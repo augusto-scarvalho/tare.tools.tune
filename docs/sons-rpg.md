@@ -20,7 +20,7 @@ As gravações servem só para medir e não entram no repositório.
 | 2 | Espada: sacar da bainha, cair no chão | `blade` draw, drop | medido |
 | 3 | Arco: puxar, soltar, voo, flecha na madeira | `bow` draw, release, fly, hit_wood | aprovado |
 | 4 | Arco: flecha em carne e em pedra | `bow` hit_flesh, hit_stone | medido |
-| 5 | Maça e martelo: golpe no ar, acertos, cair no chão | `blunt` | antigo |
+| 5 | Maça e martelo: golpe no ar, acertos, cair no chão | `blunt` | medido |
 | 6 | Escudo: bloquear golpe (madeira, metal), empurrão | `shield` | falta |
 | 7 | Passos: 8 chãos × andar, correr, aterrissar, arrastar | `footstep` | antigo |
 | 8 | Equipamento em movimento: cota de malha, placas, couro | `gear` | falta |

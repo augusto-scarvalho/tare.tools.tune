@@ -339,7 +339,8 @@ def blade_clash(fx: Fx, shift: float, ring: float, slide: tuple, grind: float, t
     return out
 
 
-def blade_swing(fx: Fx, rise: float, fall: float, centre: float, whistle: float, vwoom: float) -> list:
+def blade_swing(fx: Fx, rise: float, fall: float, centre: float, whistle: float, vwoom: float,
+                vwoom_hz: float = 120.0) -> list:
     """The swish (dB-linear rise from -30 dB, darker as it slows), the blade's pressure push at the peak,
     a fuller's whistle when fast, a low 'vwoom' when heavy."""
     rise *= 0.85 + 0.3 * fx.rand("rise")
@@ -359,8 +360,9 @@ def blade_swing(fx: Fx, rise: float, fall: float, centre: float, whistle: float,
         out.append(Noise(0.0, dur, [(0, 700), (round(p, 4), 1900), (1, 1000)], "band", 14.0,
                          amp=[(t, round(a ** 1.3, 5)) for t, a in amp], attack=0.0, release=0.01, gain=whistle))
     if vwoom:
-        out.append(Noise(0.0, dur, [(0, 105), (round(p, 4), 135), (1, 115)], "band", 9.0, amp=amp, attack=0.0,
-                         release=0.02, gain=vwoom))
+        k = vwoom_hz / 120
+        out.append(Noise(0.0, dur, [(0, 105 * k), (round(p, 4), 135 * k), (1, 115 * k)], "band", 9.0, amp=amp,
+                         attack=0.0, release=0.02, gain=vwoom))
     return out
 
 
@@ -478,6 +480,87 @@ def blade_drop(fx: Fx, shift: float, ring: float) -> list:
     return out
 
 
+
+# --- blunt weapons ----------------------------------------------------------------------------------------------------
+#
+# From recordings of clubs, hammers, pipes and rocks striking each target, and of heavy swings. A blunt swing is a
+# dark "whoom": most energy below 1 kHz (centroid 0.4-1 kHz), often a low tone near 150-270 Hz. A hit is the
+# target's body more than the weapon: flesh a deep thump (110-370 Hz) under a skin slap; wood a short knock
+# (main mode ~350 Hz, gone in 30-170 ms); metal a clang lower and longer than a blade's (0.5-7 kHz, strongest
+# 1.6-4 kHz, 40 dB in 0.2-0.6 s); stone a broad crack with grit.
+
+BLUNT_HEADS = {   # the weapon head's own modes (Hz, T60 s, gain), heard faintly under the target
+    "wood": [(350, 0.25, 1.0), (700, 0.09, 0.5), (1430, 0.08, 0.4), (1800, 0.06, 0.4), (2250, 0.06, 0.3)],
+    "iron": [(820, 0.3, 0.6), (1220, 0.2, 1.0), (1650, 0.25, 0.6), (2860, 0.3, 0.8), (3260, 0.5, 0.5),
+             (4270, 0.4, 0.4)],
+    "stone": [(1100, 0.07, 0.8), (1660, 0.16, 0.6), (4830, 0.3, 0.5), (5860, 0.2, 0.4)],
+}
+BLUNT_WOOD = [(351, 0.2, 1.0), (656, 0.12, 0.6), (937, 0.07, 0.5), (1804, 0.07, 0.6), (2226, 0.06, 0.5),
+              (2343, 0.06, 0.4), (2718, 0.06, 0.25), (3351, 0.05, 0.15)]   # a plank knocked by a blunt head
+BLUNT_STONE = [(351, 0.25, 1.0), (520, 0.15, 0.8), (1195, 0.3, 1.0), (1453, 0.25, 0.9), (2039, 0.3, 0.7),
+               (4289, 0.2, 0.4), (5203, 0.15, 0.3)]
+
+
+def _jittered(fx: Fx, modes: list, prefix: str, spread: float = 0.1, scale: float = 1.0, ring: float = 1.0) -> list:
+    return [(round(f * scale * (1 + spread * (2 * fx.g.base(f"{prefix}{i}") - 1)), 1), round(d * ring, 4), g)
+            for i, (f, d, g) in enumerate(modes)]
+
+
+def blunt_hit(fx: Fx, head: str, target: str, weight: float, drama: float) -> list:
+    """A blunt head striking flesh, wood, metal (armour, a shield) or stone."""
+    heavy = 2 ** (-0.6 * weight)                         # bigger heads, lower bodies
+    hard = {"wood": 4000, "iron": 8000, "stone": 7000}[head]
+    mass = round((0.03 if target == "wood" else 0.05) + 0.06 * weight, 3)
+    out = [Modal(0.0, 0.8, _jittered(fx, BLUNT_HEADS[head], "h", scale=heavy, ring=0.5 + 0.5 * drama),
+                 [(0.0, 1.0, 0.002)], hardness=hard, click=0.0, gain={"metal": 0.35, "wood": 0.12}.get(target, 0.25)),
+           Noise(0.0, mass, [(0, 260 * heavy), (1, 110 * heavy)], "low", 1.0, amp=decay_curve(5), attack=0.001,
+                 release=0.015, gain=(0.3 if target == "metal" else 0.6) + 0.6 * weight)]   # the mass behind it
+    if target == "flesh":
+        body = 150 * (0.8 + 0.4 * fx.g.base("body")) * heavy
+        out += [Modal(0.0, 0.7, [(round(body, 1), 0.3 + 0.1 * weight, 1.0), (round(body * 2, 1), 0.15, 0.5)],
+                      [(0.0, 1.0, 0.006)], hardness=900, click=0.0),
+                Noise(0.0, 0.025, [(0, 2200), (1, 1600)], "band", 0.8, amp=decay_curve(4), attack=0.0008,
+                      release=0.008, gain=0.75 + 0.3 * drama)]   # the skin's slap
+        if weight:
+            out.append(Scatter(0.004, 0.05, [(0, 450), (1, 80)], "pop", (150, 900), (0.002, 0.006), (0.4, 1.0),
+                               0.45 * weight))   # bone
+    elif target == "wood":
+        out += [Modal(0.0, 0.5, _jittered(fx, BLUNT_WOOD, "w", scale=0.85 + 0.3 * fx.g.base("plank")),
+                      [(0.0, 1.0, 0.0015)], hardness=6000, click=0.2),
+                Noise(0.0, 0.006, [(0, 2000), (1, 2000)], "band", 0.7, amp=decay_curve(4), attack=0.0003,
+                      release=0.002, gain=0.4)]
+    elif target == "metal":
+        plate = []
+        for i in range(30):
+            f = 450 * (10000 / 450) ** ((i + fx.g.base(f"p{i}")) / 30)
+            lvl = np.interp(np.log(f), np.log([450, 900, 1600, 3200, 5000, 7000, 10000]), [-12, -9, -2, 0, -2, -4, -8])
+            g = 10 ** (lvl / 20) * (0.4 + 1.2 * fx.rand(f"ps{i}"))
+            d = (0.25 + 0.6 * fx.g.base(f"pd{i}")) * (f / 2000) ** -0.3
+            plate.append((round(f * heavy ** 0.5, 1), round(d * (1 + 1.5 * drama), 4), round(float(g), 4)))
+        out += [Modal(0.0, 2.0, plate, [(0.0, 1.0, 0.0012)], hardness=hard * 1.5, click=0.1),
+                _crack(0.8, 3000.0)]
+    else:   # stone
+        out += [_crack(1.0, 3500.0, 0.005),
+                Modal(0.0, 0.6, _jittered(fx, BLUNT_STONE, "s", 0.15), [(0.0, 1.0, 0.0012)], hardness=9000, click=0.6,
+                      gain=0.7),
+                Scatter(0.002, round(0.08 + 0.08 * weight, 3), [(0, 900 + 900 * weight), (1, 0)], "pop", (1500, 10000),
+                        (0.0004, 0.002), (0.2, 1.0), 0.4 + 0.3 * weight)]
+    return out
+
+
+def blunt_drop(fx: Fx, head: str, weight: float) -> list:
+    """Dropped on stone: the head lands heavily, the haft slaps down 50-100 ms later, a small bounce."""
+    haft = round(0.05 + 0.05 * fx.rand("haft"), 4)
+    bounce = round(haft + 0.12 + 0.06 * fx.rand("bounce"), 4)
+    hits = [(0.0, 1.0, 0.002), (haft, 0.45, 0.0015), (bounce, 0.2, 0.002)]
+    heavy = 2 ** (-0.6 * weight)
+    return [Modal(0.0, 1.2, _jittered(fx, BLUNT_HEADS[head], "h", scale=heavy, ring=0.6), hits,
+                  hardness={"wood": 4000, "iron": 8000, "stone": 7000}[head], click=0.2),
+            fx.strike("wood", size=0.4, hits=[hits[1]], gain=0.35, prefix="haft"),
+            fx.strike("stone", size=0.75, hits=[(t, g, 0.002) for t, g, _ in hits], gain=0.5, prefix="g", click=0.2),
+            *[Noise(t, 0.1, [(0, 260 * heavy), (1, 100 * heavy)], "low", 1.0, amp=decay_curve(5), attack=0.001,
+                    release=0.015, gain=g * (0.8 + 0.6 * weight)) for t, g, _ in hits]]
+
 # --- weapons --------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -531,19 +614,16 @@ def blade(fx: Fx):
 @recipe("blunt", ("swing", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "drop"), ("wood", "iron", "stone"))
 def blunt(fx: Fx):
     """Clubs, maces, hammers, staves: heavy swings and hits."""
-    mat, s, p, e = fx.style, fx.size, fx.power, fx.event
+    head, s, p, e = fx.style, fx.size, fx.power, fx.event
+    big, hard = max(s - 0.5, 0) * 2, max(p - 0.5, 0) * 2    # size 1: heavier head, power 1: cinematic
     if e == "swing":
-        dur = (0.3 + 0.4 * s) * (1.15 - 0.3 * p)
-        layers = whoosh(fx, 0.0, dur, (600 + 1200 * p) * (1 - 0.5 * s), 1.1)
-        layers[0].wobble = (12.0 + 10 * fx.rand("flutter"), 0.5)    # tumbling mass: a fluttering push
-        return fx.voice(noise=layers)
+        layers = blade_swing(fx, 0.06 + 0.03 * s, 0.13 + 0.08 * s, 450 * 2 ** (-0.5 * (s - 0.5)), 0.0,
+                             0.35 + 0.4 * big, 200 * 2 ** (-0.6 * (s - 0.5)))
+        return fx.voice(fx.level(0.5), **splits(layers))
     if e in TARGETS:
-        layers = impact(fx, mat, TARGETS[e], edge=0.0)
-        layers.append(thud(0.0, 0.2 + 0.2 * s, 140 - 60 * s, 0.9))
-        return fx.voice(**splits(layers), space=0.5, wet=0.1)
-    hits = bounces(fx, 4, 0.14, 0.5)
-    return fx.voice(modal=[fx.strike(mat, hits=hits, prefix="a", dur=1.5),
-                           fx.strike("stone", size=0.6, hits=hits, gain=0.6, prefix="g")])
+        target = {"iron": "metal"}.get(TARGETS[e], TARGETS[e])
+        return fx.voice(fx.level(0.95), **splits(blunt_hit(fx, head, target, big, hard)))
+    return fx.voice(fx.level(0.95), **splits(blunt_drop(fx, head, big)))
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))

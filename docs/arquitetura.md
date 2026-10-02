@@ -238,6 +238,16 @@ As partes:
   - força 1 = cinema: raspa até 150 ms, anel 2,2× mais longo, golpe rápido com assobio do sulco da lâmina; nos golpes, a lâmina e a armadura soam mais, e a carne ganha um corte afiado.
 - **Níveis:** o golpe fica com metade do pico do choque, como na mistura ouvida. `Fx.level(x)` dá o pico de cada evento na força máxima, e assim a mistura entre os eventos de uma receita se mantém em qualquer força.
 
+**Maça e martelo (`blunt`): medidos em gravações** de porretes, martelos, canos e pedras batendo em cada alvo, e de golpes pesados no ar.
+- **Golpe no ar:** um "vum" escuro. Quase toda a energia fica abaixo de 1 kHz (centroide 0,4–1 kHz) e muitas vezes há um tom grave perto de 150–270 Hz.
+- **Acerto:** quem soa é mais o alvo do que a arma. A cabeça da arma (madeira, ferro ou pedra) soa baixinho por baixo, junto com o baque da massa:
+  - carne: um baque fundo (110–370 Hz, 40 dB em 0,16–0,38 s) sob o estalo da pele;
+  - madeira: uma batida curta, com o modo principal em ~350 Hz, que some em 30–170 ms;
+  - metal: um "clang" mais grave e mais longo que o de uma lâmina (0,5–7 kHz, mais forte entre 1,6 e 4 kHz, 40 dB em 0,2–0,6 s);
+  - pedra: um estalo largo com fragmentos.
+- **Cair no chão:** a cabeça bate pesada, o cabo cai 50–100 ms depois, e há um quique pequeno.
+- **Variantes:** como na espada, tamanho 1 é a arma mais pesada (mais grave, mais baque, osso na carne, mais fragmentos) e força 1 é a de cinema (mais anel no metal, estalo da pele mais forte).
+
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
 - **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.
