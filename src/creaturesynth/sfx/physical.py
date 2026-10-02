@@ -1177,11 +1177,18 @@ def explosion(fx: Fx):
         return fx.voice(noise=[boom, body, roar], lowpass=450, space=2.5, wet=0.35, gain=0.6)
     debris = Scatter(0.05, round(length, 3), [(0, 80 + 120 * p), (0.3, 40), (1, 0)], "pop", (400, 5000),
                      (0.001, 0.006), (0.1, 1.0), 0.35)
-    if e == "debris":
-        rocks = [fx.strike("stone", start=round(0.1 + 1.5 * fx.rand(f"r{k}") ** 1.5, 3), size=fx.rand(f"rs{k}"),
-                           gain=0.3 + 0.6 * fx.rand(f"rg{k}"), prefix=f"r{k}") for k in range(8)]
-        debris.start, debris.rate = 0.0, [(0, 120), (0.5, 60), (1, 0)]
-        return fx.voice(modal=rocks, scatter=[debris], space=1.0, wet=0.15, gain=0.6)
+    if e == "debris":   # CC0 rockfalls: 3-8 s, dense at first then thinning, big rocks thudding low (63-250 Hz)
+        span = 2.5 + 2.5 * s
+        rocks, thuds = [], []
+        for k in range(14 + int(10 * p)):
+            t = round(0.05 + span * 0.85 * fx.rand(f"r{k}") ** 1.3, 3)
+            big = fx.rand(f"rs{k}")
+            rocks.append(fx.strike("stone", start=t, size=big, gain=0.3 + 0.6 * fx.rand(f"rg{k}"), prefix=f"r{k}"))
+            if big > 0.6:   # a heavy one lands
+                thuds.append(Noise(t, 0.12, [(0, 260), (1, 110)], "low", 0.9, amp=decay_curve(5), attack=0.002,
+                                   release=0.02, gain=round(0.4 + 0.4 * big, 3)))
+        debris.start, debris.dur, debris.rate = 0.0, round(span, 3), [(0, 120), (0.3, 60), (0.8, 25), (1, 0)]
+        return fx.voice(modal=rocks, scatter=[debris], noise=thuds, space=1.0, wet=0.15, gain=0.6)
     crack = burst(0.0, 0.05, 1500, 0.6 + 0.2 * p, "high", 0.5)
     layers = [boom, body, roar, crack, debris]
     if fx.style == "fire":

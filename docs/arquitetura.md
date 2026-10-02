@@ -324,6 +324,7 @@ O mar e a floresta já estavam perto. Com amostras CC0 do Freesound (só para an
 **Explosões (`explosion`): comparadas com gravações.**
 - **De perto:** mais fortes em 63–250 Hz (−9 dB em 1 kHz, −14 em 4 kHz). Crescem por ~0,1 s e caem 20 dB em ~0,8 s. A primeira versão tinha um buraco em 125–250 Hz e um rugido alto demais perto de 1 kHz; ganhou um "corpo" grave e o crescimento inicial.
 - **De longe:** quase só o ronco mais grave (mais forte em 31 Hz, −34 dB em 2 kHz).
+- **Destroços (refeitos sem o CLAP):** em quedas de pedra CC0, a chuva de pedras dura 3–10 s, com 5–19 impactos por segundo, mais densa no começo e rareando sem parar de vez. As pedras grandes batem grave (63–250 Hz). A versão antiga era uma nuvem curta de estalos; agora são 14–24 pedras de tamanhos sorteados, cada uma com seu baque, por cima de uma chuva de cascalho (12–15 impactos/s medidos).
 
 **Magias (`spell`): comparadas com efeitos de magia de jogos** (não existem gravações reais de magia, então a régua são sons desenhados por outros).
 - **Fogo:** a bola de fogo de referência é sobretudo grave (centroide ~280 Hz). A nossa era um chiado médio-agudo; ganhou o ronco grave ao sair da mão e no impacto.
