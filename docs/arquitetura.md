@@ -217,6 +217,18 @@ As partes:
   - a haste cravada zumbindo perto de 160 Hz, com harmônicos, por mais de um segundo. Ela pulsa ~26 vezes por segundo enquanto balança (dois modos próximos batendo).
 - **Níveis:** o voo e o impacto ficam ~4 e ~6 dB acima do soltar, como na mistura escolhida de ouvido.
 
+**Espada: medida em gravações de golpes e choques.**
+- **Choque (`blade_clash`):** curto e agudo, não um sino.
+  - Medidas: 40 dB de queda em 0,2–0,6 s; energia concentrada perto de 6 kHz; quase nada abaixo de 1,5 kHz (média de terço de oitava de seis gravações, `BLADE_RING`).
+  - Três partes: o contato; as lâminas raspando uma na outra por 30–80 ms; muitas vezes um segundo toque ~30 ms ou ~170 ms depois.
+  - Cada lâmina tem ~60 modos densos entre 1,2 e 12,5 kHz, fixos pela espécie. Os níveis de cada modo (`BLADE_MODES`) foram ajustados renderizando e comparando até o anel bater com a média medida (±3 dB por faixa). O golpe re-pondera os modos a cada take. Três modos mais graves soam mais tempo.
+- **Golpe no ar (`blade_swing`):** ~0,25 s.
+  - O que mais pesa é o empurrão de pressão da lâmina passando (abaixo de 300 Hz). Com ele vem um chiado centrado em ~1,4 kHz, que sobe ~30 dB em ~55 ms, cai em ~170 ms e escurece ao desacelerar.
+- **Variantes escolhidas de ouvido**, ligadas aos traços:
+  - tamanho 1 = lâmina pesada: modos 25% mais graves, anel mais curto, pancada grave nos braços, golpe mais lento com um "vum" de ~120 Hz;
+  - força 1 = cinema: raspa até 150 ms, anel 2,2× mais longo, golpe rápido com assobio do sulco da lâmina.
+- **Níveis:** o golpe fica com metade do pico do choque, como na mistura ouvida. `Fx.level(x)` dá o pico de cada evento na força máxima, e assim a mistura entre os eventos de uma receita se mantém em qualquer força.
+
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
 - **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.

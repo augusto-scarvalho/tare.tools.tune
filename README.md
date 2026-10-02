@@ -171,6 +171,15 @@ Cada evento é um ponto de escuta:
 
 `hit_flesh` e `hit_stone` ainda usam os sons antigos.
 
+**A espada** (golpe no ar e choque de lâminas, em aço e ferro) seguiu o mesmo método. O tamanho e a força escolhem entre as três versões aprovadas:
+
+| | tamanho 0,5 | tamanho 1 |
+|---|---|---|
+| **força 0,5** | a medida nas gravações | pesada: mais grave, pancada nos braços, golpe lento com "vum" |
+| **força 1** | cinema: raspa mais, soa mais, golpe com assobio | as duas coisas |
+
+Os golpes em carne, madeira, armadura e pedra, sacar e derrubar ainda são os sons antigos.
+
 **Como soam, segundo o CLAP.** Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
 
 | família | descrição certa em 1º | entre as 3 primeiras |

@@ -119,9 +119,12 @@ class Fx:
         return Modal(start, round(dur, 3), modes, hits or [(0.0, 1.0, 0.0012 if m.hardness > 8000 else 0.003)],
                      scrape, hardness or m.hardness, m.click if click is None else click, gain)
 
+    def level(self, x: float = 1.0) -> float:
+        """Peak level: `x` at full power, ~12 dB lower when gentle (`x` sets the mix between a recipe's events)."""
+        return min(1.0, x * 10 ** (-12 * (1 - self.power) / 20))
+
     def voice(self, gain: float | None = None, **layers) -> Voice:
-        gain = 10 ** (-12 * (1 - self.power) / 20) if gain is None else gain   # gentle ~ -12 dB vs violent
-        return Voice(gain=round(gain, 4), **layers)
+        return Voice(gain=round(self.level() if gain is None else gain, 4), **layers)
 
 
 @dataclass(frozen=True)

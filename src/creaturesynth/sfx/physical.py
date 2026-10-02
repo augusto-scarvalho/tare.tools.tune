@@ -240,6 +240,91 @@ def arrow_in_wood(fx: Fx, cross: bool = False) -> list:
                   [(0.0, 1.0, 0.003)], hardness=4000, gain=1.1)]
 
 
+# --- blades ---------------------------------------------------------------------------------------------------------
+#
+# Modelled on recordings of sword clashes and swings. A clash is short and bright: a contact, the
+# blades grinding along each other for 30-80 ms, often a second touch ~30 or ~170 ms later, and a
+# ring of dense modes (strongest near 6 kHz, little below 1.5 kHz) falling 40 dB in 0.2-0.6 s.
+# A swing lasts ~0.25 s: mostly the slow pressure push of the passing blade (below 300 Hz), with
+# a swish centred near 1.4 kHz rising ~30 dB in ~55 ms and falling in ~170 ms.
+
+BLADE_RING = [(500, -34), (1000, -27), (1600, -18), (2500, -12.5), (3150, -8), (4000, -8.6), (5000, -6),
+              (6300, -4.4), (8000, -8), (10000, -11), (12500, -23), (16000, -27)]   # measured, dB per 1/3 octave
+BLADE_MODES = [(500, -32.4), (1000, -25.4), (1600, -16.4), (2500, -24.0), (3150, -18.1), (4000, -14.8),
+               (5000, -6.5), (6300, -1.8), (8000, -4.6), (10000, -8.8), (12500, -12.5), (16000, -16.5)]
+# BLADE_MODES: each mode's level, found by rendering and comparing until the ring matched BLADE_RING
+
+
+def _db_at(table: list, f: float) -> float:
+    return float(np.interp(np.log(f), np.log([c for c, _ in table]), [d for _, d in table]))
+
+
+def blade_modes(fx: Fx, prefix: str, shift: float = 1.0, ring: float = 1.0, n: int = 60) -> list:
+    """A blade's ring: dense modes spread log-evenly over 1.2-12.5 kHz (fixed per species), struck
+    differently every take, decaying in 0.2-0.6 s, plus three longer modes lower down."""
+    out = []
+    for i in range(n):
+        f = 1200 * (12500 / 1200) ** ((i + fx.g.base(f"{prefix}f{i}")) / n)
+        g = 10 ** (_db_at(BLADE_MODES, f) / 20) * (0.4 + 1.2 * fx.rand(f"{prefix}s{i}"))
+        d = (0.2 + 0.4 * fx.g.base(f"{prefix}d{i}")) * (f / 4000) ** -0.1
+        out.append((round(f * shift, 1), round(d * ring, 4), round(g, 4)))
+    for j in range(3):
+        f = 600 + 3400 * fx.g.base(f"{prefix}L{j}")
+        out.append((round(f * shift, 1), round((0.6 + 0.8 * fx.g.base(f"{prefix}Ld{j}")) * ring, 4),
+                    round(10 ** (_db_at(BLADE_RING, f) / 20), 4)))
+    return out
+
+
+def blade_clash(fx: Fx, shift: float, ring: float, slide: tuple, grind: float, thud: float) -> list:
+    """Two blades meet: contact, grinding slide, maybe a second touch, both ringing."""
+    sl = slide[0] + (slide[1] - slide[0]) * fx.rand("slide")
+    lag = 0.001 + 0.003 * fx.rand("lag")
+    hits = [(0.0, 1.0, 0.0006)]
+    u = fx.rand("rehit")
+    if u < 0.35:
+        hits.append((round(0.025 + 0.015 * fx.rand("rt"), 4), 0.6, 0.0006))
+    elif u < 0.7:
+        hits.append((round(0.16 + 0.03 * fx.rand("rt"), 4), 0.45, 0.0006))
+    dur = round(min(2.2 * ring + 0.1, 3.0), 3)
+    foe = shift * (0.85 + 0.3 * fx.rand("foe"))
+    scrape = (0.002, round(sl, 4), grind, 0.0)
+    out = [Modal(0.0, dur, blade_modes(fx, "a", shift, ring), hits, scrape, 16000, 0.05),
+           Modal(round(lag, 4), dur, blade_modes(fx, "b", foe, ring), hits, scrape, 16000, 0.05, gain=0.8),
+           Noise(0.0, 0.006, [(0, 4000), (1, 4000)], "high", 0.7, amp=decay_curve(4), attack=0.0002, release=0.002,
+                 gain=0.6),
+           Noise(0.0, round(sl + 0.03, 3), [(0, 7000), (1, 5500)], "band", 1.0, amp=[(0, 1), (0.6, 0.6), (1, 0)],
+                 attack=0.001, release=0.02, gain=0.25 * grind)]
+    if thud:   # heavy blades: the hands and arms take a blow
+        out.append(Noise(0.0, 0.08, [(0, 420), (1, 200)], "low", 1.0, amp=decay_curve(5), attack=0.001, release=0.02,
+                         gain=thud))
+    return out
+
+
+def blade_swing(fx: Fx, rise: float, fall: float, centre: float, whistle: float, vwoom: float) -> list:
+    """The swish (dB-linear rise from -30 dB, darker as it slows), the blade's pressure push at the peak,
+    a fuller's whistle when fast, a low 'vwoom' when heavy."""
+    rise *= 0.85 + 0.3 * fx.rand("rise")
+    fall *= 0.85 + 0.3 * fx.rand("fall")
+    lead = 0.04
+    dur = round(lead + rise + fall, 3)
+    p = (lead + rise) / dur
+    amp = [(0.0, 0.01), (round(lead / dur, 4), 0.0316), (round(p, 4), 1.0), (round(p + 0.45 * (1 - p), 4), 0.1),
+           (1.0, 0.0251)]
+    freq = [(0, centre * 0.65), (round(p, 4), centre * 1.3), (1, centre * 0.5)]
+    out = [Noise(0.0, dur, freq, "low", 0.8, amp=amp, attack=0.0, release=0.01, wobble=(40.0, 0.25), gain=0.55),
+           Noise(0.0, dur, [(t, f * 4) for t, f in freq], "high", 0.7, amp=[(t, round(a ** 1.6, 5)) for t, a in amp],
+                 attack=0.0, release=0.01, gain=0.04),
+           Modal(round(lead + rise - 0.03, 4), 0.25, [(38, 0.08, 1.0), (75, 0.05, 0.35)], [(0.0, 1.0, 0.03)],
+                 hardness=200, click=0.0)]
+    if whistle:
+        out.append(Noise(0.0, dur, [(0, 700), (round(p, 4), 1900), (1, 1000)], "band", 14.0,
+                         amp=[(t, round(a ** 1.3, 5)) for t, a in amp], attack=0.0, release=0.01, gain=whistle))
+    if vwoom:
+        out.append(Noise(0.0, dur, [(0, 105), (round(p, 4), 135), (1, 115)], "band", 9.0, amp=amp, attack=0.0,
+                         release=0.02, gain=vwoom))
+    return out
+
+
 # --- weapons --------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -247,9 +332,17 @@ def arrow_in_wood(fx: Fx, cross: bool = False) -> list:
 def blade(fx: Fx):
     """Swords, daggers, axes: swing, clash, hits on flesh/wood/armor/stone, draw, drop."""
     mat, s, p, e = fx.style, fx.size, fx.power, fx.event
+    # chosen by ear: size 0.5 / power 0.5 is the measured sword, size 1 the heavy one, power 1 the cinematic one
+    big, small, hard = max(s - 0.5, 0) * 2, max(0.5 - s, 0) * 2, max(p - 0.5, 0) * 2
     if e == "swing":
-        dur = (0.22 + 0.35 * s) * (1.15 - 0.3 * p)
-        return fx.voice(noise=whoosh(fx, 0.0, dur, (900 + 2200 * p) * (1 - 0.45 * s), 1.6, whistle=0.35))
+        layers = blade_swing(fx, 0.055 + 0.025 * big - 0.015 * small, 0.17 + 0.08 * big - 0.05 * small,
+                             1400 - 400 * big + 600 * small, 0.25 * hard, 0.5 * big)
+        return fx.voice(fx.level(0.5), **splits(layers))   # half the clash, as in the mix chosen by ear
+    if e == "clash" and mat in ("steel", "iron"):
+        shift = 2 ** (-0.83 * (s - 0.5)) * (0.8 if mat == "iron" else 1.0)
+        ring = (1 - 0.3 * big) * (1 + 1.2 * hard) * (0.5 if mat == "iron" else 1.0)
+        slide = (0.03 - 0.01 * big + 0.05 * hard, 0.08 - 0.03 * big + 0.07 * hard)
+        return fx.voice(fx.level(0.95), **splits(blade_clash(fx, shift, ring, slide, 1 + 0.3 * hard, 0.5 * big)))
     if e == "clash":
         lag = 0.002 + 0.006 * fx.rand("lag")
         slide = (0.0, 0.04 + 0.16 * fx.rand("slide"), 0.5 + 0.5 * p, 60 + 80 * fx.rand("judder"))
@@ -294,28 +387,25 @@ def blunt(fx: Fx):
 def bow(fx: Fx):
     """Bows and crossbows: draw, release, the arrow's flight and where it lands."""
     s, p, e, cross = fx.size, fx.power, fx.event, fx.style == "crossbow"
-
-    def louder(x):  # a fly-by at the ear and a strike stand above the release, as in the mix chosen by ear
-        return min(1.0, x * 10 ** (-12 * (1 - p) / 20))
-
+    # levels at full power, as in the mix chosen by ear: draw 0.7, release 0.5, fly-by 0.8, strike 0.95
     if e == "draw":
         dur = 0.5 + 0.5 * s
         if cross:  # a ratchet: regular clicks, then the latch
             clicks = [(round(i / 11 + 0.004 * fx.rand(f"c{i}"), 4), 0.8, 0.0006) for i in range(int(dur * 11))]
             return fx.voice(modal=[fx.strike("iron", size=0.05, hits=clicks, prefix="pawl", dur=dur + 0.2),
                                    fx.strike("wood", size=0.3, hits=[(dur, 1.0, 0.002)], prefix="lock")])
-        return fx.voice(**splits(creak(fx, 0.9 * (0.8 + 0.4 * s))), gain=0.7)
+        return fx.voice(fx.level(0.7), **splits(creak(fx, 0.9 * (0.8 + 0.4 * s))))
     if e == "release":
         layers = bow_release(fx, cross)
         if cross:
             layers.append(fx.strike("iron", size=0.1, hits=[(0.0, 1.0, 0.0006)], gain=0.6, prefix="click"))
-        return fx.voice(**splits(layers))
+        return fx.voice(fx.level(0.5), **splits(layers))
     if e == "fly":  # passing the listener (the release already carries it away from the archer)
         approach = 0.45 * (0.8 + 0.4 * fx.rand("approach")) * (1.15 - 0.3 * p) * (0.7 if cross else 1.0)
-        return fx.voice(louder(1.6), noise=fletching(0.0, *flyby(approach, centre=3400.0 if cross else 2800.0)))
+        return fx.voice(fx.level(0.8), noise=fletching(0.0, *flyby(approach, centre=3400.0 if cross else 2800.0)))
     target = TARGETS[e]
     if target == "wood":
-        return fx.voice(louder(1.9), **splits(arrow_in_wood(fx, cross)))
+        return fx.voice(fx.level(0.95), **splits(arrow_in_wood(fx, cross)))
     if target == "flesh":
         return fx.voice(**splits(flesh(fx, 0.0, 0.6, 0.8)))
     layers = [fx.strike(target, size=0.5, hits=[(0.0, 1.0, 0.0012)], prefix="t"),
