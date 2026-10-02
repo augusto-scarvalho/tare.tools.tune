@@ -562,7 +562,7 @@ texto ─► g2p (pt: regras | en: CMUdict + regras) ─► frases/palavras/síl
 
 **Como foi afinado:** com o Whisper como "ouvido" (`tools/intelligibility.py`), comparando versões A/B num conjunto fixo de frases de jogo. Um teste mostrou que a fricção estava ~10 dB abaixo do natural; outro achou o clique de troca de coeficientes. Execuções idênticas do Whisper variam cerca de ±0,03 de CER, então diferenças menores que isso não significam nada.
 
-**Professor natural (Kokoro).** `tools/teacher_calibration.py` gera 60 frases pt-BR com o Kokoro (vozes masculina e feminina, ~5 minutos). As frases são diferentes das frases de teste. Como o Kokoro informa a duração prevista de cada fonema (quadros de 25 ms), o alinhamento sai de graça. A ferramenta mede:
+**Professor natural (Kokoro).** `tools/teacher_calibration.py` gera 60 frases pt-BR com o Kokoro (vozes masculina e feminina, ~5 minutos). As frases são diferentes das frases de teste. Como o Kokoro informa a duração prevista de cada fonema (quadros de 25 ms), o alinhamento sai de graça. (Descobrimos depois que o som vem ~60 ms antes dessa grade; as medidas abaixo foram feitas sem essa correção, ver o motor natural.) A ferramenta mede:
 - formantes de vogais tônicas longas;
 - durações por tonicidade;
 - o espectro do trecho ruidoso das fricativas.
@@ -626,7 +626,7 @@ A distância está no envelope espectral quadro a quadro, nas vogais e nas conso
 
 Síntese concatenativa com o nosso vocoder: o envelope espectral vem de gravações, as regras dão o resto (fonemas, ritmo, entonação). O Kokoro é só o professor: lê um corpus uma vez, offline, e o que fica são números.
 
-**Banco de voz.** 240 frases por voz (as 60 de calibração + 180 de diálogo de jogo, foneticamente variadas, nenhuma das frases de teste), ~10,5 min. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 32 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. Cada fronteira anda até a maior mudança espectral em ±15 ms. Dois bancos em português: `pt/alex` (masculino, trato 1,0) e `pt/dora` (feminino, 1,15), ~3,4 MB cada.
+**Banco de voz.** 240 frases por voz (as 60 de calibração + 180 de diálogo de jogo, foneticamente variadas, nenhuma das frases de teste), ~10,5 min. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 32 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. **O som do Kokoro vem ~60 ms antes da grade de durações dele** (mediana 65 ms na voz masculina, 60 na feminina; de 55 a 75 ms entre frases). Sem corrigir, o rótulo de um [s] caía quase todo na vogal seguinte: "próxima" saía "pró-fi-ma". Por isso, em cada frase, os rótulos andam o quanto faz as fricativas chiarem mais e as vogais ficarem mais fortes que o fechamento das oclusivas (busca de −100 a +20 ms). Depois, cada fronteira anda até a maior mudança espectral em ±15 ms. Dentro dos rótulos de [s] e [ʃ], a energia acima de 4 kHz passou de 13 dB abaixo para 14 dB acima da energia abaixo de 1,2 kHz. Dois bancos em português: `pt/alex` (masculino, trato 1,0) e `pt/dora` (feminino, 1,15), ~3,4 MB cada.
 
 **Montagem de uma frase nova:**
 1. A nossa frente (g2p + `phonetics.segments`, que agora marca começo e fim de palavra) dá fonemas, tônicas e a entonação.
@@ -643,11 +643,12 @@ Síntese concatenativa com o nosso vocoder: o envelope espectral vem de gravaç�
 | ressíntese direta de frases do professor pelo nosso vocoder, 32 faixas | 0,011 |
 | primeira montagem, 60 frases no banco | 0,22 (masc.) / 0,34 (fem.) |
 | 240 frases no banco | 0,17 / 0,18 |
-| + sotaque do professor + durações por regressão | **0,11 / 0,11** |
+| + sotaque do professor + durações por regressão | 0,11 / 0,11 |
 | o mesmo, pelo `Speaker` (com jitter); NPCs sorteados (`Speaker.random(7)`, `(12)`) | 0,08 / 0,11; 0,12 e 0,10 |
+| + rótulos realinhados (−60 ms) e o "x" de "próximo"/"táxi" no g2p | **0,045 / 0,042; 0,033 e 0,037** |
 | motor de formantes | 0,23 |
 
-Onde ainda se perde (16 frases do corpus, deixando a própria frase fora do banco): com fonemas, durações e tom do professor, 0,046; com as durações do professor e o **nosso** tom, 0,035 (a entonação não atrapalha); com durações médias, 0,06-0,09; com a nossa transcrição, 0,13. O que falta está nas durações e nas diferenças de transcrição que sobraram (vogais abertas e fechadas, [u]/[w]).
+Onde se perdia antes do realinhamento (16 frases do corpus, deixando a própria frase fora do banco): com fonemas, durações e tom do professor, 0,046; com as durações do professor e o **nosso** tom, 0,035 (a entonação não atrapalha); com durações médias, 0,06-0,09; com a nossa transcrição, 0,13. O que falta está nas durações e nas diferenças de transcrição que sobraram (vogais abertas e fechadas, [u]/[w]).
 
 **Balbucio** (`speech/babble.py`). Depois do g2p, as sílabas podem ser trocadas antes da prosódia, e por isso o ritmo, as tônicas e o tipo de frase continuam os do texto:
 - `gibberish`: cada sílaba vira ataque + vogal sorteados do inventário do idioma, às vezes com coda no fim da palavra; a semente é a fala + o nome do personagem.

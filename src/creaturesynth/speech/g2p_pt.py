@@ -10,6 +10,7 @@ Phoneme symbols (X-SAMPA-like):
     fric.    f v s z S Z R(=h)     nasals: m n J    liquids: l L r(tap)
 """
 import re
+import unicodedata
 from dataclasses import dataclass
 
 from .units import Phrase, Syllable, Word, is_vowel, transcription
@@ -26,6 +27,11 @@ CODA_R = "R"   # r at the end of a syllable: "R" fricative (Rio, A/B-tuned) or "
 KW_WORDS = {"cinquenta", "frequente", "frequência", "tranquilo", "tranquila", "linguiça", "aguentar", "aguenta",
             "consequência", "sequência", "pinguim", "bilíngue", "eloquente", "delinquente", "quinquênio",
             "arguir", "unguento", "sagui", "equino", "equestre", "quiproquó"}
+# "x" between vowels is usually [ʃ] (caixa, lixo); these words say it [s] or [ks] (matched without accents)
+X_AS_S = ("proxim", "maxim", "auxili", "trouxe", "trouxer", "sintax", "aproxim")
+X_AS_KS = ("taxi", "fixo", "fixa", "fixar", "afix", "prefix", "sufix", "crucifix", "sexo", "sexu", "complex", "reflex",
+           "flexi", "flexa", "anex", "conex", "nexo", "oxig", "oxid", "toxic", "intoxic", "axil", "axiom", "lexic",
+           "fluxo", "influx", "maxila", "boxe", "xerox", "paradox", "ortodox", "convex", "saxof", "onix", "fenix")
 CLITICS = {"o", "a", "os", "as", "um", "uns", "de", "da", "do", "das", "dos", "e", "que", "se", "em", "me",
            "te", "lhe", "nos", "vos", "por", "com", "na", "no", "nas", "ao", "aos", "à", "às", "pra", "pro",
            "lhes", "sem", "mas", "nem", "num", "numa"}
@@ -194,6 +200,10 @@ def _vowel(g: str, stressed: bool, final_syl: bool, post_tonic: bool) -> str:
     return base
 
 
+def _plain(word: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", word) if not unicodedata.combining(c))
+
+
 def word_to_phonemes(word: str, clitic: bool = False) -> Word:
     u = _units(word)
     _mark_glides(u)
@@ -282,7 +292,12 @@ def word_to_phonemes(word: str, clitic: bool = False) -> Word:
         elif g == "z":
             x.ph = "s" if after is None else "z"
         elif g == "x":
-            if k == 0 or (prev is not None and prev.kind == "G"):
+            plain = _plain(word)
+            if k > 0 and any(stem in plain for stem in X_AS_S):
+                x.ph = "s"
+            elif k > 0 and any(stem in plain for stem in X_AS_KS):
+                x.ph = "ks"
+            elif k == 0 or (prev is not None and prev.kind == "G"):
                 x.ph = "S"
             elif k == 1 and prev is not None and prev.g == "e":
                 x.ph = "z" if after_is_v else "s"

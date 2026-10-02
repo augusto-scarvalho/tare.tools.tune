@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from teacher_calibration import CORPUS  # noqa: E402
 
 from creaturesynth.speech.concat import FRAME, fit_durations  # noqa: E402
-from creaturesynth.speech.vocoder import ENV_FLOOR, encode  # noqa: E402
+from creaturesynth.speech.vocoder import ENV_FLOOR, band_freqs, encode  # noqa: E402
 
 CACHE = ROOT / "teacher"
 OUT = ROOT / "src/creaturesynth/speech/data"
@@ -271,6 +271,34 @@ def labels(phonemes: str, dur: list[int], n_frames: int) -> list[tuple]:
     return [t for t in out if t[2] > t[1]]
 
 
+def realign(lab, env, search=range(-20, 5)):
+    """The teacher's sound runs ahead of its own duration grid (by ~60 ms, measured over the corpus): shift the
+    labels by what makes fricatives hiss and vowels outshine stop closures most, then refine each boundary."""
+    bf = band_freqs()
+    hiss = env[:, (bf > 4000) & (bf < 11000)].mean(1) - env[:, bf < 1200].mean(1)
+    level = env[:, (bf > 200) & (bf < 4000)].mean(1)
+    n = len(env)
+
+    def score(d):
+        fr, stop, vow = [], [], []
+        for sym, a, e, *_ in lab:
+            a, e = min(max(a + d, 0), n), min(max(e + d, 0), n)
+            if e <= a:
+                continue
+            if sym in ("s", "S", "f", "z"):
+                fr.append(hiss[a:e].mean())
+            elif sym in ("p", "t", "k", "b", "d", "g"):
+                stop.append(level[a:e].mean())
+            elif sym in ("a", "e", "E", "i", "o", "O", "u"):
+                vow.append(level[a:e].mean())
+        return (np.mean(fr) if fr else 0.0) + (np.mean(vow) - np.mean(stop) if stop and vow else 0.0)
+
+    d = max(search, key=score)
+    out = [[sym, min(max(a + d, 0), n), min(max(e + d, 0), n), *rest] for sym, a, e, *rest in lab]
+    out[0][1], out[-1][2] = 0, n
+    return [tuple(x) for x in out if x[2] > x[1]], d
+
+
 def refine(lab, env, f0, reach=3):
     """Move each boundary (the teacher's 25 ms grid) to the biggest spectral change within +-reach frames."""
     lab = [list(x) for x in lab]
@@ -290,12 +318,14 @@ def build(lang: str):
     for name, (voice, tract) in VOICES[lang].items():
         items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
         audio = np.load(CACHE / f"speech_{lang}_{name}.npz")
-        f0s, envs, aps, phones, base = [], [], [], [], 0
+        f0s, envs, aps, phones, base, shifts = [], [], [], [], 0, []
         for u, it in enumerate(items):
             x = audio[it["key"]].astype(np.float64)
             f0, t = pw.harvest(x, KOKORO_SR, f0_floor=60, f0_ceil=600, frame_period=FRAME * 1000)
             f, env, ap = encode(f0, pw.cheaptrick(x, f0, t, KOKORO_SR), pw.d4c(x, f0, t, KOKORO_SR), KOKORO_SR)
-            for sym, a, b, st, flags in refine(labels(it["phonemes"], it["dur"], len(f)), env, f):
+            lab, shift = realign(labels(it["phonemes"], it["dur"], len(f)), env)
+            shifts.append(shift)
+            for sym, a, b, st, flags in refine(lab, env, f):
                 phones.append([sym, base + a, base + min(b, len(f)), st, u, flags])
             f0s.append(f)
             envs.append(env)
@@ -311,7 +341,8 @@ def build(lang: str):
                             ap=np.round(np.concatenate(aps) * 255).astype(np.uint8),
                             phones=np.frombuffer(json.dumps(phones).encode(), dtype=np.uint8),
                             meta=np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8))
-        print(f"{lang}/{name}: {len(phones)} phones, {base * FRAME / 60:.1f} min, duration model r = "
+        print(f"{lang}/{name}: labels moved {np.median(shifts) * FRAME * 1000:.0f} ms (median), "
+              f"{len(phones)} phones, {base * FRAME / 60:.1f} min, duration model r = "
               f"{model['fit'][0]} -> {out} ({out.stat().st_size / 1e6:.1f} MB)")
 
 

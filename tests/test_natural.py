@@ -18,6 +18,21 @@ def test_banks_ship_numbers_only():
         bank("xx/nobody")
 
 
+def test_bank_labels_sit_on_the_sounds():
+    """The teacher's sound runs ~60 ms ahead of its duration grid; the builder realigns. A labelled [s] must hiss
+    and a labelled vowel must outshine a stop closure."""
+    from creaturesynth.speech.vocoder import band_freqs
+    bf = band_freqs()
+    for name in ("pt/alex", "pt/dora"):
+        b = bank(name)
+        hiss = b.env[:, (bf > 4000) & (bf < 11000)].mean(1) - b.env[:, bf < 1200].mean(1)
+        level = b.env[:, (bf > 200) & (bf < 4000)].mean(1)
+
+        def mean(feature, syms, b=b):
+            return np.mean([feature[p[1]:p[2]].mean() for p in b.ph if p[0] in syms and p[2] > p[1]])
+        assert mean(hiss, {"s", "S"}) > 8 and mean(level, {"a", "E", "O"}) - mean(level, {"p", "t", "k"}) > 20
+
+
 def test_natural_voice_is_a_portable_deterministic_spec():
     sp = Speaker(pitch=110, tract=1.02, engine="natural")
     v = sp.voice("Você viu o dragão perto da montanha?", "pt")

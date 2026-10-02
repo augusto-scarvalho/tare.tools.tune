@@ -24,6 +24,10 @@ SR = 22_050
     # open stressed mid vowels (taught by comparing with the Kokoro teacher's transcriptions)
     ("nossa", "'nO.s6"), ("porta", "'pOR.t6"), ("certo", "'sER.tU"), ("janela", "Za.'nE.l6"), ("papel", "pa.'pEw"),
     ("mesa", "'me.z6"), ("beleza", "be.'le.z6"), ("pessoa", "pe.'so.6"), ("fazer", "fa.'zeR"), ("amor", "a.'moR"),
+    # the four x: [ʃ] (caixa, lixo, xícara), [s] (próxima, máximo), [ks] (táxi, fixo), [z] (exame)
+    ("caixa", "'kaj.S6"), ("lixo", "'li.SU"), ("xícara", "'Si.ka.r6"), ("taxa", "'ta.S6"), ("próxima", "'prO.si.m6"),
+    ("máximo", "'ma.si.mU"), ("trouxe", "'trow.sI"), ("táxi", "'ta.ksi"), ("fixo", "'fi.ksU"),
+    ("oxigênio", "o.ksi.'Ze.ni.U"), ("exame", "e.'za.mI"), ("texto", "'tes.tU"),
 ])
 def test_portuguese_words(word, expected):
     assert g2p_pt.transcribe(word) == expected + " ."

@@ -65,7 +65,7 @@ Requer Python 3.10 ou mais novo.
 
 Texto em **português brasileiro** ou **inglês** vira fala. A frente é a mesma para os dois motores:
 
-1. **Texto → fonemas.** No português, por regras: dígrafos, nasais, "t/d" antes de "i", "r"/"s"/"x", sílaba tônica e números por extenso. No inglês, pelo dicionário CMUdict (~126 mil palavras), com regras para palavras que não estão nele, como nomes inventados.
+1. **Texto → fonemas.** No português, por regras: dígrafos, nasais, "t/d" antes de "i", "r"/"s"/"x" (com listas para o "x" de "próximo" e de "táxi"), sílaba tônica e números por extenso. No inglês, pelo dicionário CMUdict (~126 mil palavras), com regras para palavras que não estão nele, como nomes inventados.
 2. **Entonação.** Afirmação cai no fim, pergunta sim/não sobe, pergunta com "where/what" cai, exclamação tem pico mais alto, vírgula deixa a frase em suspenso.
 3. **Som**, por um de dois motores (`Speaker(engine=...)`):
    - `"formant"` (padrão): cada fonema tem duração e alvos de formantes, a coarticulação suaviza a passagem e um sintetizador em cascata/paralelo no estilo Klatt gera o áudio. Soa robótico e retrô, mas é minúsculo e estica para qualquer voz, de fada a gigante.
@@ -91,7 +91,7 @@ npc = Speaker.random(42).but(engine="natural")                    # uma voz natu
 | | português (CER) |
 |---|---|
 | formantes | 0,23 |
-| natural, voz masculina / feminina / NPCs sorteados | 0,08 / 0,11 / 0,10–0,12 |
+| natural, voz masculina / feminina / NPCs sorteados | 0,045 / 0,042 / 0,033–0,037 |
 | o professor (Kokoro) | 0,003 |
 
 No inglês, os formantes ficam entre 0,04 e 0,06 conforme a voz.
