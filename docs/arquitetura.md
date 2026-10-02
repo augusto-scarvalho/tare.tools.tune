@@ -328,6 +328,7 @@ O mar e a floresta já estavam perto. Com amostras CC0 do Freesound (só para an
 
 **Magias (`spell`): comparadas com efeitos de magia de jogos** (não existem gravações reais de magia, então a régua são sons desenhados por outros).
 - **Fogo:** a bola de fogo de referência é sobretudo grave (centroide ~280 Hz). A nossa era um chiado médio-agudo; ganhou o ronco grave ao sair da mão e no impacto.
+  Em viagem, loops de chama CC0 são mais fortes em 63 Hz (−20 a −30 dB em 1–4 kHz). O nosso tinha o pico em 500 Hz; agora é um ronco grave com o crepitar por cima.
 - **Gelo:** tinha só agudo. O lançar ganhou corpo nos médios (a geada se formando); o impacto ganhou o baque do bloco, com menos cacos lá em cima.
 - **Raio:** o impacto era só trovão grave (centroide ~100 Hz). Agora o raio cai primeiro, com estalo brilhante e crepitar, e o trovão rola depois.
 - **Cura:** os sinos tinham um ronco grave por baixo (a nota "hum" do sino). Agora são carrilhões de vidro sobre um coro baixinho.
@@ -340,6 +341,7 @@ O mar e a floresta já estavam perto. Com amostras CC0 do Freesound (só para an
   - raízes arrancadas: ronco terroso em 63–250 Hz.
 
   A versão antiga tinha bolhas d'água e um coaxar; agora é folhagem com rajadas, troncos rangendo e, no impacto, a terra se abrindo.
+- **Carregar e viajar:** cargas abertas (32 sons de "charge up", risers) variam demais para servir de régua. Umas crescem até o fim, outras têm pico no meio e somem, e o brilho sobe de −3 a +5 oitavas. As nossas cargas ficam dentro dessa variação e foram mantidas. Os loops de projétil mágico também variam muito; só o fogo tinha um erro claro.
 
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.

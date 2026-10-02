@@ -138,10 +138,10 @@ def spell(fx: Fx):
                  swell(0.02, 0.8, 500 * low, 200 * low, gain=0.5, wobble=(14, 0.8), amp=decay_curve(3)),
                  boom(0.0, 0.9, 140 * low, 1.6),   # the roar of the fire leaving the hand
                  crackle(0.05, 0.8, [(0, 150), (1, 0)], gain=0.4)]
-        elif e == "travel":
-            L = [bed(0, trip + LOOP, 700 * low, 0.6, 1.0, (13, 0.8)), bed(0, trip + LOOP, 110 * low, 0.9, 0.6, (6, 0.5),
-                                                                       "brown", "low"),
-                 crackle(0, trip + LOOP, [(0, 70), (1, 70)])]
+        elif e == "travel":   # flame loops roar lowest (strongest at 63 Hz, -20 to -30 dB at 1-4 kHz), crackling on top
+            L = [bed(0, trip + LOOP, 110 * low, 0.9, 1.0, (6, 0.5), "brown", "low"),
+                 bed(0, trip + LOOP, 500 * low, 0.6, 0.25, (13, 0.8), "brown"),
+                 crackle(0, trip + LOOP, [(0, 70), (1, 70)], gain=0.4)]
         else:
             L = [boom(0, 2.0 + s, 120 * low, 1.2), burst(0.0, 0.06, 1500, 0.5),
                  swell(0.0, 1.5 + s, 700 * low, 250 * low, gain=0.5, wobble=(14, 0.8), amp=decay_curve(3)),
