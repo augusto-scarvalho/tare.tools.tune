@@ -80,6 +80,50 @@ No código, use `speaker_from("kokoro:pf_dora")`; no bestiário, `"voice": "koko
 
 **Inteligibilidade** medida com o Whisper (`tools/intelligibility.py`) em 16 frases de diálogo de jogo por idioma: no inglês, CER entre 0,04 e 0,06 conforme a voz (a maioria das frases sai perfeita); no português, entre 0,24 e 0,34 (cerca de 70 a 75% dos caracteres certos). O português ainda é o ponto a melhorar.
 
+### Quem fala com qual motor
+
+Cada motor tem seu ponto forte, e `speech.casting.cast` faz a escolha pelo papel do personagem:
+
+| papel (`role`) | para quê | voz |
+|---|---|---|
+| `main` | falas importantes de NPC | natural (Kokoro), se instalado; senão, formantes |
+| `minor` | o resto dos NPCs | formantes, voz única por nome |
+| `crowd` | burburinho de fundo | formantes, língua inventada |
+| `creature` | criaturas que falam | a voz da criatura, balbuciando |
+| `robot` | máquinas, golems | formantes robóticos, palavras reais |
+
+A voz natural soa humana, mas é pesada, não é procedural e não vira spec. A de formantes é leve, determinística, varia sem fim e sabe **balbuciar** (`style`). Os três estilos de balbucio mantêm o ritmo, as tônicas e a pontuação do texto, então perguntas continuam subindo:
+- `gibberish`: língua inventada com os sons do idioma, como os Sims;
+- `animalese`: uma nota por sílaba, rápida e aguda, como Animal Crossing;
+- `mumble`: tudo em "mm".
+
+```python
+from creaturesynth.speech.casting import cast
+
+rei = cast("main", "rei", gender="m")              # Kokoro se instalado
+povo = cast("crowd", "povo")                       # balbucio
+rato = cast("creature", creature=rato_criatura)    # pequeno: animalese
+audio = rei.render("Salve o reino!")
+```
+
+## Calibração com CLAP
+
+O [CLAP](https://huggingface.co/laion/clap-htsat-unfused) é um modelo que põe som e texto no mesmo espaço: dá para perguntar "isto soa como um gato miando?". O creaturesynth usa dois modelos: um para otimizar (`laion/clap-htsat-unfused`) e outro, que nunca é usado na otimização, como juiz (`laion/larger_clap_general`). Assim o ajuste não "decora" o gosto de um modelo só.
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -e ".[clap]"
+creaturesynth design "a small cat meowing" -o gato.json --wav gato.wav   # criatura a partir de um texto
+creaturesynth match miado.wav --archetype mammal -o gato.json            # criatura parecida com uma gravação
+creaturesynth judge                                                      # o que o juiz ouve em cada arquétipo
+```
+
+- `design` testa todos os arquétipos (ou só os de `--archetype`), refina os 2 melhores com uma estratégia evolutiva e devolve a entrada pronta para o bestiário (`-o`). Leva cerca de 1 minuto em CPU.
+- `match` combina o CLAP com medidas da gravação (curva de tom, envelope, espectro, duração, número de sílabas).
+- O resultado é sempre uma criatura procedural comum: as variações por indivíduo e por take continuam valendo.
+
+**O que o juiz disse.** Ele acerta o arquétipo em 32% dos casos, contra 10% do acaso, e chama 56% dos sons não-chip de "som 8-bit de videogame". Para atacar isso, há uma camada de realismo opcional: ruído de fundo, reflexões curtas de sala, perda de agudos, oscilação de volume e sopro. O ajuste com o otimizador baixou o "8-bit" para 46% no juiz, mas não melhorou o acerto de arquétipo. Por isso a camada fica desligada por padrão. Para ligar: `creaturesynth.archetypes.REALISM.update(REALISM_CLAP)`.
+
 ## Duas formas de usar
 
 ### 1. Offline: gerar assets para qualquer engine
@@ -102,14 +146,19 @@ creaturesynth bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamad
 }
 ```
 
-`extends` herda de outra entrada (evoluções, variantes) e `random` sorteia uma criatura nova. Falas de NPC entram numa seção `speakers`, com uma voz e as falas de cada um:
+`extends` herda de outra entrada (evoluções, variantes) e `random` sorteia uma criatura nova. Falas de NPC entram numa seção `speakers`, com o papel ou a voz e as falas de cada um:
 
 ```json
 "speakers": {
+  "rei":      {"role": "main", "gender": "m", "lines": {"missao": "Salve o reino!"}},
   "ferreiro": {"voice": "deep", "lang": "pt", "lines": {"oi": "Bem-vindo à forja, viajante!"}},
-  "guarda":   {"voice": "npc:12", "lines": {"alto": "Alto lá! Quem vem?"}}
+  "guarda":   {"voice": "npc:12", "lines": {"alto": "Alto lá! Quem vem?"}},
+  "povo":     {"role": "crowd", "lines": {"conversa": "Que dia bonito hoje."}},
+  "lobo":     {"creature": "wolf", "lines": {"oi": "Olá, viajante."}}
 }
 ```
+
+`"natural_voices": false` no topo do arquivo (ou `bake --no-natural`) deixa todas as falas procedurais.
 
 Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por chamado.
 
@@ -140,6 +189,8 @@ creaturesynth gen1 pikachu                                            # reprodu�
 creaturesynth gen1 all -o gen1/
 creaturesynth say "Olá, viajante!" --voice child -o ola.wav --phonemes  # fala
 creaturesynth say "Hello there!" --lang en --voice npc:7 --pitch 140
+creaturesynth say "Que dia bonito!" --role crowd --name povo            # balbucio de multidão
+creaturesynth say "Oi, tudo bem?" --voice cute --style animalese
 creaturesynth voices                                                  # vozes prontas
 ```
 

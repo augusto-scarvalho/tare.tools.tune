@@ -7,7 +7,7 @@ import json
 from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "creaturesynth.voice"
-VERSION = 2   # 2: added `speech`
+VERSION = 3   # 2: added `speech`; 3: realism (air, room, lowpass, shimmer)
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -35,6 +35,7 @@ class Syllable:
     release: float = 0.05             # seconds
     amp: Curve = field(default_factory=lambda: [(0.0, 1.0), (1.0, 1.0)])     # loudness over time
     gain: float = 1.0                 # peak level relative to the other syllables
+    shimmer: float = 0.0              # random cycle-scale loudness wobble (natural voices are not steady)
 
 
 @dataclass
@@ -87,6 +88,9 @@ class Voice:
     space: float = 0.0                # reverb tail length, seconds (engines may use their own reverb)
     wet: float = 0.2                  # reverb mix
     gain: float = 1.0                 # final peak level (calls: idle is quieter than attack)
+    air: float = 0.0                  # recording noise floor, 0..1 (-70 .. -30 dB under the peak)
+    room: float = 0.0                 # short early reflections, 0..1 mix (a real space, not a tail)
+    lowpass: float = 0.0              # Hz, 0 = off: distance/microphone loss of highs
     seed: int = 0                     # drives every random stream of the renderer
     meta: dict = field(default_factory=dict)  # informational: archetype, call, traits...
 

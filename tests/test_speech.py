@@ -7,6 +7,7 @@ from creaturesynth import Creature, Voice, read_wav, render
 from creaturesynth.bake import bake, load_bestiary
 from creaturesynth.cli import main
 from creaturesynth.runtime import VoiceBank
+from creaturesynth.spec import VERSION
 from creaturesynth.speech import PRESETS, Speaker, g2p_en, g2p_pt
 
 SR = 22_050
@@ -68,7 +69,7 @@ def test_deterministic_and_spec_round_trip():
     assert np.array_equal(render(v, SR), render(s.voice("Cuidado com os lobos!", "pt"), SR))
     again = Voice.from_json(v.to_json())
     assert again == v and np.array_equal(render(again, SR), render(v, SR))
-    assert json.loads(v.to_json())["version"] == 2
+    assert json.loads(v.to_json())["version"] == VERSION
 
 
 def test_spec_v1_documents_still_load():

@@ -16,6 +16,7 @@ keywords = ["procedural audio", "sound design", "game audio", "creature", "synth
 plot = ["matplotlib>=3.7"]
 asr = ["faster-whisper>=1.0"]   # tools/intelligibility.py
 neural = ["kokoro>=0.9", "soundfile"]   # natural voices (pulls PyTorch; CPU wheels work)
+clap = ["transformers>=4.40", "torch", "soundfile"]   # design/match/judge creatures with CLAP
 dev = ["pytest>=8", "ruff>=0.6", "matplotlib>=3.7"]
 
 [project.scripts]

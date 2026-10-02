@@ -16,7 +16,7 @@ import numpy as np
 from .. import rng
 from ..render import DEFAULT_SR, render
 from ..spec import SpeechProgram, Voice
-from . import g2p_en, g2p_pt
+from . import babble, g2p_en, g2p_pt
 from .neural import NeuralSpeaker
 from .phonetics import FRAME_RATE, frames
 from .units import transcription
@@ -44,13 +44,25 @@ class Speaker:
     def phonemes(self, text: str, lang: str = "pt") -> str:
         return transcription(_frontend(lang).text_to_phrases(text))
 
-    def speech(self, text: str, lang: str = "pt") -> SpeechProgram:
+    def speech(self, text: str, lang: str = "pt", style: str = "speech") -> SpeechProgram:
+        """`style`: "speech" (the words), or non-verbal "gibberish", "animalese", "mumble" (see babble.py)."""
         g2p = _frontend(lang)
         phrases = g2p.text_to_phrases(text)
         if not phrases:
             raise ValueError("nothing to say")
-        tracks = frames(phrases, lang, pitch=self.pitch, tract=self.tract, range_=self.range, rate=self.rate,
-                        breath=self.breath)
+        if style not in babble.STYLES:
+            raise ValueError(f"unknown style {style!r}; choose from {', '.join(babble.STYLES)}")
+        seed = rng.seed32("babble", text, self.name)
+        pitch, rate, range_, notes = self.pitch, self.rate, self.range, None
+        if style == "gibberish":
+            phrases = babble.gibberish(phrases, lang, seed)
+        elif style == "mumble":
+            phrases = babble.mumble(phrases)
+        elif style == "animalese":  # fast, high and sing-song
+            pitch, rate, range_ = pitch * 1.5, rate * 2.2, range_ * 0.5
+            notes = babble.melody(phrases, seed)
+        tracks = frames(phrases, lang, pitch=pitch, tract=self.tract, range_=range_, rate=rate,
+                        breath=self.breath, melody=notes)
         if self.whisper:
             av = np.asarray(tracks["av"])
             tracks["ah"] = [round(float(x), 4) for x in np.asarray(tracks["ah"]) + self.whisper * av * 0.9]
@@ -59,13 +71,13 @@ class Speaker:
                              rough=(self.rough, 32.0), sub=self.sub, text=text, lang=lang,
                              phonemes=transcription(phrases))
 
-    def voice(self, text: str, lang: str = "pt", seed: int | None = None) -> Voice:
-        seed = rng.seed32("speech", text, lang, repr(self)) if seed is None else seed
-        return Voice(speech=[self.speech(text, lang)], crush=self.crush, drive=self.drive, space=self.space,
-                     wet=0.18, seed=seed, meta={"speaker": self.name, "text": text, "lang": lang})
+    def voice(self, text: str, lang: str = "pt", seed: int | None = None, style: str = "speech") -> Voice:
+        seed = rng.seed32("speech", text, lang, repr(self), style) if seed is None else seed
+        return Voice(speech=[self.speech(text, lang, style)], crush=self.crush, drive=self.drive, space=self.space,
+                     wet=0.18, seed=seed, meta={"speaker": self.name, "text": text, "lang": lang, "style": style})
 
-    def render(self, text: str, lang: str = "pt", sr: int = DEFAULT_SR) -> np.ndarray:
-        return render(self.voice(text, lang), sr)
+    def render(self, text: str, lang: str = "pt", sr: int = DEFAULT_SR, style: str = "speech") -> np.ndarray:
+        return render(self.voice(text, lang, style=style), sr)
 
     def but(self, **changes) -> "Speaker":
         return replace(self, **changes)

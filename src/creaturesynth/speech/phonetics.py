@@ -252,7 +252,8 @@ def _smooth(x: np.ndarray, ms: float) -> np.ndarray:
     return np.convolve(pad, w, mode="same")[n:-n]
 
 
-def _intonation(segs: list[_Seg], sylls: list[dict], t: np.ndarray, pitch: float, rng_: float, lang: str):
+def _intonation(segs: list[_Seg], sylls: list[dict], t: np.ndarray, pitch: float, rng_: float, lang: str,
+                melody: list[float] | None = None):
     """Pitch keypoints per syllable nucleus -> smooth f0 curve over the grid."""
     starts = np.cumsum([0.0] + [s.dur for s in segs])
     nuclei = {s.vowel_of: (starts[i], starts[i + 1]) for i, s in enumerate(segs) if s.vowel_of >= 0}
@@ -294,6 +295,8 @@ def _intonation(segs: list[_Seg], sylls: list[dict], t: np.ndarray, pitch: float
                        "?": (1 + 0.2 * R) if lang == "pt" else (1 + 0.55 * R)}[kind]
                 v = nuclear_end + (pitch * end - nuclear_end) * frac
                 pts = [(a, v), (b, v)]
+            if melody is not None:  # babble: one note per syllable on top of the contour
+                pts = [(x, y * 2 ** (melody[i % len(melody)] / 12)) for x, y in pts]
             xs += [p[0] for p in pts]
             ys += [p[1] for p in pts]
     xs.append(starts[-1])
@@ -304,7 +307,7 @@ def _intonation(segs: list[_Seg], sylls: list[dict], t: np.ndarray, pitch: float
 
 
 def frames(phrases: list[Phrase], lang: str, pitch: float = 120.0, tract: float = 1.0, range_: float = 1.0,
-           rate: float = 1.0, breath: float = 0.05) -> dict[str, list[float]]:
+           rate: float = 1.0, breath: float = 0.05, melody: list[float] | None = None) -> dict[str, list[float]]:
     """Frame tracks at FRAME_RATE for the formant synthesiser."""
     segs, sylls = segments(phrases, lang, rate)
     starts = np.cumsum([0.0] + [s.dur for s in segs])
@@ -345,7 +348,7 @@ def frames(phrases: list[Phrase], lang: str, pitch: float = 120.0, tract: float 
         tracks[name] = col(lambda s, j=j, d=default: s.fric[0][j] if s.fric else d) * (tract if j < 2 else 1)
     for name, j, default in (("fb", 0, 5000), ("wb", 1, 1500), ("gb", 2, 0.0)):
         tracks[name] = col(lambda s, j=j, d=default: s.fric[1][j] if len(s.fric) > 1 else d) * (tract if j < 2 else 1)
-    tracks["f0"] = _intonation(segs, sylls, t, pitch, range_, lang)
+    tracks["f0"] = _intonation(segs, sylls, t, pitch, range_, lang, melody)
 
     step = GRID / FRAME_RATE
     picks = np.arange(0, n, step)

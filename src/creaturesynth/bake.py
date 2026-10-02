@@ -17,10 +17,18 @@ Bestiary format (JSON)::
 Spoken lines go in an optional ``speakers`` section::
 
       "speakers": {
+        "king":       {"role": "main", "gender": "m", "lines": {"quest": "Salve o reino!"}},
         "blacksmith": {"voice": "deep", "lang": "pt", "lines": {"greet": "Bem-vindo à forja!"}},
         "guard":      {"voice": "npc:12", "lines": {"halt": "Alto lá!"}},
+        "villager":   {"role": "crowd", "lines": {"chat": "Que dia bonito hoje."}},
+        "wolf":       {"creature": "wolf", "lines": {"hi": "Olá, viajante."}},
         "fairy":      {"voice": {"preset": "fairy", "rate": 1.2}, "lang": "en", "lines": {"hi": "Hi there!"}}
       }
+
+``role`` picks the engine (see speech/casting.py): ``main`` lines get a natural voice (Kokoro)
+when it is installed, everyone else a formant voice; ``crowd`` and ``creature`` babble.
+``style`` (speech, gibberish, animalese, mumble), ``gender`` (f, m) and ``voice`` override.
+A top-level ``"natural_voices": false`` keeps every line procedural.
 """
 import json
 import os
@@ -36,15 +44,27 @@ from .audio_io import write_wav
 from .calls import CALLS
 from .creature import Creature
 from .render import DEFAULT_SR, render
-from .speech import NeuralSpeaker, Speaker, speaker_from
+from .speech import Speaker
+from .speech.casting import Cast, cast
 
 MANIFEST = "manifest.json"
+SPEAKER_KEYS = {"voice", "role", "gender", "creature", "style", "lang", "lines"}
 
 
-def speaker_from_entry(name: str, entry: Mapping):
-    from dataclasses import replace
+def speaker_from_entry(name: str, entry: Mapping, creatures: Mapping[str, Creature] | None = None,
+                       lang: str = "pt", natural: bool | None = None) -> Cast:
+    if unknown := set(entry) - SPEAKER_KEYS:
+        raise ValueError(f"speaker {name!r}: unknown field(s) {', '.join(sorted(unknown))}")
+    creature = None
+    if "creature" in entry:
+        if entry["creature"] not in (creatures or {}):
+            raise ValueError(f"speaker {name!r}: unknown creature {entry['creature']!r}")
+        creature = creatures[entry["creature"]]
+    role = entry.get("role", "creature" if creature else "minor")
+    voice = entry.get("voice", None if "role" in entry or "gender" in entry or creature else "default")
     try:
-        return replace(speaker_from(entry.get("voice", "default")), name=name)
+        return cast(role, name, entry.get("lang", lang), entry.get("gender"), creature, voice,
+                    entry.get("style"), natural)
     except TypeError as e:
         raise ValueError(f"speaker {name!r}: {e}") from None
 
@@ -72,15 +92,18 @@ def creature_from_entry(name: str, entry: Mapping, entries: Mapping[str, Mapping
         raise ValueError(f"creature {name!r}: {e}") from None
 
 
-def load_bestiary(source: str | Path | Mapping) -> tuple[dict[str, Creature], dict]:
-    """Returns (creatures by name, settings)."""
+def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> tuple[dict[str, Creature], dict]:
+    """Returns (creatures by name, settings). `natural` (default: the file's "natural_voices", else
+    whether Kokoro is installed) decides if "main" speakers get natural voices."""
     data = source if isinstance(source, Mapping) else json.loads(Path(source).read_text())
     entries = data.get("creatures", {})
     creatures = {name: creature_from_entry(name, e, entries) for name, e in entries.items()}
     settings = {k: data[k] for k in ("sample_rate", "takes", "calls") if k in data}
+    natural = data.get("natural_voices") if natural is None else natural
     if data.get("speakers"):
-        settings["speakers"] = {name: (speaker_from_entry(name, e), e.get("lang", data.get("lang", "pt")),
-                                       dict(e.get("lines", {})))
+        lang = data.get("lang", "pt")
+        settings["speakers"] = {name: (speaker_from_entry(name, e, creatures, lang, natural),
+                                       e.get("lang", lang), dict(e.get("lines", {})))
                                 for name, e in data["speakers"].items()}
     return creatures, settings
 
@@ -100,10 +123,10 @@ def _bake_one(job):
 
 
 def _bake_line(job):
-    name, speaker, lang, line_id, text, sr, out_dir, specs = job
+    name, who, lang, line_id, text, sr, out_dir, specs = job
     stem = f"{name}/{line_id}"
-    voice = None if isinstance(speaker, NeuralSpeaker) else speaker.voice(text, lang)  # natural voices: no spec
-    audio = render(voice, sr) if voice else speaker.render(text, lang, sr)
+    voice = who.voice(text, lang)  # natural voices have no spec
+    audio = render(voice, sr) if voice else who.render(text, lang, sr)
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
     entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4)}
     if specs and voice:
@@ -114,9 +137,11 @@ def _bake_line(job):
 
 def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable[str] | None = None,
          takes: int = 4, sr: int = DEFAULT_SR, specs: bool = True, workers: int | None = None,
-         speakers: Mapping[str, tuple["Speaker", str, Mapping[str, str]]] | None = None) -> dict:
+         speakers: Mapping[str, tuple["Cast | Speaker", str, Mapping[str, str]]] | None = None) -> dict:
     """Render every creature x call x take (and every speaker line) to ``out_dir``; write ``manifest.json``."""
     out_dir = Path(out_dir)
+    speakers = {name: (who if isinstance(who, Cast) else Cast(who, name=name), lang, lines)
+                for name, (who, lang, lines) in (speakers or {}).items()}
     calls = list(calls or CALLS)
     for call in calls:
         if call not in CALLS:
@@ -124,7 +149,7 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
     jobs = [(name, c, call, take, sr, str(out_dir), specs)
             for name, c in creatures.items() for call in calls for take in range(takes)]
     line_jobs = [(name, sp, lang, line_id, text, sr, str(out_dir), specs)
-                 for name, (sp, lang, lines) in (speakers or {}).items() for line_id, text in lines.items()]
+                 for name, (sp, lang, lines) in speakers.items() for line_id, text in lines.items()]
     workers = workers or min(os.cpu_count() or 1, 8)
     if workers > 1 and len(jobs) + len(line_jobs) > 1:
         with ProcessPoolExecutor(workers) as pool:
@@ -141,9 +166,10 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
     for name, call, take, entry in results:
         manifest["creatures"][name]["calls"][call][take] = entry
     if speakers:
-        manifest["speakers"] = {name: {"speaker": asdict(sp), "lang": lang, "lines": {},
-                                       "engine": "kokoro" if isinstance(sp, NeuralSpeaker) else "formant"}
-                                for name, (sp, lang, _) in speakers.items()}
+        manifest["speakers"] = {name: {"speaker": asdict(who.speaker), "lang": lang, "role": who.role,
+                                       "style": who.style, "engine": "kokoro" if who.natural else "formant",
+                                       "lines": {}}
+                                for name, (who, lang, _) in speakers.items()}
         for name, line_id, entry in line_results:
             manifest["speakers"][name]["lines"][line_id] = entry
     out_dir.mkdir(parents=True, exist_ok=True)

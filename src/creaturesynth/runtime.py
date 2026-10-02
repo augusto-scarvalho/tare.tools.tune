@@ -78,7 +78,8 @@ class VoiceBank:
         return self._future(creature, call, take).result()
 
     def line(self, speaker, text: str, lang: str = "pt", block: bool = True) -> np.ndarray | None:
-        """A spoken line (cached); with ``block=False`` returns None until it is ready."""
+        """A spoken line (cached); with ``block=False`` returns None until it is ready.
+        `speaker`: a Speaker, NeuralSpeaker or speech.casting.Cast (which also carries the babble style)."""
         k = ("line", speaker, text, lang)
         with self._lock:
             fut = self._cache.get(k)

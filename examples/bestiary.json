@@ -25,11 +25,16 @@
  },
  "lang": "pt",
  "speakers": {
+  "rei":       {"role": "main", "gender": "m", "lines": {"missao": "Traga o cristal antes do anoitecer, e o reino será seu."}},
+  "rainha":    {"role": "main", "gender": "f", "lines": {"aviso": "Cuidado com a floresta ao norte."}},
   "ferreiro":  {"voice": "deep", "lines": {"oi": "Bem-vindo à forja, viajante!", "preco": "Essa espada custa cinquenta moedas."}},
   "guarda":    {"voice": "npc:12", "lines": {"alto": "Alto lá! Quem vem?"}},
   "crianca":   {"voice": "child", "lines": {"oi": "Você viu o dragão?"}},
   "fada":      {"voice": {"preset": "fairy", "rate": 1.1}, "lang": "en", "lines": {"hi": "Hello, traveler! Follow me."}},
   "ogro":      {"voice": "monster", "lines": {"grr": "Saia da minha ponte!"}},
-  "robo":      {"voice": "robot", "lang": "en", "lines": {"scan": "Scanning. No threats detected."}}
+  "robo":      {"voice": "robot", "lang": "en", "lines": {"scan": "Scanning. No threats detected."}},
+  "povo":      {"role": "crowd", "lines": {"conversa": "Você soube da feira? Dizem que vai chover amanhã."}},
+  "filhote":   {"creature": "cub", "lines": {"oi": "Oi! Quer brincar comigo?"}},
+  "ogro_fala": {"creature": "ogre", "lines": {"ponte": "Ninguém passa pela minha ponte!"}}
  }
 }

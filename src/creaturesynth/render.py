@@ -140,6 +140,8 @@ def render_syllable(s: Syllable, sr: int, k: int) -> np.ndarray:
     if depth:
         wobble = np.sin(2 * np.pi * rate * t + 3 * smooth_noise(rng.key(k, "rough"), n, sr, 8))
         env *= 1 - depth * (0.5 + 0.5 * wobble)
+    if s.shimmer:
+        env *= np.clip(1 + s.shimmer * smooth_noise(rng.key(k, "shimmer"), n, sr, 60), 0, None)
     rate, depth, sharp = s.pulses
     if depth:
         env *= 1 - depth + depth * (0.5 - 0.5 * np.cos(2 * np.pi * rate * t)) ** sharp
@@ -161,6 +163,17 @@ def _reverb(x: np.ndarray, sr: int, seconds: float, wet: float, k: int) -> np.nd
     dry = np.concatenate([x, np.zeros(n)])
     tail = fftconvolve(dry, ir)[: len(dry)]
     return (1 - wet) * dry + wet * tail * (np.max(np.abs(x)) / (np.max(np.abs(tail)) + 1e-12))
+
+
+def _room(x: np.ndarray, sr: int, mix: float, k: int) -> np.ndarray:
+    """A small space: a few dozen early reflections over ~60 ms."""
+    n = int(0.06 * sr)
+    ir = np.zeros(n)
+    taps = (rng.uniforms(rng.key(k, "taps"), 40) * (n - 1)).astype(int)
+    ir[taps] = rng.noise(rng.key(k, "gains"), 40) * np.exp(-3 * taps / n)
+    ir[0] = 1.0
+    wet = fftconvolve(x, ir)[: len(x)]
+    return (1 - mix) * x + mix * wet / (np.max(np.abs(wet)) + 1e-12) * np.max(np.abs(x))
 
 
 def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
@@ -186,6 +199,13 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
         out = _crush(out, voice.crush)
     if voice.drive:
         out = np.tanh(voice.drive * out) / np.tanh(voice.drive)
+    if voice.lowpass:
+        out = sosfilt(butter(2, min(voice.lowpass, 0.45 * sr) / (sr / 2), output="sos"), out)
+    if voice.room:
+        out = _room(out, sr, voice.room, rng.key(voice.seed, "room"))
+    if voice.air:
+        pink = sosfilt(butter(1, 1000 / (sr / 2), output="sos"), rng.noise(rng.key(voice.seed, "air"), len(out)))
+        out = out + pink / (np.max(np.abs(pink)) + 1e-12) * 10 ** ((-70 + 40 * voice.air) / 20)
     if voice.space:
         out = _reverb(out, sr, voice.space, voice.wet, rng.key(voice.seed, "space"))
     fade = min(int(0.004 * sr), len(out))

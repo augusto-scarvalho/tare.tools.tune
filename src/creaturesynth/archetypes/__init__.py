@@ -19,6 +19,13 @@ VOWELS = {  # first four formants (Hz) of a human-sized vocal tract
 }
 
 
+# Applied to every creature voice. Off by default: the CLAP fit below made sounds less "8-bit" to the
+# held-out judge (56% -> 46%) but did not improve archetype recognition (docs/arquitetura.md, CLAP).
+# Opt in with REALISM.update(REALISM_CLAP).
+REALISM = {"air": 0.0, "room": 0.0, "lowpass": 0.0, "shimmer": 0.0, "jitter": 1.0, "breath": 0.0}
+REALISM_CLAP = {"air": 0.0, "room": 1.0, "lowpass": 12430.0, "shimmer": 0.31, "jitter": 1.0, "breath": 0.4}
+
+
 def archetype(name: str):
     def register(fn: Callable[["Ctx"], Voice]):
         ARCHETYPES[name] = fn
@@ -64,6 +71,14 @@ class Ctx:
 
     def voice(self, syllables: list[Syllable], **kw) -> Voice:
         kw.setdefault("gain", 10 ** (-14 * (1 - self.intensity) / 20))  # idle ~ -9 dB vs attack
+        r = REALISM
+        for key in ("air", "room", "lowpass"):
+            kw.setdefault(key, r[key])
+        for s in syllables:
+            s.shimmer = max(s.shimmer, r["shimmer"])
+            s.jitter *= r["jitter"]
+            if s.source != "noise":
+                s.breath = min(s.breath + r["breath"], 0.9)
         return Voice(syllables=syllables, **kw)
 
 

@@ -26,11 +26,9 @@ class Genome:
         return uniform(key(self.species, fnv1a(gene)))
 
     def u(self, gene: str) -> float:
-        """Gene value in [0, 1]."""
-        if gene in self.overrides:
-            return min(max(float(self.overrides[gene]), 0.0), 1.0)
+        """Gene value in [0, 1]. A pinned gene replaces the species value; individuals still vary around it."""
         g = fnv1a(gene)
-        v = self.base(gene)
+        v = min(max(float(self.overrides[gene]), 0.0), 1.0) if gene in self.overrides else self.base(gene)
         if self.variation:
             v += self.variation * tri(key(self.species, g, self.individual, 1))
         if self.take_variation:

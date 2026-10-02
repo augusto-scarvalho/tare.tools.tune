@@ -25,14 +25,15 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `genome.py` | genes por nome: estáveis por espécie, variação por indivíduo e por take |
 | `calls.py` | `Traits` (tamanho, agressividade) e `Call` (idle, alert, attack, hurt, death) |
 | `archetypes/` | `natural.py`, `fantasy.py`, `retro.py`: cada arquétipo é `design(ctx) -> Voice` |
-| `spec.py` | `Voice`, `Syllable`, `ChipProgram` + JSON (v1) |
+| `spec.py` | `Voice`, `Syllable`, `ChipProgram`, `SpeechProgram` + JSON (v3) |
 | `render.py` | DSP fonte-filtro |
 | `chip.py` | motor Game Boy (2 pulsos + ruído) e leitor dos dados da 1ª geração |
 | `creature.py` | API principal (`Creature`) |
 | `bake.py` | uso offline: bestiário → WAVs + manifest |
 | `runtime.py` | uso em jogo Python: `VoiceBank` |
 | `cli.py` | linha de comando |
-| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `Speaker` |
+| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `neural.py` (Kokoro), `Speaker` |
+| `clap.py`, `designer.py`, `analysis.py` | calibração: CLAP (texto ↔ som), busca evolutiva (`design`, `match`), medidas de gravações |
 
 ## Determinismo
 
@@ -58,7 +59,7 @@ Vetores de teste para conferir uma port estão em `tests/test_rng_genome.py`. O 
 
 **Atenção:** mudar a fórmula de um arquétipo muda a voz das espécies que já existem. Assets "bakeados" não sofrem com isso, porque guardam o WAV e o spec.
 
-## Spec (versão 2)
+## Spec (versão 3)
 
 Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 
@@ -73,10 +74,13 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 | `crush` | 0..1, reduz taxa de amostragem e bits |
 | `space`, `wet` | cauda de reverb em segundos e mix. A engine pode trocar pelo reverb dela |
 | `gain` | pico final relativo a -1 dBFS (o idle sai ~9 dB abaixo do ataque) |
+| `lowpass` | Hz, 0 = desligado: perda de agudos (distância, microfone) (v3) |
+| `room` | 0..1, mix de reflexões curtas de sala (v3) |
+| `air` | 0..1, ruído de fundo de gravação, de -70 a -30 dB do pico (v3) |
 | `seed` | semente de todos os fluxos aleatórios |
 | `meta` | informativo (arquétipo, chamado, traços) |
 
-**Syllable**: `start` e `dur` (s); `pitch` (curva em Hz); `source` (`glottal`, `sine`, `pulse` ou `noise`); `pulse_width`; `brightness`; `vibrato` [Hz, semitons]; `jitter` (semitons); `sub`; `rough` [profundidade, Hz]; `breath`; `ring` [Hz, mix]; `formants` [[Hz, largura, ganho], ...]; `mouth` (curva de escala dos formantes); `pulses` [Hz, profundidade, nitidez]; `attack` e `release` (s); `amp` (curva); `gain`.
+**Syllable**: `start` e `dur` (s); `pitch` (curva em Hz); `source` (`glottal`, `sine`, `pulse` ou `noise`); `pulse_width`; `brightness`; `vibrato` [Hz, semitons]; `jitter` (semitons); `sub`; `rough` [profundidade, Hz]; `breath`; `ring` [Hz, mix]; `formants` [[Hz, largura, ganho], ...]; `mouth` (curva de escala dos formantes); `pulses` [Hz, profundidade, nitidez]; `attack` e `release` (s); `amp` (curva); `gain`; `shimmer` (oscilação aleatória de volume, v3).
 
 Uma curva é `[[t, valor], ...]` com `t` de 0 a 1. O tom é interpolado em escala log; o resto, linear.
 
@@ -90,7 +94,7 @@ Uma curva é `[[t, valor], ...]` com `t` de 0 a 1. O tom é interpolado em escal
 - `fnp`, `fnz`: polo e zero nasais;
 - `fa`/`wa`/`ga` e `fb`/`wb`/`gb`: duas ressonâncias de fricção (Hz, largura, ganho).
 
-Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` como informação. Specs da versão 1 continuam sendo lidos.
+Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` como informação. Specs das versões 1 e 2 continuam sendo lidos.
 
 ## Algoritmo do render (para ports)
 
@@ -116,6 +120,7 @@ Por sílaba, com `n = max(floor(dur·sr), 16)` e `t = i/sr`:
 4. **Envelope**: `amp` interpolado linearmente.
    - Ataque de `A = clamp(floor(attack·sr), 1, n)` amostras, multiplicado por `linspace(0,1,A)²`. O release é igual, invertido.
    - `rough`: `env *= 1 − d·(0.5 + 0.5·sin(2π·rate·t + 3·smooth(key(k,"rough"), 8/s)))`.
+   - `shimmer`: `env *= max(0, 1 + shimmer·smooth(key(k,"shimmer"), 60/s))`.
    - `pulses`: `env *= 1 − d + d·(0.5 − 0.5·cos(2π·rate·t))^nitidez`.
 5. A sílaba é `x·env`, normalizada para pico = `gain`.
 
@@ -124,10 +129,14 @@ Na voz inteira:
 2. Passa-alta Butterworth de 2ª ordem em 40 Hz, depois normaliza para pico 1.
 3. `crush`: sample-and-hold de `1 + floor(11·crush)` amostras, quantizado em `2^(14 − 10·crush)` níveis.
 4. `drive`: `tanh(d·x)/tanh(d)`.
-5. Reverb:
+5. Realismo (v3), na ordem:
+   - `lowpass`: Butterworth de 2ª ordem em `min(lowpass, 0.45·sr)`;
+   - `room`: IR de 60 ms com 1 na amostra 0 e 40 reflexões em `floor(uniforms(key(key(seed,"room"),"taps"), 40)·(N−1))`, ganhos `noise(key(key(seed,"room"),"gains"), 40)·e^(−3·tap/N)`; saída `(1−room)·x + room·molhado·pico(x)/pico(molhado)`;
+   - `air`: `noise(key(seed,"air"), n)` passado por passa-baixa de 1ª ordem em 1 kHz, normalizado para pico 1 e somado com ganho `10^((−70 + 40·air)/20)`.
+6. Reverb:
    - IR: `noise(key(seed,"space"), N)·exp(−6.9·i/N)`, com `N = space·sr`, passada por um passa-baixa Butterworth de 2ª ordem em 5 kHz.
    - Saída: `(1−wet)·seco + wet·cauda·pico(seco)/pico(cauda)`.
-6. Fade de 4 ms no fim e normalização para pico `0.89·gain`.
+7. Fade de 4 ms no fim e normalização para pico `0.89·gain`.
 
 **Fala (`speech/klatt.py`)**, com trilhas interpoladas: amplitudes e `f0` por amostra, coeficientes a cada 48 amostras.
 1. **Fonte:** serra PolyBLEP em `f0` (com jitter), passa-baixa de 1ª ordem em `tilt`, opcionalmente `sub`. Soma-se `av·fonte` com `ah·ruído`; o ruído pulsa com o ciclo glotal quando há vozeamento.
@@ -141,6 +150,21 @@ Na voz inteira:
 **Coeficientes variáveis sem clique:** entre blocos, os filtros carregam o histórico de forma direta I (duas entradas e duas saídas) e recalculam o estado para os coeficientes novos (`render.time_varying`). Reaproveitar o estado do `lfilter` através de uma troca de coeficientes gera um estalo audível a cada transição de fonema.
 
 **Validar uma port:** os fluxos aleatórios devem bater bit a bit (vetores de teste). O áudio não será bit-exato, por ordem de operações em ponto flutuante e convolução por FFT. Para ter material de comparação, rode `creaturesynth bake` com specs: cada entrada do manifest traz o spec e o WAV de referência. Renderize os specs na engine e compare os espectros. Com `space = 0` a diferença deve ser mínima.
+
+## Calibração com CLAP
+
+`clap.py` carrega dois modelos CLAP pelo `transformers`: o **otimizador** (`laion/clap-htsat-unfused`) e o **juiz** (`laion/larger_clap_general`), que fica fora de toda otimização. `LABELS` liga 22 descrições em inglês ("a cat meowing", "a monster growling", "an 8-bit video game sound effect"...) aos arquétipos que deveriam ganhá-las.
+
+**Busca** (`designer.py`). Os genes de um arquétipo são descobertos rodando o design com um `Genome` espião (12 espécies × 3 traços × todos os chamados). A busca é uma estratégia evolutiva (1+1) com a regra de 1/5 sobre genes, tamanho e agressividade:
+- `design(prompt)`: maximiza a similaridade CLAP com o texto. Primeiro avalia `screen` candidatos por arquétipo, depois refina os 2 melhores.
+- `match(amostra)`: similaridade CLAP com a gravação menos `feature_weight ×` a distância de `analysis.features`. As medidas são tom (YIN com correção de oitava/quinta), envelope de loudness, espectro de longo prazo, duração, aperiodicidade, fração vozeada e número de segmentos.
+- Os genes encontrados viram genes fixos da espécie (`genes`). Fixar um gene muda o valor base, mas a variação por indivíduo e por take continua.
+
+**Resultado com o juiz** (120 sons: por arquétipo, 2 espécies fora da calibração × 3 tamanhos × 2 chamados):
+- **Acerto do arquétipo:** 32% (acaso: cerca de 10%). `chip` 100%, `reptile` 58%, `slime` 50%; mamífero, pássaro, inseto e robô ficam abaixo de 10%.
+- **"Som 8-bit de videogame":** 56% dos sons não-chip recebem esse rótulo. O alvo, então, era soar menos sintético.
+- **Camada de realismo** (`lowpass`, `room`, `air`, `shimmer` + mais jitter e sopro), ajustada pelo otimizador em 70 iterações: no conjunto de calibração, o acerto foi de 30% para 45%. No juiz, o "8-bit" caiu de 56% para 46%, mas o acerto ficou em 32% e a probabilidade média do rótulo certo caiu de 0,33 para 0,30. Inseto, monstro, réptil e robô melhoraram; slime, espírito e anfíbio pioraram.
+- **Decisão:** a camada fica disponível (`REALISM_CLAP`), mas desligada por padrão. Para o juiz, o problema de reconhecimento está no desenho dos arquétipos, não na falta de "gravação".
 
 ## As duas formas de uso
 
@@ -203,10 +227,21 @@ O que se aprendeu, sempre conferindo com o Whisper em A/B:
 
 `phonetics.LANG_PHONES` guarda ajustes por idioma sobre a tabela comum. Está vazio para o português, porque nenhum ajuste acústico passou no A/B.
 
+**Balbucio** (`speech/babble.py`). Depois do g2p, as sílabas podem ser trocadas antes da prosódia, e por isso o ritmo, as tônicas e o tipo de frase continuam os do texto:
+- `gibberish`: cada sílaba vira ataque + vogal sorteados do inventário do idioma, às vezes com coda no fim da palavra; a semente é a fala + o nome do personagem.
+- `mumble`: toda sílaba vira "m" + schwa.
+- `animalese`: mantém as sílabas, mas a voz fica 1,5× mais aguda, 2,2× mais rápida, com metade da entonação e uma nota aleatória (±5 semitons) por sílaba somada ao contorno.
+
+**Elenco** (`speech/casting.py`). `cast(role, name, lang, gender, creature, voice, style, natural)` devolve um `Cast` (voz + estilo + papel) com `render()` e `voice()`; `voice()` é `None` para vozes naturais, que não têm spec. As regras:
+- `main` usa Kokoro quando `natural` (padrão: Kokoro instalado); o nome escolhe a voz entre as do idioma e gênero.
+- Nos outros casos, a voz de formantes é sorteada pelo nome; com `gender`, fica a primeira semente com pitch ≥ 165 Hz (f) ou ≤ 150 Hz (m).
+- `voice` explícita sempre vence. Uma voz `kokoro:` sem Kokoro vira uma voz de formantes do mesmo gênero.
+
+O bestiário e o `bake` usam o elenco. O manifesto registra `role`, `style` e `engine` de cada personagem.
+
 **Próximos passos da fala:**
 - Melhorar o português (nasais, "v", encontros consonantais).
 - Mais idiomas: o front-end é plugável (`speech.LANGS`).
-- Um modo "balbucio" estilo Animal Crossing.
 - Usar o professor de outro jeito: ajustar os parâmetros por análise-por-síntese, comparando espectros quadro a quadro com o Kokoro na mesma sequência de fonemas, em vez de copiar medidas.
 
 ## Motor da 1ª geração
@@ -227,3 +262,4 @@ A verificação contra o motor TypeScript original está em `tests/test_chip.py`
 - Editor visual: sliders de genes e traços, espectrograma e "evoluir" ao vivo.
 - Qualidade: fonte glotal LF, IRs de reverb reais, normalização por loudness (LUFS) nos pacotes.
 - Mais arquétipos (aquático, dragão dedicado, enxame) e mistura entre arquétipos (híbridos).
+- Redesenhar os arquétipos que o juiz CLAP não reconhece (mamífero, pássaro, inseto, robô), medindo com `creaturesynth judge`.
