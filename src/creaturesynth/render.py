@@ -5,7 +5,7 @@ Signal flow per syllable:
     -> subharmonics, breath, ring modulation
     -> time-varying formant bank (parallel band-passes, coefficients updated every 64 samples)
     -> envelope (attack/release, amp curve, growl AM, pulse trains)
-Then for the whole voice: sum syllables + chip programs + speech + effect layers (layers.py)
+Then for the whole voice: sum syllables + chip programs + speech + vocoded clips + effect layers (layers.py)
 -> 40 Hz high-pass -> crush -> saturation -> realism -> reverb -> loop folding -> normalise to `gain`.
 
 Every block is a simple per-sample recurrence (one-pole, biquad, PolyBLEP) or a seeded
@@ -193,13 +193,17 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
         from .speech.klatt import render_speech  # the speech module builds on this one
         for i, p in enumerate(voice.speech):
             parts.append((int(p.start * sr), render_speech(p, sr, rng.key(voice.seed, "speech", i))))
+    if voice.vocoded:
+        from .speech.vocoder import render_vocoded
+        for i, v in enumerate(voice.vocoded):
+            parts.append((int(v.start * sr), render_vocoded(v, sr, rng.key(voice.seed, "vocoded", i))))
     if voice.modal or voice.noise or voice.scatter:
         from .layers import render_modal, render_noise, render_scatter
         for name, fn in (("modal", render_modal), ("noise", render_noise), ("scatter", render_scatter)):
             for i, e in enumerate(getattr(voice, name)):
                 parts.append((int(e.start * sr), fn(e, sr, rng.key(voice.seed, name, i))))
     if not parts:
-        raise ValueError("voice has no syllables, chip programs, speech or effect layers")
+        raise ValueError("voice has no syllables, chip programs, speech, vocoded clips or effect layers")
     out = np.zeros(max(k + len(y) for k, y in parts))
     for k, y in parts:
         out[k:k + len(y)] += y

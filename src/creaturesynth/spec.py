@@ -7,7 +7,8 @@ import json
 from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "creaturesynth.voice"
-VERSION = 4   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop)
+VERSION = 5   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
+              # 5: vocoded clips
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -126,6 +127,26 @@ class Scatter:
 
 
 @dataclass
+class Vocoded:
+    """A short performance rebuilt by the vocoder (speech/vocoder.py) from an analysed clip, moved to another voice."""
+
+    clip: str                         # template name, "<kind>/<performer>/<take>", e.g. "attack/adventurer/attack3"
+    start: float = 0.0
+    pitch: float = 1.0                # pitch ratio
+    warp: float = 1.0                 # formant ratio: a shorter vocal tract moves them up
+    stretch: float = 1.0              # length ratio
+    breath: float = 0.0               # -1..1: less (towards fully voiced) or more air (1 = whispered)
+    tilt: float = 0.0                 # brighter (+) or darker (-), dB per octave around 1 kHz
+    swing: float = 1.0                # pitch contour: wider (> 1), flatter (< 1), 0 = monotone
+    gain: float = 1.0
+
+    @property
+    def duration(self) -> float:
+        from .speech.vocoder import template  # the vocoder builds on the renderer
+        return template(self.clip).duration * self.stretch
+
+
+@dataclass
 class Voice:
     syllables: list[Syllable] = field(default_factory=list)
     chips: list[ChipProgram] = field(default_factory=list)
@@ -133,6 +154,7 @@ class Voice:
     modal: list[Modal] = field(default_factory=list)
     noise: list[Noise] = field(default_factory=list)
     scatter: list[Scatter] = field(default_factory=list)
+    vocoded: list[Vocoded] = field(default_factory=list)
     drive: float = 0.0                # tanh saturation amount
     crush: float = 0.0                # 0..1 sample-rate/bit-depth reduction
     space: float = 0.0                # reverb tail length, seconds (engines may use their own reverb)
@@ -151,7 +173,7 @@ class Voice:
         from .chip import program_duration  # chip imports this module
         ends = [s.start + s.dur for s in self.syllables]
         ends += [c.start + program_duration(c) for c in self.chips]
-        ends += [p.start + p.duration for p in self.speech]
+        ends += [p.start + p.duration for p in (*self.speech, *self.vocoded)]
         ends += [e.start + e.dur for e in (*self.modal, *self.noise, *self.scatter)]
         return max(ends, default=0.0)
 
@@ -165,7 +187,7 @@ class Voice:
         out["syllables"] = [compact(s) for s in self.syllables]
         out["chips"] = [compact(c) for c in self.chips]
         out["speech"] = [compact(p) for p in self.speech]
-        for name in ("modal", "noise", "scatter"):
+        for name in ("modal", "noise", "scatter", "vocoded"):
             out[name] = [compact(e) for e in getattr(self, name)]
         return json.loads(json.dumps(out))  # tuples -> lists: exactly what JSON round-trips to
 
@@ -186,6 +208,7 @@ class Voice:
                             for sp in data.get("speech", [])]
         for name, kind in (("modal", Modal), ("noise", Noise), ("scatter", Scatter)):
             kwargs[name] = [_element(kind, e) for e in data.get(name, [])]
+        kwargs["vocoded"] = [Vocoded(**v) for v in data.get("vocoded", [])]
         return cls(**kwargs)
 
     @classmethod

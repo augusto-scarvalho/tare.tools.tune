@@ -88,7 +88,9 @@ No código, use `speaker_from("kokoro:pf_dora")`; no bestiário, `"voice": "koko
 
 ### Interjeições (jogos sem dublagem completa)
 
-Muitos jogos não são dublados: o personagem só solta um "hyah!", um "ugh", um "hm?" ou uma risada, e o texto faz o resto. `Speaker.emote` gera essas interjeições sem palavras **na voz do próprio personagem**: mesma altura, mesmo trato vocal, mesmo sopro e mesma rouquidão.
+Muitos jogos não são dublados: o personagem só solta um "hyah!", um "ugh", um "hm?" ou uma risada, e o texto faz o resto. `Speaker.emote` gera essas interjeições sem palavras **na voz do próprio personagem**.
+
+Elas partem de performances reais: gravações CC0 de atores, analisadas uma vez em números (tom, envelope espectral e ar a cada 5 ms; 183 moldes, 951 kB). No jogo, um vocoder nosso, em numpy, refaz o som e o leva para a altura, o trato vocal, o brilho e o sopro do personagem. Não roda nenhum modelo nem IA, e o resultado é determinístico: o mesmo personagem, tipo, estilo e take dão sempre as mesmas amostras.
 
 ```python
 from creaturesynth.speech import Speaker
@@ -106,17 +108,18 @@ write_wav("risada.wav", garota.emote("laugh", style="anime", intensity=0.9), 480
   - reações: `surprise`, `hmm`, `huh`;
   - respostas: `yes`, `no`;
   - humor: `cheer`, `angry`.
-- **Estilos**, inspirados nos jogos que usam esses sons (os sons em si são originais):
+- **Estilos**, inspirados nos jogos que usam esses sons (os sons não vêm desses jogos):
 
   | estilo | jeito | inspirado em |
   |---|---|---|
   | `grunt` | sem palavras e cheio de ar, curto | o herói de *Zelda* |
-  | `anime` | brilhante e cheio de voz: "ya!", "kya!", "e?!", "fufu" | *Rune Factory* |
-  | `tactics` | contido e apertado: "hmph", "hah", "heh" | *Fire Emblem* |
+  | `anime` | brilhante, mais voz e menos ar, contorno mais vivo | *Rune Factory* |
+  | `tactics` | contido: mais curto, mais grave e mais escuro | *Fire Emblem* |
   | `mmo` | gritos cheios, mais longos e fortes | *Final Fantasy XIV* |
 - `intensity` (0 a 1) controla quanto esforço vai no som.
+- O spec guarda o molde e as transformações (`Vocoded`, v5); uma port precisa levar os moldes junto.
 
-Medido em gravações CC0 (pacotes do OpenGameArt de aventureiro, de vozes femininas de RPG e de gritos; risadas, suspiros, sustos e "hm" do Freesound). Um grito de ataque sobe muito acima da fala: homens 17 a 23 semitons (95 Hz → ~345 Hz), mulheres cerca de 10. Ele dura 0,15–0,35 s e é mais ar do que voz. Uma risada pulsa 4,5–6 vezes por segundo. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
+As performances vêm de pacotes CC0 do OpenGameArt (aventureiro, vozes femininas de RPG, gritos) e de risadas, suspiros, sustos e "hm" do Freesound. O molde escolhido é o que menos precisa ser mexido para chegar à voz do personagem, sobretudo nas formantes: uma heroína pega intérpretes mulheres; um herói, homens. Os esforços mudam de voz pelo registro do grito, medido nas mesmas gravações: um grito de ataque sobe muito acima da fala, homens 17 a 23 semitons (95 Hz → ~345 Hz), mulheres cerca de 10. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ### Quem fala com qual motor
 
@@ -390,7 +393,7 @@ Os dados dos gritos (`data/gen1/cries.json`) são dados de jogo de terceiros. Fi
 ## Desenvolvimento
 
 ```bash
-pytest -q          # ~310 testes, incluindo os 151 gritos contra a referência
+pytest -q          # ~350 testes, incluindo os 151 gritos contra a referência
 ruff check .
 
 pip install -e ".[asr]"
@@ -403,6 +406,8 @@ python tools/structure_analysis.py compare    # espectros quadro a quadro contra
 python tools/structure_analysis.py mos        # naturalidade prevista (UTMOS): professor 3,5, nosso motor 2,2
 python tools/structure_analysis.py transplant # qual parte da nossa fala custa naturalidade
 python tools/structure_analysis.py compare --set klatt.FRIC_GAIN=2 --speaker tilt=4000   # testar uma mudança
+
+python tools/build_barks.py --freesound DIR --oga DIR   # refaz os moldes das interjeições (precisa das gravações e do pyworld)
 ```
 
 O que essas ferramentas mostraram está em [`docs/arquitetura.md`](docs/arquitetura.md): a distância para a voz natural está no envelope espectral quadro a quadro, e nenhum ajuste de parâmetros do motor de formantes a fecha. Por isso a divisão de trabalho: voz natural nas falas importantes, formantes no resto.
@@ -412,6 +417,8 @@ O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som 
 ## Créditos
 
 A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/creaturesynth/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
+
+As interjeições partem de gravações CC0 do OpenGameArt ("Voice Clip Pack - Male Adventurer RPG", "Female RPG Voice Starter Pack" de Cici Fyre, "Male Grunt/Yelling sounds") e do Freesound (os ids estão em `tools/build_barks.py`). O pacote leva só os números medidos nelas; a síntese segue o desenho do vocoder [WORLD](https://github.com/mmorise/World), de Masanori Morise.
 
 Os instrumentos foram medidos nas notas da [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE), da Versilian Studios (CC0). As gravações serviram só para medir e não acompanham o pacote.
 

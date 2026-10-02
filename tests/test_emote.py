@@ -1,8 +1,11 @@
 import numpy as np
 import pytest
 
+from creaturesynth.render import render
+from creaturesynth.spec import Vocoded, Voice
 from creaturesynth.speech import Speaker
 from creaturesynth.speech.emote import EMOTES, STYLES, emote, shout_pitch
+from creaturesynth.speech.vocoder import FRAME, Template, band_freqs, synthesize, template, templates
 
 SR = 16_000
 
@@ -12,7 +15,7 @@ def test_every_emote_in_every_style():
     for style in STYLES:
         for kind in EMOTES:
             y = hero.emote(kind, style, 0.7, 0, SR)
-            assert np.isfinite(y).all() and 0.08 < len(y) / SR < 4.0 and np.abs(y).max() > 0.5
+            assert np.isfinite(y).all() and 0.08 < len(y) / SR < 4.5 and np.abs(y).max() > 0.5
 
 
 def test_takes_vary_and_repeat():
@@ -28,12 +31,71 @@ def test_shouting_register_matches_the_recordings():
     assert shout_pitch(120, 1.0, 0.0) == pytest.approx(120)
 
 
+def pitch_of(v: Vocoded) -> float:
+    return template(v.clip).pitch * v.pitch
+
+
 def test_barks_follow_the_speakers_voice():
     low, high = Speaker(pitch=90, tract=0.95), Speaker(pitch=300, tract=1.3)
-    f_low = np.mean(emote(low, "hmm").frames["f0"])
-    f_high = np.mean(emote(high, "hmm").frames["f0"])
-    assert f_high > 2.5 * f_low
-    assert np.mean(emote(low, "attack").frames["f0"]) > 2.5 * 90   # an effort is pitched far above speech
+    assert pitch_of(emote(high, "hmm")) > 2.5 * pitch_of(emote(low, "hmm"))
+    shouts = [pitch_of(emote(low, "attack", take=i)) for i in range(6)]
+    assert np.median(shouts) > 2 * 90                       # an effort is pitched far above speech
+
+
+def test_a_voice_gets_performers_like_it():
+    heroine, hero = Speaker(pitch=215, tract=1.16), Speaker(pitch=125, tract=1.04)
+    for kind in ("attack", "attack_big", "hurt", "jump", "laugh", "cheer"):
+        for take in range(3):
+            assert template(emote(heroine, kind, take=take).clip).tract > 1.05
+            assert template(emote(hero, kind, take=take).clip).tract < 1.05
+    assert emote(hero, "giggle").clip.startswith("laugh/")   # no man giggles in the recordings: a quick laugh
+
+
+def test_every_kind_has_performances():
+    kinds = {t.kind for t in templates()}
+    assert set(EMOTES) <= kinds and len(templates()) > 150
+    for t in templates():
+        voiced = t.f0[t.f0 > 0]
+        assert t.env.shape == (len(t.f0), 32) and ((voiced > 40) & (voiced < 1300)).all()
+
+
+def test_vocoded_layer_round_trips_in_the_spec():
+    v = Voice(vocoded=[Vocoded("laugh/male/536811", 0.1, pitch=1.2, warp=1.1, stretch=0.9, breath=-0.2)], seed=3)
+    w = Voice.from_json(v.to_json())
+    assert w == v and w.duration == pytest.approx(0.1 + template("laugh/male/536811").duration * 0.9)
+    assert np.array_equal(render(v, SR), render(w, SR))
+    with pytest.raises(ValueError):
+        render(Voice(vocoded=[Vocoded("dance/nobody/0")]), SR)
+
+
+def steady(f0: float = 200.0, formant: float = 1000.0) -> Template:
+    n = 120
+    env = np.tile(-60 + 40 * np.exp(-((band_freqs() - formant) / 300) ** 2), (n, 1))
+    return Template("test", "test", "test", 1.0, f0, np.full(n, f0), env, np.zeros((n, 5)))
+
+
+def peak(y: np.ndarray, lo: float, hi: float) -> float:
+    y = y[len(y) // 4: 3 * len(y) // 4]
+    spec = np.abs(np.fft.rfft(y * np.hanning(len(y))))
+    f = np.fft.rfftfreq(len(y), 1 / SR)
+    band = (f > lo) & (f < hi)
+    return float(f[band][np.argmax(spec[band])])
+
+
+def test_vocoder_moves_pitch_formants_and_length():
+    t = steady()
+    y = synthesize(t, SR, seed=1)
+    assert peak(y, 100, 300) == pytest.approx(200, abs=3)
+    assert peak(synthesize(t, SR, pitch=1.5, seed=1), 100, 450) == pytest.approx(300, abs=4)
+    centroid = [peak(synthesize(t, SR, warp=w, seed=1), 500, 3000) for w in (1.0, 1.3)]
+    assert centroid[1] == pytest.approx(1.3 * centroid[0], rel=0.12)
+    assert len(synthesize(t, SR, stretch=2.0, seed=1)) == pytest.approx(2 * len(t.f0) * FRAME * SR, rel=0.1)
+
+
+def test_vocoder_is_deterministic_and_seeded():
+    t = template("sigh/female/403936")
+    a = synthesize(t, SR, seed=1)
+    assert np.array_equal(a, synthesize(t, SR, seed=1)) and not np.array_equal(a, synthesize(t, SR, seed=2))
 
 
 def test_unknown_emote_or_style():

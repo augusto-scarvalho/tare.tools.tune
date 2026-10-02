@@ -25,14 +25,14 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `genome.py` | genes por nome: estáveis por espécie, variação por indivíduo e por take |
 | `calls.py` | `Traits` (tamanho, agressividade) e `Call` (idle, alert, attack, hurt, death) |
 | `archetypes/` | `natural.py`, `fantasy.py`, `retro.py`: cada arquétipo é `design(ctx) -> Voice` |
-| `spec.py` | `Voice`, `Syllable`, `ChipProgram`, `SpeechProgram` + JSON (v3) |
+| `spec.py` | `Voice` e suas camadas (`Syllable`, `ChipProgram`, `SpeechProgram`, `Modal`, `Noise`, `Scatter`, `Vocoded`) + JSON (v5) |
 | `render.py` | DSP fonte-filtro |
 | `chip.py` | motor Game Boy (2 pulsos + ruído) e leitor dos dados da 1ª geração |
 | `creature.py` | API principal (`Creature`) |
 | `bake.py` | uso offline: bestiário → WAVs + manifest |
 | `runtime.py` | uso em jogo Python: `VoiceBank` |
 | `cli.py` | linha de comando |
-| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `neural.py` (Kokoro), `Speaker` |
+| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `neural.py` (Kokoro), `vocoder.py` (moldes de gravações + síntese), `emote.py` (interjeições), `Speaker` |
 | `clap.py`, `designer.py`, `analysis.py` | calibração: CLAP (texto ↔ som), busca evolutiva (`design`, `match`), medidas de gravações |
 | `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `magic.py`, `ambience.py` |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
@@ -83,6 +83,7 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 | `room` | 0..1, mix de reflexões curtas de sala (v3) |
 | `air` | 0..1, ruído de fundo de gravação, de -70 a -30 dB do pico (v3) |
 | `modal`, `noise`, `scatter` | listas de `Modal`, `Noise` e `Scatter` (efeitos sonoros, v4) |
+| `vocoded` | lista de `Vocoded` (performances refeitas pelo vocoder, v5) |
 | `loop` | segundos de crossfade; > 0 gera um loop sem emenda de `duração − loop` segundos (v4) |
 | `seed` | semente de todos os fluxos aleatórios |
 | `meta` | informativo (arquétipo, chamado, traços) |
@@ -109,7 +110,9 @@ Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` c
 
 **Scatter** (v4), uma nuvem de eventos: `start`, `dur`; `rate` (curva em eventos por segundo); `event` (`pop`, `drop` ou `ping`); `freq`, `decay` e `level` (faixas [mín, máx]); `gain`.
 
-Specs das versões 1 a 3 continuam sendo lidos.
+**Vocoded** (v5), uma performance curta refeita pelo vocoder (`speech/vocoder.py`) a partir de um molde: `clip` (nome do molde, `<tipo>/<intérprete>/<take>`, por exemplo `attack/adventurer/attack3`); `start`; `pitch` (razão de tom); `warp` (razão das formantes: trato mais curto, formantes mais altas); `stretch` (razão de duração); `breath` (−1..1: menos ar, até voz pura, ou mais ar, até sussurro); `tilt` (dB por oitava em torno de 1 kHz); `swing` (largura do contorno de tom: 1 = como foi gravado, 0 = monótono); `gain`. Os moldes ficam em `speech/data/barks.npz` e uma port precisa levá-los junto (ver o algoritmo abaixo).
+
+Specs das versões 1 a 4 continuam sendo lidos.
 
 ## Algoritmo do render (para ports)
 
@@ -180,6 +183,16 @@ Na voz inteira:
    - o antirressonador usa `[1/A, −B/A, −C/A]`.
 3. **Paralelo:** `af·ruído` passa por dois band-pass (`fa`/`wa`·`ga` e `fb`/`wb`·`gb`), mais `ab·ruído` com passa-alta em 1,2 kHz, tudo vezes `FRIC_GAIN`.
 4. **Saída:** soma, `rough` (AM), passa-alta em 60 Hz e normalização para `gain`.
+
+**Vocoder (`speech/vocoder.py`)**, o mesmo desenho de síntese do WORLD (M. Morise), em numpy e determinístico:
+- **Moldes** (`barks.npz`, um zip de arrays `.npy`): a cada 5 ms, `f0` (float16, 0 = sem voz), `env` (uint8: envelope espectral em 32 faixas mel de 40 Hz a 20 kHz, `valor/2 − 107.5` dB) e `ap` (uint8: aperiodicidade em 5 faixas log de 500 Hz a 16 kHz, `valor/255`); `meta` é JSON com tipo, intérprete, trato, tom mediano, início e número de quadros de cada molde, e a fonte (licença CC0).
+- **Transformações**, quadro a quadro: `stretch` reamostra os quadros (interpolação linear; `f0` só entre quadros com voz); `swing` faz `f0 = tom·(f0/tom)^swing`; `pitch` multiplica `f0`; `breath ≥ 0` faz `ap += breath·(1 − ap)`, `breath < 0` faz `ap *= 1 + breath`.
+- **Filtros por quadro** (`nfft` 2048 acima de 32 kHz, senão 1024): o envelope é lido em `f/warp` (interpolação linear em Hz, `ap` em log de Hz), mais `tilt·log2(f/1000)` dB. Abaixo do tom gravado (500 Hz onde não há voz) o envelope não mede nada: fica no valor do tom, caindo 3 dB por oitava. Voz: fase mínima de `√(P·(1−ap))`; ar: fase mínima de `√(P·ap)` (ou `√P` sem voz). Fase mínima pelo cepstro real dobrado.
+- **Pulsos:** um por período glotal (`f0` do quadro, ou 500 Hz sem voz). Em cada pulso no tempo `t` (fracionário), com `n` amostras até o próximo:
+  - ar: `noise(key(seed,"breath", i), n)` menos a média, por FFT de `nfft` vezes o filtro de ar, vezes √3 (ruído uniforme com variância 1);
+  - voz: a resposta de fase mínima com atraso fracionário (`e^(−2πif·frac/sr)`), menos o DC (subtraído com uma janela de Hann na primeira metade), vezes `√n`;
+  - os dois somados a partir da amostra `floor(t·sr)`.
+- No fim, corta-se a cauda abaixo de −80 dB do pico, e a camada é normalizada para `gain`.
 
 **Coeficientes variáveis sem clique:** entre blocos, os filtros carregam o histórico de forma direta I (duas entradas e duas saídas) e recalculam o estado para os coeficientes novos (`render.time_varying`). Reaproveitar o estado do `lfilter` através de uma troca de coeficientes gera um estalo audível a cada transição de fonema.
 
@@ -617,18 +630,41 @@ O bestiário e o `bake` usam o elenco. O manifesto registra `role`, `style` e `e
 - Mais idiomas: o front-end é plugável (`speech.LANGS`).
 - Envelope por contexto (difones aprendidos do professor) ou um vocoder neural pequeno, medidos com `tools/structure_analysis.py` (UTMOS + Whisper).
 
-### Interjeições (`speech/emote.py`)
+### Interjeições (`speech/emote.py`, `speech/vocoder.py`)
 
-São frames do sintetizador de formantes montados direto de segmentos:
-- respiro (`h`, que sopra pelas formantes da vogal seguinte);
-- vogal;
-- zumbido nasal;
-- chiado (`s`, `f`);
-- explosão (`k`, `p`).
+**Primeira versão: formantes.** As interjeições eram frames do sintetizador de formantes montados de segmentos (respiro, vogal, zumbido, chiado, explosão), medidos nas gravações abaixo. Soavam artificiais e robóticas: o mesmo limite da fala por formantes.
 
-Cada segmento tem curvas de tom (em semitons sobre a base), de voz e de ar. A voz do `Speaker` entra inteira: altura, trato, sopro, inclinação espectral, jitter, rouquidão e sub-harmônicos.
+**Agora: performances reais, refeitas por nós.** Cada gravação CC0 é analisada uma vez, no desenvolvimento, com o vocoder WORLD (`tools/build_barks.py`, `pip install pyworld`). Ficam só números, a cada 5 ms: tom, envelope espectral e quanto é ar. São 183 moldes, 146 s de performance, 951 kB. No jogo, `vocoder.py` refaz o som com a nossa própria síntese em numpy (sem modelo nenhum, sem o WORLD) e o leva para a voz do personagem. É determinístico: o mesmo personagem, tipo, estilo e take dão as mesmas amostras.
 
-**Medidas** (gravações CC0, só para análise: OpenGameArt "RPG Male Adventurer", "Female RPG Voice Starter Pack" (três vozes), "Male Grunt/Yelling sounds"; Freesound):
+**Fontes** (CC0; as gravações não estão no repositório):
+- OpenGameArt: "Voice Clip Pack - Male Adventurer RPG", "Female RPG Voice Starter Pack" de Cici Fyre (três vozes) e "Male Grunt/Yelling sounds" (três vozes);
+- Freesound: risadas, risadinhas, suspiros, sustos, "hm", "hã?", comemorações e gemidos de dor, por id (a lista está no `MANIFEST` de `tools/build_barks.py`; cada molde guarda a sua fonte).
+
+**A síntese bate com a do WORLD.** Em 21 moldes, a energia por faixa fica em média a ±1 dB da síntese do próprio WORLD de 200 Hz a 24 kHz; num molde ou outro, uma faixa abaixo de 1,2 kHz chega a 9 dB de diferença. O vozeamento medido (harvest) é parecido: 0,71 contra 0,75 em média. Três detalhes fizeram diferença:
+- o pulso cai entre amostras (atraso fracionário): sem isso, numa voz de 700 Hz o arredondamento vira 1,5% de jitter;
+- o ar é ruído entre um pulso e o próximo, sem média, filtrado pelo envelope: abaixo do tom ele some, como no WORLD;
+- abaixo do tom gravado, o envelope do CheapTrick não mede nada (lá chegou a ficar 20 dB acima das formantes). Ele é trocado pelo valor no tom, caindo 3 dB por oitava. Sem isso, uma voz levada para baixo ganhava um primeiro harmônico estourado, e cada começo de som, um baque grave.
+
+**Levar para a voz do personagem.**
+- Esforços (ataque, dor, morte, pulo, comemoração) mudam de voz pelo registro do grito: `pitch = grito(fala do personagem, trato dele) / grito(fala do intérprete, trato do intérprete)`. Os outros (risos, suspiros, "hm") mudam pela fala: `pitch = fala do personagem / fala do intérprete`. A fala de cada intérprete é estimada pelo trato que demos a ele: 115 Hz (homem, trato 1,0), 190 Hz (madura, 1,1), 210 Hz (mulher, 1,15), 260 Hz (fofa, 1,27).
+- `warp = trato do personagem / trato do intérprete`, limitado a 0,75–1,35. `pitch` fica entre 0,4 e 2,5.
+- A escolha do molde minimiza `|ln pitch| + 3·|ln warp|`, menos a preferência do estilo pelo intérprete. Mexer muito nas formantes é o que mais denuncia uma voz convertida, mais do que o tom. Por isso uma heroína sempre pega intérpretes mulheres e um herói, homens.
+- Quando nenhum intérprete do tipo é próximo, entra um tipo parente, esticado e transposto, com custo +0,25. Exemplos: não há mulher com ataque forte (vira ataque × 1,5) e não há homem com risadinha (vira risada × 0,75, +4 st).
+- O take sorteia entre os moldes a até 0,25 do melhor (no máximo 4), mais ±0,6 st de tom e ±6% de duração.
+- A voz do `Speaker` entra também: `breath` e `whisper` viram ar; `tilt` (Hz) vira inclinação, `3·log2(tilt/3000)` dB/oitava; `range` vira `swing` (`range^0,7`, então o robô fala monótono); `rate` encurta. `crush`, `drive` e `space` passam para o `Voice`.
+
+**Estilos:**
+
+| estilo | tom | formantes | duração | ar | brilho (dB/oit) | contorno | prefere |
+|---|---|---|---|---|---|---|---|
+| `grunt` | 0 | 1,0 | 0,92 | +0,08 | 0 | 1,0 | aventureiro, gritos |
+| `anime` | +1 st | 1,04 | 1,0 | −0,25 | +1 | 1,15 | voz fofa |
+| `tactics` | −1 st | 0,98 | 0,88 | 0 | −0,8 | 0,85 | voz madura, takes curtos |
+| `mmo` | +0,5 st | 1,0 | 1,12 | 0 | +0,5 | 1,1 | gritos |
+
+`intensity` (0 a 1, base 0,7), nos esforços: de −2,1 a +0,9 st de tom, de −1,4 a +0,6 dB/oitava de brilho, de 0,79× a 1,09× de duração, e um pouco menos de ar quanto mais forte. Nos outros tipos, metade disso no tom e no brilho, e de 0,86× a 1,06× de duração.
+
+**Medidas** das mesmas gravações, da primeira versão (continuam valendo para o registro do grito):
 
 | interjeição | duração | tom | voz × ar | outras medidas |
 |---|---|---|---|---|
@@ -641,20 +677,7 @@ Cada segmento tem curvas de tom (em semitons sobre a base), de voz e de ar. A vo
 | "hm" | 0,9–2,8 s | sobe ~4 st na dúvida | nasal | — |
 | "yay" | — | começa 2–3 st acima e cai | — | — |
 
-**Registro do grito.** O tom de um esforço vai da fala em direção a um registro que depende do trato: f0 = fala^(1−e) · R^e, com R = 420 Hz · trato^1,8 e e ≈ 0,85. Calibrado nas gravações:
-- um homem de 95 Hz grita a ~345 Hz;
-- mulheres que falam a 230, 280 e 550 Hz gritam a ~430, ~530 e ~600 Hz.
-
-Os nossos dão 314–341 Hz no homem e 549–656 Hz na voz fofa.
-
-**Brilho.** Vogais gritadas são abertas: o F1 sobe até 25% com o esforço, e as vogais do grito são "a", "é" e "æ". Vogais fechadas no sintetizador saem 20–40 dB mais escuras que os gritos gravados. Medido como energia acima de 1,5 kHz:
-
-| | nosso | gravado |
-|---|---|---|
-| esforços | −10 a −16 dB | −8 a −24 dB |
-| "hm" (zumbido levemente aberto: 400/1400/2600 Hz) | −34 a −37 dB | −17 a −33 dB |
-
-**Estilos.** `grunt` (mais ar, curto), `anime` (mais voz, brilhante, sílabas "ya", "kya", "e", "fu"), `tactics` (menos esforço, contido) e `mmo` (gritos cheios e 25% mais longos). Mudam o esforço, o ar, a duração, o brilho e as vogais.
+**Registro do grito.** O tom de um esforço vai da fala em direção a um registro que depende do trato: f0 = fala^(1−e) · R^e, com R = 420 Hz · trato^1,8 e e ≈ 0,85 (0,55 no pulo). Calibrado nas gravações: um homem de 95 Hz grita a ~345 Hz; mulheres que falam a 230, 280 e 550 Hz gritam a ~430, ~530 e ~600 Hz.
 
 ## Motor da 1ª geração
 

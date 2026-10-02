@@ -88,7 +88,7 @@ class Speaker:
     def emote_voice(self, kind: str, style: str = "grunt", intensity: float = 0.7, take: int = 0) -> Voice:
         from .emote import emote
         seed = rng.seed32("emote", kind, style, repr(self), take)
-        return Voice(speech=[emote(self, kind, style, intensity, take)], crush=self.crush, drive=self.drive,
+        return Voice(vocoded=[emote(self, kind, style, intensity, take)], crush=self.crush, drive=self.drive,
                      space=self.space, wet=0.18, seed=seed,
                      meta={"speaker": self.name, "emote": kind, "style": style, "intensity": intensity})
 
