@@ -1,7 +1,8 @@
 """A small source-filter vocoder for voice clips taken from real performances (see tools/build_barks.py).
 
 A template is what a recording leaves once analysed: every 5 ms its pitch (0 = no voice), its spectral envelope
-(32 mel-spaced bands, dB) and how much of it is breath rather than voice (5 bands, 0..1). Synthesis rebuilds it the
+(mel-spaced bands, dB: 32 for the barks, 64 for the voice banks) and how much of it is breath rather than voice
+(5 bands, 0..1). Synthesis rebuilds it the
 way the WORLD vocoder does (M. Morise, 2016), here in plain numpy and deterministic. At every glottal pulse
 (every 2 ms where there is no voice):
 
@@ -41,10 +42,10 @@ def ap_freqs(n: int = AP_BANDS) -> np.ndarray:
     return np.geomspace(500, 16_000, n)
 
 
-def encode(f0: np.ndarray, sp: np.ndarray, ap: np.ndarray, fs: int):
+def encode(f0: np.ndarray, sp: np.ndarray, ap: np.ndarray, fs: int, bands: int = BANDS):
     """WORLD's per-bin power envelope and aperiodicity -> the compact bands stored in a template."""
     fr = np.arange(sp.shape[1]) * fs / (2 * (sp.shape[1] - 1))
-    bf, af = band_freqs(), ap_freqs()
+    bf, af = band_freqs(bands), ap_freqs()
     env = np.array([np.interp(bf, fr, 10 * np.log10(np.maximum(s, 1e-20))) for s in sp])
     apb = np.array([np.interp(af, fr, a) for a in ap])
     return f0.astype(np.float32), env.astype(np.float32), np.clip(apb, 0, 1).astype(np.float32)
@@ -122,7 +123,7 @@ def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stre
     nfft = 2048 if sr > 32_000 else 1024
     freqs = np.fft.rfftfreq(nfft, 1 / sr)
     src_f = np.maximum(freqs / warp, 1.0)
-    bf, logaf = band_freqs(), np.log(ap_freqs())
+    bf, logaf = band_freqs(env.shape[1]), np.log(ap_freqs())   # as many bands as the template has
     slope = tilt * np.log2(np.maximum(freqs, 50) / 1000)
 
     def filters(k: int):

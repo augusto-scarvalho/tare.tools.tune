@@ -184,7 +184,9 @@ def natural(gender: str = "m", bank: str = "", name: str = "") -> Speaker:
         from . import concat
         b = concat.bank(bank)
         return Speaker(pitch=b.pitch, tract=b.tract, engine="natural", bank=bank, name=name or bank)
-    return Speaker(pitch=115.0 if gender == "m" else 210.0, tract=1.0 if gender == "m" else 1.15,
+    # near the banks' own voices: moving far above them thins the sound (measured on pt/dora: 173 Hz -> 210 Hz costs
+    # ~0.4 of predicted naturalness)
+    return Speaker(pitch=120.0 if gender == "m" else 180.0, tract=1.0 if gender == "m" else 1.15,
                    engine="natural", name=name)
 
 

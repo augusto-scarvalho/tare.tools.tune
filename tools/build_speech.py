@@ -21,111 +21,21 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "tools"))
+from corpus_pt import EXTRA_PT, sentences  # noqa: E402
 from teacher_calibration import CORPUS  # noqa: E402
 
-from tare.tools.tune.speech.concat import FRAME, fit_durations  # noqa: E402
+from tare.tools.tune.speech.concat import FRAME, fit_durations, fit_intonation, nucleus_features  # noqa: E402
 from tare.tools.tune.speech.vocoder import ENV_FLOOR, band_freqs, encode  # noqa: E402
 
 CACHE = ROOT / "teacher"
 OUT = ROOT / "src/tare/tools/tune/speech/data"
 KOKORO_SR, HOP = 24_000, 600                     # Kokoro: 24 kHz audio, phone durations in 25 ms steps
+BANDS = 64                                       # envelope bands: 32 cost 0.25 of predicted naturalness (UTMOS)
 LANG_CODES = {"pt": "p", "en": "a"}
 # bank name -> (Kokoro voice, the vocal tract we give it)
 VOICES = {"pt": {"alex": ("pm_alex", 1.0), "dora": ("pf_dora", 1.15)}}
 
-EXTRA_PT = [
-    "Bom dia, senhor! O que deseja comprar hoje?", "As maçãs vermelhas custam duas moedas cada.",
-    "O capitão mandou fechar os portões da cidade.", "Minha mãe sempre dizia para ter coragem.",
-    "Os irmãos trabalham juntos na fazenda do avô.", "Ninguém volta vivo daquela torre maldita.",
-    "Esse pergaminho fala de um tesouro escondido.", "A lenda diz que o herói voltará um dia.",
-    "Atravesse o rio pela ponte de pedra.", "Os lobos uivam quando a lua aparece.",
-    "Compre três flechas e um arco novo.", "O alquimista transformou chumbo em prata.",
-    "Por que você está tão preocupado?", "Eles fugiram antes do amanhecer.",
-    "O velho sábio mora no alto da colina.", "Guarde bem esta pedra brilhante.",
-    "As crianças brincam na praça principal.", "O trem chegou atrasado à estação.",
-    "Quantos dragões você já derrotou?", "Ele quebrou o braço lutando contra o troll.",
-    "Já está na hora de partir, amigos.", "A floresta proibida fica ao sul do vilarejo.",
-    "O cozinheiro preparou uma sopa de legumes.", "Ela perdeu o colar de pérolas no jardim.",
-    "Não confie no mercador de olhos verdes.", "O inverno chegou cedo neste ano.",
-    "Os guardas trocam de turno à meia-noite.", "Precisamos atravessar o deserto em dois dias.",
-    "O monstro dorme no fundo do lago gelado.", "Que bom ver você de novo, minha filha!",
-    "Ouvi dizer que o rei ficou doente.", "A biblioteca guarda livros muito raros.",
-    "O sacerdote abençoou as armas dos soldados.", "Dez cavaleiros partiram, só um voltou.",
-    "A cigana leu a minha sorte nas cartas.", "Cuidado com as armadilhas no corredor.",
-    "O ouro do reino desapareceu do cofre.", "Quero um quarto para passar a noite.",
-    "O vulcão acordou depois de cem anos.", "Os anões cavam túneis debaixo da montanha.",
-    "A elfa atirou uma flecha certeira.", "Traga lenha seca para a fogueira.",
-    "O barqueiro cobra uma moeda de prata.", "Escondi o mapa embaixo da cama.",
-    "Ele jurou proteger a princesa para sempre.", "Ganhei esta cicatriz numa batalha antiga.",
-    "Vocês ouviram aquele grito na floresta?", "Siga a trilha até encontrar o moinho velho.",
-    "O pão de hoje saiu quentinho do forno.", "As velas iluminam o salão do trono.",
-    "A tropa marchou durante a noite inteira.", "Um corvo negro pousou na janela.",
-    "A espada mágica brilha perto dos inimigos.", "Bebam água fresca da fonte sagrada.",
-    "O bardo cantou uma canção muito triste.", "Ela tem medo de aranhas gigantes.",
-    "A ilha dos piratas aparece no nevoeiro.", "O príncipe chegou montado num cavalo branco.",
-    "Desculpe, mas a loja já está fechada.", "Quem roubou as joias da coroa?",
-    "Os sinos tocam quando alguém se casa.", "O caçador seguiu as pegadas do urso.",
-    "Ainda falta muito para chegar à capital?", "Vamos dividir o tesouro em partes iguais.",
-    "A magia do gelo congela qualquer inimigo.", "O mestre ensinou o golpe secreto.",
-    "Meus pés doem depois de tanto andar.", "Nunca vi uma tempestade tão forte.",
-    "As joaninhas vivem perto das flores.", "O feiticeiro lançou uma maldição terrível.",
-    "Sente-se perto do fogo e descanse.", "Há um portal escondido atrás da cachoeira.",
-    "Os mineiros encontraram cristais azuis.", "Meu escudo rachou com o último golpe.",
-    "A taberneira serve vinho e cerveja.", "O exército inimigo cercou o castelo.",
-    "Leia o livro antes de usar a varinha.", "A estátua de bronze parece se mover.",
-    "O nevoeiro esconde o caminho da serra.", "Fique quieto, os guardas estão chegando.",
-    "Os peixes pulam no rio ao entardecer.", "Ele tropeçou e caiu na lama.",
-    "Uma serpente enorme saiu da gruta.", "O prefeito prometeu reconstruir a muralha.",
-    "Tenho uma missão importante para você.", "A cura custa vinte peças de ouro.",
-    "Lembre-se de mim quando estiver longe.", "O dia está lindo para viajar.",
-    "Os gnomos consertam relógios quebrados.", "A neve cobriu todas as estradas.",
-    "Encontre o cristal e traga-o para mim.", "O jovem ferreiro sonha em ser cavaleiro.",
-    "As abóboras cresceram muito este ano.", "O fantasma assombra o porão da casa.",
-    "Pegue o machado e corte aquela corda.", "Quem é você e o que faz aqui?",
-    "O navio pirata afundou perto dos recifes.", "A velha rainha guarda um segredo.",
-    "Os camponeses pediram ajuda ao conselho.", "O céu ficou vermelho antes da guerra.",
-    "Tome cuidado com o chefe dos bandidos.", "Ele aprendeu a ler com o monge.",
-    "As ruínas antigas escondem passagens.", "O cachorro latiu a noite toda.",
-    "Uma chave dourada abre a porta norte.", "A guilda dos ladrões tem novos membros.",
-    "Os pássaros cantam no alto das árvores.", "Esse queijo tem um cheiro muito forte.",
-    "O gelo da caverna nunca derrete.", "A carroça quebrou no meio da estrada.",
-    "Conte-me tudo o que aconteceu ontem.", "O dragão vermelho cospe fogo e fumaça.",
-    "Minha espada precisa de uma lâmina nova.", "Ela nasceu numa aldeia de pescadores.",
-    "Os cogumelos azuis são venenosos.", "O torneio começa amanhã ao meio-dia.",
-    "A ponte levadiça está emperrada.", "Não toque nesse ovo de dragão!",
-    "O general planeja atacar ao amanhecer.", "A poção vermelha recupera a energia.",
-    "Um gigante bloqueia a passagem do vale.", "As montanhas brilham sob o sol da manhã.",
-    "Ele vendeu a fazenda para pagar dívidas.", "Os ventos do norte trazem chuva.",
-    "A feiticeira mora numa torre de cristal.", "Preciso de um guia para atravessar o pântano.",
-    "As crianças contam histórias de assombração.", "O padre acendeu as velas do altar.",
-    "Lutamos juntos contra o exército das sombras.", "Que tal uma partida de xadrez?",
-    "A maré sobe muito rápido nesta praia.", "O lenço bordado era da minha avó.",
-    "Um cavaleiro sem cabeça cavalga à noite.", "O sapateiro consertou as minhas botas.",
-    "A chama azul indica magia antiga.", "Ela canta melhor do que qualquer bardo.",
-    "Os orcs destruíram a ponte do rio.", "O médico receitou chá de gengibre.",
-    "A coroa pertence ao herdeiro legítimo.", "Ouço passos vindo do corredor escuro.",
-    "Bem que eu avisei sobre aquele lugar.", "O moleiro mói o trigo todas as manhãs.",
-    "Seu nome está escrito no livro antigo.", "Os mercenários exigem pagamento adiantado.",
-    "O jardim do palácio tem rosas negras.", "Ninguém consegue abrir aquele baú.",
-    "Volte quando tiver dinheiro suficiente.", "A estrela cadente caiu perto daqui.",
-    "Ele guarda rancor desde a infância.", "A neblina sobe do pântano ao anoitecer.",
-    "O rato roeu a roupa do rei de Roma.", "Três pratos de trigo para três tigres tristes.",
-    "O sabiá sabia assobiar.", "A aranha arranha a jarra.",
-    "Lhama, ilha, palha, olho, filho, velho.", "Banho, sonho, ninho, linha, vinho, caminho.",
-    "Pão, mão, cão, chão, irmão, coração.", "Mãe, pães, cães, alemães, capitães.",
-    "Põe, leões, dragões, botões, canções.", "Sim, fim, jardim, ruim, assim.",
-    "Um, algum, nenhum, comum, atum.", "Bem, tem, também, ninguém, alguém.",
-    "Tio, tia, dia, diabo, tipo, divino.", "Leite, noite, parte, verde, tarde.",
-    "Carro, terra, ferro, guerra, morro.", "Rato, rosa, rua, rede, rio, rei.",
-    "Mar, amor, calor, flor, cantar, partir.", "Sal, mel, sol, azul, papel, anel.",
-    "Gato, gente, guerra, gigante, gostar.", "Casa, mesa, rosa, coisa, pesado.",
-    "Chave, chuva, peixe, caixa, xícara.", "Janela, jogo, gelo, hoje, viagem.",
-    "Prato, preto, primo, prova, pluma.", "Braço, branco, bruxa, blusa, bloco.",
-    "Trono, trigo, trevo, atlas, atleta.", "Dragão, drama, cravo, crime, clima.",
-    "Grito, grande, gruta, globo, glória.", "Fraco, frio, fruta, flecha, floresta.",
-    "Vrum, livro, palavra, nevrálgico.", "Ótimo, ótica, órfão, ópera, ônibus.",
-]
-SENTENCES = {"pt": CORPUS + EXTRA_PT}
+SENTENCES = {"pt": CORPUS + EXTRA_PT + sentences(760)}
 
 
 def _fix_espeak_data_path():
@@ -156,16 +66,28 @@ def kokoro(lang: str):
 
 
 def render(lang: str):
+    """The teacher reads the corpus; sentences already in the cache are kept."""
     pipe = kokoro(lang)
     CACHE.mkdir(exist_ok=True)
     for name, (voice, _tract) in VOICES[lang].items():
+        old_items, old_audio = [], {}
+        if (CACHE / f"speech_{lang}_{name}.json").exists():
+            old_items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
+            old_audio = dict(np.load(CACHE / f"speech_{lang}_{name}.npz"))
+        cached = {}
+        for it in old_items:
+            cached.setdefault(it["text"], []).append(it)
         items, audio = [], {}
         for i, text in enumerate(SENTENCES[lang]):
-            for k, r in enumerate(pipe(text, voice=voice)):
+            if text in cached:
+                parts = [(it, old_audio[it["key"]]) for it in cached[text]]
+            else:
+                parts = [({"phonemes": r.phonemes, "dur": [int(d) for d in r.pred_dur.tolist()]},
+                          r.audio.numpy().astype(np.float32)) for r in pipe(text, voice=voice)]
+            for k, (it, y) in enumerate(parts):
                 key = f"{i}__{k}"
-                audio[key] = r.audio.numpy().astype(np.float32)
-                items.append({"key": key, "text": text, "phonemes": r.phonemes,
-                              "dur": [int(d) for d in r.pred_dur.tolist()]})
+                audio[key] = y
+                items.append({"key": key, "text": text, "phonemes": it["phonemes"], "dur": it["dur"]})
         np.savez_compressed(CACHE / f"speech_{lang}_{name}.npz", **audio)
         (CACHE / f"speech_{lang}_{name}.json").write_text(json.dumps(items, ensure_ascii=False, indent=1))
         print(f"{lang}/{name}: {len(items)} utterances, {sum(len(a) for a in audio.values()) / KOKORO_SR / 60:.1f} min")
@@ -274,7 +196,7 @@ def labels(phonemes: str, dur: list[int], n_frames: int) -> list[tuple]:
 def realign(lab, env, search=range(-20, 5)):
     """The teacher's sound runs ahead of its own duration grid (by ~60 ms, measured over the corpus): shift the
     labels by what makes fricatives hiss and vowels outshine stop closures most, then refine each boundary."""
-    bf = band_freqs()
+    bf = band_freqs(env.shape[1])
     hiss = env[:, (bf > 4000) & (bf < 11000)].mean(1) - env[:, bf < 1200].mean(1)
     level = env[:, (bf > 200) & (bf < 4000)].mean(1)
     n = len(env)
@@ -322,7 +244,8 @@ def build(lang: str):
         for u, it in enumerate(items):
             x = audio[it["key"]].astype(np.float64)
             f0, t = pw.harvest(x, KOKORO_SR, f0_floor=60, f0_ceil=600, frame_period=FRAME * 1000)
-            f, env, ap = encode(f0, pw.cheaptrick(x, f0, t, KOKORO_SR), pw.d4c(x, f0, t, KOKORO_SR), KOKORO_SR)
+            f, env, ap = encode(f0, pw.cheaptrick(x, f0, t, KOKORO_SR), pw.d4c(x, f0, t, KOKORO_SR), KOKORO_SR,
+                                BANDS)
             lab, shift = realign(labels(it["phonemes"], it["dur"], len(f)), env)
             shifts.append(shift)
             for sym, a, b, st, flags in refine(lab, env, f):
@@ -334,18 +257,67 @@ def build(lang: str):
         voiced = np.concatenate(f0s)
         model = fit_durations(phones)
         meta = {"lang": lang, "name": name, "teacher": f"Kokoro-82M {voice} (Apache-2.0)", "tract": tract,
-                "pitch": round(float(np.median(voiced[voiced > 0])), 1), "durations": model}
+                "pitch": round(float(np.median(voiced[voiced > 0])), 1), "durations": model, "env_delta": True,
+                "intonation": intonation(lang, items, phones, voiced)}
         env = np.clip(np.round((np.concatenate(envs) - ENV_FLOOR) * 2), 0, 255).astype(np.uint8)
+        env = np.diff(env, axis=0, prepend=np.zeros((1, env.shape[1]), np.uint8))   # frame-to-frame, mod 256
         out = OUT / f"bank_{lang}_{name}.npz"
         np.savez_compressed(out, f0=voiced.astype(np.float16), env=env,
                             ap=np.round(np.concatenate(aps) * 255).astype(np.uint8),
                             phones=np.frombuffer(json.dumps(phones).encode(), dtype=np.uint8),
                             meta=np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8))
         print(f"{lang}/{name}: labels moved {np.median(shifts) * FRAME * 1000:.0f} ms (median), "
-              f"{len(phones)} phones, {base * FRAME / 60:.1f} min, duration model r = "
-              f"{model['fit'][0]} -> {out} ({out.stat().st_size / 1e6:.1f} MB)")
+              f"{len(phones)} phones, {base * FRAME / 60:.1f} min, duration model r = {model['fit'][0]}, "
+              f"intonation r = {meta['intonation']['fit']} -> {out} ({out.stat().st_size / 1e6:.1f} MB)")
+
+
+def intonation(lang: str, items: list[dict], phones: list, f0: np.ndarray) -> dict:
+    """The teacher's pitch at the start and end of each vowel (relative to its sentence's median), by phrase position,
+    stress and phrase kind (from our own front-end; sentences split in chunks or phrased differently are left out)."""
+    from tare.tools.tune.speech import LANGS
+    by_utt: dict[int, list] = {}
+    for p in phones:
+        by_utt.setdefault(p[4], []).append(p)
+    rows, targets = [], []
+    for u, it in enumerate(items):
+        ph = by_utt.get(u)
+        alone = it["key"].endswith("__0") and not (u + 1 < len(items) and items[u + 1]["text"] == it["text"])
+        if not ph or not alone:
+            continue
+        seq = [(p[0], p[3], p[5]) for p in ph]
+        kinds = [(p.kind, p.wh) for p in LANGS[lang].text_to_phrases(it["text"])]
+        if 1 + sum(s == "_" for s, *_ in seq[1:-1]) != len(kinds):
+            continue
+        voiced = f0[ph[0][1]:ph[-1][2]]
+        median = np.log2(np.median(voiced[voiced > 0]))
+        feats, where = nucleus_features(seq, kinds)
+        for r, i in zip(feats, where, strict=True):
+            fr = f0[ph[i][1]:ph[i][2]]
+            third = max(len(fr) // 3, 1)
+            first, last = fr[:third], fr[-third:]
+            if (first > 0).any() and (last > 0).any():
+                rows.append(r)
+                targets.append((np.log2(np.median(first[first > 0])) - median,
+                                np.log2(np.median(last[last > 0])) - median))
+    return fit_intonation(rows, np.array(targets))
+
+
+def fit(lang: str):
+    """Refit the duration and intonation models of the banks, without analysing the recordings again."""
+    for name in VOICES[lang]:
+        path = OUT / f"bank_{lang}_{name}.npz"
+        d = dict(np.load(path))
+        meta = json.loads(bytes(d["meta"]).decode())
+        phones = json.loads(bytes(d["phones"]).decode())
+        items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
+        meta["durations"] = fit_durations(phones)
+        meta["intonation"] = intonation(lang, items, phones, d["f0"].astype(np.float64))
+        d["meta"] = np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8)
+        np.savez_compressed(path, **d)
+        print(f"{lang}/{name}: duration model r = {meta['durations']['fit'][0]}, "
+              f"intonation r = {meta['intonation']['fit']}")
 
 
 if __name__ == "__main__":
     cmd, lang = sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "pt"
-    {"render": render, "build": build}[cmd](lang)
+    {"render": render, "build": build, "fit": fit}[cmd](lang)

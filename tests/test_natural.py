@@ -12,7 +12,7 @@ SR = 16_000
 def test_banks_ship_numbers_only():
     assert {"pt/alex", "pt/dora"} <= set(banks("pt"))
     b = bank("pt/alex")
-    assert b.env.shape == (len(b.f0), 32) and len(b.ph) > 5000 and "Kokoro" in b.meta["teacher"]
+    assert b.env.shape == (len(b.f0), 64) and len(b.ph) > 30000 and "Kokoro" in b.meta["teacher"]
     assert closest("pt", 1.0) == "pt/alex" and closest("pt", 1.2) == "pt/dora"
     with pytest.raises(ValueError):
         bank("xx/nobody")
@@ -22,9 +22,9 @@ def test_bank_labels_sit_on_the_sounds():
     """The teacher's sound runs ~60 ms ahead of its duration grid; the builder realigns. A labelled [s] must hiss
     and a labelled vowel must outshine a stop closure."""
     from tare.tools.tune.speech.vocoder import band_freqs
-    bf = band_freqs()
     for name in ("pt/alex", "pt/dora"):
         b = bank(name)
+        bf = band_freqs(b.env.shape[1])
         hiss = b.env[:, (bf > 4000) & (bf < 11000)].mean(1) - b.env[:, bf < 1200].mean(1)
         level = b.env[:, (bf > 200) & (bf < 4000)].mean(1)
 
@@ -103,3 +103,13 @@ def test_selection_prefers_contiguous_pieces():
     joins = sum(units[i - 1][1] != units[i][0] for i in range(1, len(units)))
     assert joins <= 2                      # a sentence of the bank is found almost whole
     assert isinstance(Spoken("pt/alex", [(0, 4, 4)]).duration, float)
+
+
+def test_learned_intonation_rises_for_questions_and_falls_for_statements():
+    sp = Speaker(pitch=120, engine="natural")
+    q = np.array(sp.spoken("Você viu o dragão?", "pt").f0)
+    st = np.array(sp.spoken("Você viu o dragão.", "pt").f0)
+    assert bank("pt/alex").meta["intonation"]["fit"][1] > 0.6
+    tail = slice(-25, -5)
+    assert np.mean(q[tail]) > 1.1 * np.mean(st[tail])
+    assert np.mean(st[tail]) < np.median(st)          # a statement ends low

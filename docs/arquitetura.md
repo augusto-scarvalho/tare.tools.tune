@@ -626,15 +626,16 @@ A distância está no envelope espectral quadro a quadro, nas vogais e nas conso
 
 Síntese concatenativa com o nosso vocoder: o envelope espectral vem de gravações, as regras dão o resto (fonemas, ritmo, entonação). O Kokoro é só o professor: lê um corpus uma vez, offline, e o que fica são números.
 
-**Banco de voz.** 240 frases por voz (as 60 de calibração + 180 de diálogo de jogo, foneticamente variadas, nenhuma das frases de teste), ~10,5 min. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 32 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. **O som do Kokoro vem ~60 ms antes da grade de durações dele** (mediana 65 ms na voz masculina, 60 na feminina; de 55 a 75 ms entre frases). Sem corrigir, o rótulo de um [s] caía quase todo na vogal seguinte: "próxima" saía "pró-fi-ma". Por isso, em cada frase, os rótulos andam o quanto faz as fricativas chiarem mais e as vogais ficarem mais fortes que o fechamento das oclusivas (busca de −100 a +20 ms). Depois, cada fronteira anda até a maior mudança espectral em ±15 ms. Dentro dos rótulos de [s] e [ʃ], a energia acima de 4 kHz passou de 13 dB abaixo para 14 dB acima da energia abaixo de 1,2 kHz. Dois bancos em português: `pt/alex` (masculino, trato 1,0) e `pt/dora` (feminino, 1,15), ~3,4 MB cada.
+**Banco de voz.** 1000 frases por voz, ~45 min: as 60 de calibração, 180 de diálogo de jogo escritas à mão e 760 de uma pequena gramática de diálogo de jogo (`tools/corpus_pt.py`, determinística), nenhuma das frases de teste. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 64 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. **O som do Kokoro vem ~60 ms antes da grade de durações dele** (mediana 65 ms na voz masculina, 60 na feminina; de 55 a 75 ms entre frases). Sem corrigir, o rótulo de um [s] caía quase todo na vogal seguinte: "próxima" saía "pró-fi-ma". Por isso, em cada frase, os rótulos andam o quanto faz as fricativas chiarem mais e as vogais ficarem mais fortes que o fechamento das oclusivas (busca de −100 a +20 ms). Depois, cada fronteira anda até a maior mudança espectral em ±15 ms. Dentro dos rótulos de [s] e [ʃ], a energia acima de 4 kHz passou de 13 dB abaixo para 14 dB acima da energia abaixo de 1,2 kHz. Dois bancos em português: `pt/alex` (masculino, trato 1,0, 130 Hz) e `pt/dora` (feminino, 1,15, 173 Hz), ~21 MB cada (envelope guardado como diferença entre quadros, que comprime melhor).
 
 **Montagem de uma frase nova:**
 1. A nossa frente (g2p + `phonetics.segments`, que agora marca começo e fim de palavra) dá fonemas, tônicas e a entonação.
 2. **Sotaque do professor** (`accent_pt`): alinhando a nossa transcrição com a do professor nas 240 frases, as diferenças caíram de 988 para 438 em 7.137 fonemas (94% iguais) com regras como: "r" de fim de sílaba vira tap, com um schwa curto antes de consoante dentro da palavra; "em" vira [ẽj] + [ŋ]; "lh" vira [lj]; "a" reduzido só na última sílaba de palavra longa ("a", "da", "na" ficam [a]); "a" tônico antes de m/n/nh nasaliza ("cama" [ˈkɐ̃mɐ]); "s" antes de consoante sonora vira [z]; [ŋ] depois de vogal nasal antes de fricativa ("cansado") e no fim de "sim", "um".
-3. **Durações do professor:** regressão ridge em log da duração, com fonema, tônica, começo e fim de palavra, última palavra antes de pausa, vizinhos e interações (r = 0,50 no banco; o alinhamento de 25 ms limita).
-4. **Seleção de unidades:** um pedaço do banco por difone (do meio de um fonema ao meio do seguinte). Custo de alvo: fonema certo ou substituto (tabela de grupos: [a]/[ɐ] 0,3, [e]/[ɛ] 0,3, [u]/[w] 0,1...), tônica, vizinhos e duração. Custo de junção: 0 se os pedaços são contíguos no banco; senão, a distância espectral média no meio do fonema (dB/10) + 0,2. Viterbi com os 25 melhores por difone. Quando o banco não tem o difone, junta meios de lugares diferentes.
-5. **Junções:** o ponto de corte dentro do fonema é o par de quadros (entre 25% e 75% de cada pedaço) com espectros mais próximos; em volta dele, crossfade de ±15 ms em que cada pedaço continua com a própria dinâmica.
-6. O tom da nossa entonação onde o banco tem voz; o vocoder refaz o som com `warp = trato do personagem / trato do professor`.
+3. **Durações do professor:** regressão ridge em log da duração, com fonema, tônica, começo e fim de palavra, última palavra antes de pausa, vizinhos e interações (r = 0,59 no banco; o alinhamento de 25 ms limita).
+4. **Entonação do professor:** outra regressão dá o tom no começo e no fim de cada vogal (log2, relativo à mediana da frase), pela posição na frase (contando do fim e do começo), tônica, lugar em relação ao acento nuclear, tipo de frase (afirmação, pergunta, pergunta com "quem/onde", exclamação, vírgula) e posição na fala (r = 0,71 no começo, 0,82 no fim da vogal). Os alvos são ligados linearmente em log e suavizados (50 ms); `range` escala os desvios e a nota do `animalese` soma por sílaba. Substitui as nossas regras de entonação no motor natural (o de formantes continua com elas).
+5. **Seleção de unidades:** um pedaço do banco por difone (do meio de um fonema ao meio do seguinte). Custo de alvo: fonema certo ou substituto (tabela de grupos: [a]/[ɐ] 0,3, [e]/[ɛ] 0,3, [u]/[w] 0,1...), tônica, vizinhos, duração e 0,5 por oitava entre o tom do pedaço e o tom que ele vai receber. Custo de junção: 0 se os pedaços são contíguos no banco; senão, a distância espectral média no meio do fonema (dB/10) + 0,2 + 0,5 por oitava entre os tons dos dois pedaços, vezes o peso da classe do fonema onde cai a emenda (vogal 3, semivogal 2, líquida 1,5, nasal 1, fricativa 0,4, oclusiva 0,2, pausa 0,05): o ouvido percebe uma emenda no meio de uma vogal muito mais do que no silêncio de um [p]. Viterbi com os 25 melhores por difone. Quando o banco não tem o difone, junta meios de lugares diferentes.
+6. **Junções:** o ponto de corte dentro do fonema é o par de quadros (entre 25% e 75% de cada pedaço) com espectros mais próximos; em volta dele, crossfade de ±15 ms em que cada pedaço continua com a própria dinâmica.
+7. O tom onde o banco tem voz; o vocoder refaz o som com `warp = trato do personagem / trato do professor`.
 
 **Medidas** (Whisper, CER, frases fora do corpus):
 
@@ -645,10 +646,30 @@ Síntese concatenativa com o nosso vocoder: o envelope espectral vem de gravaç�
 | 240 frases no banco | 0,17 / 0,18 |
 | + sotaque do professor + durações por regressão | 0,11 / 0,11 |
 | o mesmo, pelo `Speaker` (com jitter); NPCs sorteados (`Speaker.random(7)`, `(12)`) | 0,08 / 0,11; 0,12 e 0,10 |
-| + rótulos realinhados (−60 ms) e o "x" de "próximo"/"táxi" no g2p | **0,045 / 0,042; 0,033 e 0,037** |
+| + rótulos realinhados (−60 ms) e o "x" de "próximo"/"táxi" no g2p | 0,045 / 0,042; 0,033 e 0,037 |
+| + banco de 1000 frases, 64 faixas, emendas em consoantes, entonação aprendida | 0,058 / 0,038 |
 | motor de formantes | 0,23 |
 
 Onde se perdia antes do realinhamento (16 frases do corpus, deixando a própria frase fora do banco): com fonemas, durações e tom do professor, 0,046; com as durações do professor e o **nosso** tom, 0,035 (a entonação não atrapalha); com durações médias, 0,06-0,09; com a nossa transcrição, 0,13. O que falta está nas durações e nas diferenças de transcrição que sobraram (vogais abertas e fechadas, [u]/[w]).
+
+**Naturalidade: onde se perde.** O UTMOS (preditor de MOS, de 1 a 5) serviu só de diagnóstico, numa escada de 16 frases do corpus ditas sem a própria gravação no banco, voz masculina:
+
+| | banco de 240 frases, 32 faixas | banco de 1000 frases, 64 faixas |
+|---|---|---|
+| o professor (Kokoro) | 3,46 | 3,46 |
+| ressíntese direta pelo nosso vocoder | 3,02 | 3,20 |
+| montado em pedaços, com fonemas, durações e tom do professor | 2,26 | 2,65 |
+| + a nossa entonação por regras | 2,17 | 2,45 |
+| + as nossas durações | 2,18 | 2,51 |
+| + a nossa transcrição (o sistema inteiro) | 2,23 | 2,55 |
+
+O que se aprendeu com ela:
+- **Vocoder:** a nossa síntese em resolução cheia empata com a do WORLD (3,30). Guardar o envelope em 32 faixas custava 0,25; com 64, 0,08. A aperiodicidade em 5 ou 16 faixas não muda nada.
+- **Montagem:** com os pedaços da própria frase (sem emendas), a nota é a da ressíntese (3,02): toda a perda vem das emendas entre gravações diferentes (12 a 15 por frase). Mais frases no banco: 60 → 120 → 240 frases deram 2,06 → 2,22 → 2,35, e 1000 deram 2,65. Correções de nível e espectro em rampa nas emendas não ajudaram; emendar de preferência em consoantes e com tons parecidos ajudou pouco (+0,09).
+- **Entonação:** com o banco grande, a nossa curva por regras virou a maior perda depois das emendas (−0,20). A entonação aprendida do professor dá 2,66 contra 2,68 com o tom do próprio professor. Somar à nossa curva a micro-prosódia dos pedaços (o desvio rápido do tom deles) não mudou nada e saiu.
+- **Altura:** o UTMOS cai quando a voz é levada para longe do tom do banco (feminina: 2,61 a 173 Hz, 2,38 a 190, 2,22 a 210).
+
+Sistema inteiro, 32 frases fora do corpus: voz masculina (115 Hz) UTMOS 2,37 → 2,71 e CER 0,045 → 0,058; feminina a 210 Hz 2,00 → 2,20 e CER 0,042 → 0,038 (no tom do banco, 173 Hz, 2,61 nas 16 frases de teste).
 
 **Balbucio** (`speech/babble.py`). Depois do g2p, as sílabas podem ser trocadas antes da prosódia, e por isso o ritmo, as tônicas e o tipo de frase continuam os do texto:
 - `gibberish`: cada sílaba vira ataque + vogal sorteados do inventário do idioma, às vezes com coda no fim da palavra; a semente é a fala + o nome do personagem.

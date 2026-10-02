@@ -38,6 +38,12 @@ GROUPS = [({"a", "6"}, 0.3), ({"e", "E"}, 0.3), ({"o", "O"}, 0.3), ({"i", "I", "
 N_BEST = 25                       # candidates kept per diphone
 JOIN = 0.2                        # the cost of any join, on top of the spectral distance (dB / 10)
 SMOOTH = 3                        # frames cross-faded on each side of a join
+# a join inside a vowel is heard most, inside a stop closure or a pause least: the join cost is scaled by the class
+# of the phone it falls in, so the selection breaks between pieces at consonants
+JOIN_CLASS = {"vowel": 3.0, "glide": 2.0, "liquid": 1.5, "nasal": 1.0, "fric": 0.4, "affricate": 0.4, "stop": 0.2,
+              "pause": 0.05}
+F0_TARGET = 0.5                   # per octave between a piece's own pitch and the pitch it will be given
+F0_JOIN = 0.5                     # per octave between the pitches of two pieces that meet
 
 
 def substitution(a: str, b: str) -> float:
@@ -100,6 +106,59 @@ def fit_durations(phones: list, ridge: float = 2.0) -> dict:
             "fit": [round(float(np.corrcoef(pred, y)[0, 1]), 3), round(float(np.std(y - pred)), 3)]}
 
 
+# -- intonation: what the teacher does, as a regression ---------------------------------------------------------------
+
+NUCLEI = set("a6eEiIoOuU") | {"6~", "e~", "i~", "o~", "u~"}
+
+
+def nucleus_features(seq: list[tuple[str, int, int]], kinds: list[tuple[str, bool]]) -> tuple[list[dict], list[int]]:
+    """For each syllable nucleus of [(symbol, stress, flags)] (pauses "_" split the phrases; `kinds`: (".", "?",
+    "!", ","; a wh-question) per phrase): the intonation model's inputs, and where the nucleus is in `seq`."""
+    phrases, cur = [], []
+    for i, (sym, _st, _fl) in enumerate(seq):
+        if sym == "_":
+            if cur:
+                phrases.append(cur)
+            cur = []
+        elif sym in NUCLEI:
+            cur.append(i)
+    if cur:
+        phrases.append(cur)
+    rows, where = [], []
+    for pi, idx in enumerate(phrases):
+        kind, wh = kinds[min(pi, len(kinds) - 1)] if kinds else (".", False)
+        kind = "?wh" if kind == "?" and wh else kind
+        accents = [i for i in idx if seq[i][1] > 0] or [idx[-1]]
+        nuclear, first = accents[-1], accents[0]
+        for k, i in enumerate(idx):
+            from_end, stressed = len(idx) - 1 - k, seq[i][1] > 0
+            place = "nuc" if i == nuclear else "post" if i > nuclear else "pre_acc" if stressed else "pre"
+            rows.append({f"end={min(from_end, 4)}": 1.0, f"start={min(k, 2)}": 1.0, "stress": float(stressed),
+                         f"place={place}": 1.0, f"{kind}:{place}": 1.0, f"{kind}:end={min(from_end, 2)}": 1.0,
+                         "first_accent": float(i == first and stressed), "rel": k / max(len(idx) - 1, 1),
+                         "first_phrase": float(pi == 0), "last_phrase": float(pi == len(phrases) - 1),
+                         "word_final": float(seq[i][2] & 2 > 0), f"kind={kind}": 1.0})
+            where.append(i)
+    return rows, where
+
+
+def fit_intonation(rows: list[dict], targets: np.ndarray, ridge: float = 3.0) -> dict:
+    """Log2 pitch at the start and the end of each nucleus, relative to the sentence's median: ridge regression."""
+    names = sorted({k for r in rows for k in r})
+    index = {k: i for i, k in enumerate(names)}
+    x = np.zeros((len(rows), len(names) + 1))
+    x[:, -1] = 1.0
+    for i, r in enumerate(rows):
+        for k, v in r.items():
+            x[i, index[k]] = v
+    reg = ridge * np.eye(x.shape[1])
+    reg[-1, -1] = 0.0
+    coef = np.linalg.solve(x.T @ x + reg, x.T @ targets)
+    pred = x @ coef
+    return {"names": names, "coef": np.round(coef, 5).tolist(),
+            "fit": [round(float(np.corrcoef(pred[:, j], targets[:, j])[0, 1]), 3) for j in range(2)]}
+
+
 # -- the banks --------------------------------------------------------------------------------------------------------
 
 class Bank:
@@ -109,16 +168,51 @@ class Bank:
         self.name = f"{self.meta['lang']}/{self.meta['name']}"
         self.tract, self.pitch = self.meta["tract"], self.meta["pitch"]
         self.f0 = d["f0"].astype(np.float64)
-        self.env = d["env"].astype(np.float64) / 2 + ENV_FLOOR
-        self.ap = d["ap"].astype(np.float64) / 255
+        env = d["env"]
+        if self.meta.get("env_delta"):                 # stored frame-to-frame (mod 256): it compresses better
+            env = np.cumsum(env, axis=0, dtype=np.uint8)
+        self._env8 = env                               # kept as stored (0.5 dB steps); rows are decoded on demand
+        self.ap = d["ap"].astype(np.float32) / 255
         self.ph = json.loads(bytes(d["phones"]).decode())
         self.by_sym: dict[str, list[int]] = {}
         for k, p in enumerate(self.ph):
             self.by_sym.setdefault(p[0], []).append(k)
-        self.mid_env = np.array([self.env[(p[1] + p[2]) // 2] for p in self.ph])
+        bounds = np.array([p[1:3] for p in self.ph])
+        self.mid_env = self.rows((bounds[:, 0] + bounds[:, 1]) // 2)
+        voiced = self.f0 > 0                           # each phone's pitch: the mean of its voiced frames
+        starts = np.minimum(bounds[:, 0], len(self.f0) - 1)
+        sums = np.add.reduceat(np.where(voiced, self.f0, 0.0), starts)
+        counts = np.add.reduceat(voiced.astype(float), starts)
+        self.ph_f0 = np.where(counts > 0, sums / np.maximum(counts, 1), 0.0)   # phones tile the bank in order
         model = self.meta["durations"]
         self._index = {k: i for i, k in enumerate(model["names"])}
         self._coef = np.asarray(model["coef"])
+
+    def intonation(self, seq: list[tuple[str, int, int]], kinds: list[tuple[str, bool]]):
+        """(log2 pitch at the start and end of each nucleus relative to the sentence's median, where they are), or
+        None when the bank has no intonation model."""
+        model = self.meta.get("intonation")
+        if not model:
+            return None
+        index = {k: i for i, k in enumerate(model["names"])}
+        coef = np.asarray(model["coef"])
+        rows, where = nucleus_features(seq, kinds)
+        x = np.zeros((len(rows), len(coef)))
+        x[:, -1] = 1.0
+        for i, r in enumerate(rows):
+            for k, v in r.items():
+                if k in index:
+                    x[i, index[k]] = v
+        return x @ coef, where
+
+    def rows(self, idx) -> np.ndarray:
+        """Envelope frames (dB) at the given indices."""
+        return self._env8[idx].astype(np.float64) / 2 + ENV_FLOOR
+
+    @property
+    def env(self) -> np.ndarray:
+        """The whole envelope in dB (analysis; the engine decodes rows as it needs them)."""
+        return self.rows(slice(None))
 
     def durations(self, seq: list[tuple[str, int, int]]) -> list[float]:
         out = []
@@ -226,10 +320,12 @@ ACCENTS = {"pt": accent_pt}
 
 # -- unit selection ---------------------------------------------------------------------------------------------------
 
-def select(b: Bank, seq: list[list]) -> list[tuple[int, int]]:
+def select(b: Bank, seq: list[list], pitch: list[float] | None = None) -> list[tuple[int, int]]:
     """For each diphone of `seq`: (bank phone giving the first phone's second half, bank phone giving the second
-    phone's first half). Contiguous in the bank when possible; Viterbi over target and join costs."""
+    phone's first half). Contiguous in the bank when possible; Viterbi over target and join costs. `pitch`: the
+    pitch each phone will get (Hz, 0 = unknown), so pieces spoken near it are preferred."""
     n = len(seq)
+    pitch = pitch or [0.0] * n
     cands, costs = [], []
     for i in range(n - 1):
         a, c = seq[i], seq[i + 1]
@@ -250,8 +346,11 @@ def select(b: Bank, seq: list[list]) -> list[tuple[int, int]]:
                 cost += 0.1 * min(substitution(seq[i - 1][0], b.ph[k - 1][0]), 1.0)
             if i + 2 < n and k + 2 < len(b.ph):
                 cost += 0.1 * min(substitution(seq[i + 2][0], b.ph[k + 2][0]), 1.0)
-            for want, have in ((a, b.ph[k]), (c, b.ph[k + 1])):
+            for want, kk, f in ((a, k, pitch[i]), (c, k + 1, pitch[i + 1])):
+                have = b.ph[kk]
                 cost += 0.15 * abs(np.log(max(have[2] - have[1], 1) * FRAME / max(want[1], 0.01)))
+                if f > 0 and b.ph_f0[kk] > 0:
+                    cost += F0_TARGET * abs(np.log2(b.ph_f0[kk] / f))
             opts.append((cost, k, k + 1))
         if not opts:                       # no such diphone in the bank: halves from different places
             right = sorted(b.matches(c[0]))[:6]
@@ -267,6 +366,10 @@ def select(b: Bank, seq: list[list]) -> list[tuple[int, int]]:
         prev_r = np.array([r for _, r in cands[i - 1]])
         cur_l = np.array([l_ for l_, _ in cands[i]])
         d = np.abs(b.mid_env[prev_r][:, None, :] - b.mid_env[cur_l][None, :, :]).mean(-1) / 10 + JOIN
+        fa, fb = b.ph_f0[prev_r][:, None], b.ph_f0[cur_l][None, :]
+        both = (fa > 0) & (fb > 0)
+        d = d + F0_JOIN * np.where(both, np.abs(np.log2(np.maximum(fa, 1) / np.maximum(fb, 1))), 0.0)
+        d = d * JOIN_CLASS.get(klass(seq[i][0]), 1.0)
         d[prev_r[:, None] == cur_l[None, :]] = 0.0
         total = acc[:, None] + d
         back.append(np.argmin(total, 0))
@@ -283,7 +386,7 @@ def _couple(b: Bank, k1: int, k2: int, lo: float = 0.25, hi: float = 0.75) -> tu
     (a1, b1), (a2, b2) = b.ph[k1][1:3], b.ph[k2][1:3]
     i1 = np.arange(int(a1 + lo * (b1 - a1)), max(int(a1 + hi * (b1 - a1)), int(a1 + lo * (b1 - a1)) + 1))
     i2 = np.arange(int(a2 + lo * (b2 - a2)), max(int(a2 + hi * (b2 - a2)), int(a2 + lo * (b2 - a2)) + 1))
-    d = np.abs(b.env[i1][:, None, :] - b.env[i2][None, :, :]).mean(-1)
+    d = np.abs(b.rows(i1)[:, None, :] - b.rows(i2)[None, :, :]).mean(-1)
     j1, j2 = np.unravel_index(np.argmin(d), d.shape)
     return float(i1[j1]), float(i2[j2])
 
@@ -317,7 +420,7 @@ def frames(b: Bank, parts: list[list], joins: list[int], smooth: int = SMOOTH):
         lo = np.clip(np.floor(x).astype(int), 0, last)
         hi = np.minimum(lo + 1, last)
         w = np.clip(x - lo, 0.0, 1.0)[:, None]
-        return (b.env[lo] * (1 - w) + b.env[hi] * w, b.ap[lo] * (1 - w) + b.ap[hi] * w,
+        return (b.rows(lo) * (1 - w) + b.rows(hi) * w, b.ap[lo] * (1 - w) + b.ap[hi] * w,
                 b.f0[np.clip(np.round(x).astype(int), 0, last)] > 0)
 
     env, ap, voiced = at(src)
@@ -349,6 +452,24 @@ def render_spoken(sp, sr: int, seed: int) -> np.ndarray:
     return sp.gain * y / (np.max(np.abs(y)) + 1e-12)
 
 
+def _contour(learned, edges, n: int, pitch: float, range_: float, melody) -> np.ndarray:
+    """Nucleus targets (start and end of each vowel, a quarter in) -> pitch per output frame, smoothed (50 ms)."""
+    targets, where = learned
+    xs, ys = [0.0], [0.0]
+    for k, ((start, end), i) in enumerate(zip(targets, where, strict=True)):
+        a, e = edges[i], edges[i + 1]
+        note = melody[k % len(melody)] / 12 if melody else 0.0
+        xs += [a + 0.25 * (e - a), e - 0.25 * (e - a)]
+        ys += [range_ * start + note, range_ * end + note]
+    if len(xs) > 1:
+        ys[0] = ys[1]
+    lf = np.interp(np.arange(n), xs, ys)
+    kernel = np.hanning(12)[1:-1]
+    kernel /= kernel.sum()
+    lf = np.convolve(np.pad(lf, 5, mode="edge"), kernel, mode="same")[5:-5]
+    return pitch * 2 ** lf
+
+
 def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate: float = 1.0,
          melody: list[float] | None = None, jitter: float = 0.0, seed: int = 0) -> tuple[list, list, list, str]:
     """Phrases (from a g2p front-end) -> (pieces, joins, f0 per output frame, the teacher-accent transcription)."""
@@ -373,11 +494,16 @@ def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate:
     for p, d in zip(seq, b.durations([(p[0], p[2], p[3]) for p in seq]), strict=True):
         if p[0] != "_":
             p[1] = d / rate
-    units = select(b, seq)
-    parts, joins = pieces(b, seq, units)
-    n = sum(k for _, _, k in parts)
     new = np.cumsum([0.0] + [2 * max(int(round(p[1] / 2 / FRAME)), 1) * FRAME for p in seq])
+    n = int(round(new[-1] / FRAME))
     f0 = np.interp(np.interp(np.arange(n) * FRAME, new, ours), t_ours, f0_ours)
+    learned = b.intonation([(p[0], p[2], p[3]) for p in seq], [(ph.kind, ph.wh) for ph in phrases])
+    if learned is not None:            # the teacher's intonation, for our phones, timing and pitch
+        f0 = _contour(learned, new / FRAME, n, pitch, range_, melody)
+    middles = np.clip(((new[:-1] + new[1:]) / 2 / FRAME).astype(int), 0, n - 1)
+    units = select(b, seq, [float(f0[m]) if p[0] in VOWEL or p[0] in VOICED else 0.0
+                            for p, m in zip(seq, middles, strict=True)])
+    parts, joins = pieces(b, seq, units)
     if jitter:                         # a slow random wander, as a voice has
         from ..render import smooth_noise
         f0 = f0 * 2 ** (jitter * smooth_noise(rng.key(seed, "jitter"), n, int(1 / FRAME), 6) / 12)
