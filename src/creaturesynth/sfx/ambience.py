@@ -9,7 +9,7 @@ archetypes, so they sing with the same voices as the bestiary.
 """
 from ..archetypes import VOWELS
 from ..creature import Creature
-from ..spec import Noise, Scatter, Syllable, Voice
+from ..spec import Modal, Noise, Scatter, Syllable, Voice
 from . import Fx, bell_curve, decay_curve, recipe
 from .magic import thunder
 from .physical import splits
@@ -64,14 +64,43 @@ def place(voice: Voice, at: float, gain: float = 1.0, end: float = LENGTH + XFAD
     return out
 
 
-def owl(start: float, pitch: float) -> list[Syllable]:
-    """Hoo, hoo-hoo: soft sine hoots through an 'u' mouth."""
-    f = [(hz, bw, g) for hz, bw, g in zip(VOWELS["u"][:2], (120, 200), (1.0, 0.3), strict=True)]
+def songbird(fx: Fx, start: float, name: str, gain: float = 1.0) -> list[Syllable]:
+    """A songbird's phrase, from CC0 recordings: 3-8 elements 50-500 ms apart - whistles with a small slide, chirps
+    sweeping an octave or more in 20-60 ms, trills of 20 ms notes - between 2 and 7 kHz. The species keeps its
+    register; every phrase is new."""
+    base = 2500 + 2500 * fx.g.u(name + "reg")
     out, t = [], start
-    for k, d in enumerate((0.45, 0.2, 0.55)):
-        out.append(Syllable(round(t, 3), d, [(0, pitch * 1.03), (0.3, pitch), (1, pitch * 0.92)], "sine",
-                            breath=0.15, formants=f, attack=0.06, release=0.12, gain=0.8 if k else 1.0))
-        t += d + (0.35 if k == 0 else 0.08)
+    for k in range(3 + int(5.99 * fx.rand(f"{name}n"))):
+        kind = fx.rand(f"{name}k{k}")
+        f = base * 2 ** (0.8 * (fx.rand(f"{name}f{k}") - 0.4))
+        if kind < 0.35:        # whistle
+            d = 0.08 + 0.25 * fx.rand(f"{name}d{k}")
+            pitch = [(0, f), (1, f * 2 ** (0.3 * (fx.rand(f"{name}s{k}") - 0.5)))]
+            out.append(Syllable(round(t, 4), round(d, 4), pitch, "sine", attack=0.01, release=0.02, gain=gain))
+        elif kind < 0.75:      # chirp
+            d = 0.02 + 0.04 * fx.rand(f"{name}d{k}")
+            up = fx.rand(f"{name}u{k}") < 0.5
+            pitch = [(0, f * (0.6 if up else 1.6)), (1, f * (1.6 if up else 0.6))]
+            out.append(Syllable(round(t, 4), round(d, 4), pitch, "sine", attack=0.003, release=0.005, gain=gain))
+        else:                  # trill
+            n, step = 6 + int(8 * fx.rand(f"{name}tn{k}")), 0.04 + 0.02 * fx.rand(f"{name}ts{k}")
+            for j in range(n):
+                out.append(Syllable(round(t + j * step, 4), 0.02, [(0, f * 1.2), (1, f * 0.85)], "sine",
+                                    attack=0.003, release=0.006, gain=gain * (0.8 + 0.2 * (j % 2))))
+            d = n * step
+        t += d + 0.05 + 0.4 * fx.rand(f"{name}g{k}")
+    return out
+
+
+def owl(start: float, pitch: float) -> list[Syllable]:
+    """A great horned owl, from CC0 recordings: five near-pure hoots (2nd harmonic ~-40 dB), two short then three
+    long - hoo h'hoo, hooo, hooo, hooo - the middle ones a touch higher, the last one sinking."""
+    f = [(VOWELS["u"][0], 120, 1.0)]
+    out = []
+    for t, d, k in ((0.0, 0.08, 1.0), (0.32, 0.11, 1.06), (0.47, 0.27, 1.06), (1.09, 0.35, 1.05), (1.67, 0.27, 0.98)):
+        out.append(Syllable(round(start + t, 3), d, [(0, pitch * k * 1.01), (0.4, pitch * k), (1, pitch * k * 0.95)],
+                            "sine", breath=0.08, formants=f, attack=min(0.04, d / 3), release=min(0.1, d / 2),
+                            gain=0.8 if d < 0.15 else 1.0))
     return out
 
 
@@ -135,8 +164,12 @@ def ambience(fx: Fx):
 
     elif st == "stream":
         if loop:
-            L = [drops(400 + 800 * p, (300, 2500), (0.005, 0.02), 1.0), band(1500, 0.4, 0.6, (1.5, 0.3)),
-                 band(300, 0.7, 0.4, (0.8, 0.3), "brown", "low")]
+            # CC0 recordings of streams: broad 0.5-8 kHz (strongest 1-4 kHz), little low, distinct bubbles and
+            # splashes over the fizz (crest ~21 dB)
+            L = [drops(60 + 120 * p, (400, 3000), (0.005, 0.02), 1.0, level=(0.05, 1.0)),
+                 drops(600 + 600 * p, (2000, 9000), (0.0005, 0.002), 0.2, event="pop"),
+                 band(2000, 0.4, 0.3, (1.5, 0.3)), band(7000, 0.7, 0.18, (1.0, 0.3)),
+                 band(300, 0.7, 0.12, (0.8, 0.3), "brown", "low")]
         else:  # something jumps in
             L = [drops([(0, 400), (1, 0)], (300, 2000), (0.005, 0.03), 1.0, 0.8),
                  Noise(0.0, 0.5, [(0, 1200), (1, 3000)], "band", 0.8, amp=decay_curve(5), attack=0.005, gain=0.8)]
@@ -148,21 +181,20 @@ def ambience(fx: Fx):
                  drops([(0, 3.5), (1, 3.5)], (900, 2600), (0.02, 0.05), 1.0, level=(0.2, 1.0))]
             extra = {"space": 3.0, "wet": 0.4}
         else:
-            L = [drops([(0, 3), (1, 3)], (900, 2600), (0.02, 0.05), 1.0, 1.0, level=(0.6, 1.0))]
+            # CC0 recordings of drips: 0.75-5.4 kHz, ringing 10-35 ms
+            L = [drops([(0, 3), (1, 3)], (700, 4500), (0.01, 0.04), 1.0, 1.0, level=(0.6, 1.0))]
             extra = {"space": 3.0, "wet": 0.45}
 
     elif st == "forest":
-        birds = [Creature("bird", species=fx.sfx.species * 7 + k, size=0.15 + 0.3 * fx.g.u(f"bs{k}")) for k in range(3)]
         if loop:
             L = [band(3500, 0.6, 0.5, (0.15, 0.6), amp=gusts(fx, 3)), band(200, 0.7, 0.06, (0.1, 0.4), "brown", "low"),
                  band(800, 0.7, 0.12, (0.15, 0.5), amp=gusts(fx, 3)),
                  drops([(0, 30), (1, 30)], (2500, 9000), (0.0005, 0.002), 0.25, event="pop")]
-            for k in range(int(5 + 6 * p)):
-                b = birds[k % len(birds)]
-                at = LENGTH * fx.g.u(f"bird{k}")
-                L += place(b.voice("idle", take=k), at, 0.35 + 0.4 * fx.g.u(f"bv{k}"))
+            for k in range(int(5 + 6 * p)):   # three birds singing phrases here and there, near and far
+                at = (LENGTH - 2.5) * fx.g.u(f"bird{k}")
+                L += songbird(fx, at, f"bird{k % 3}", 0.25 + 0.5 * fx.g.u(f"bv{k}"))
         else:
-            L = place(birds[int(fx.rand("who") * 3)].voice("alert", take=fx.take), 0.0)
+            L = songbird(fx, 0.0, f"bird{int(fx.rand('who') * 3)}")
         extra = {"space": 1.2, "wet": 0.15}
 
     elif st == "night":
@@ -176,7 +208,7 @@ def ambience(fx: Fx):
                 L += place(c.voice("idle", take=k), LENGTH * k / (10 + 10 * p) + 0.3 * fx.g.u(f"c{k}"),
                            0.25 + 0.35 * fx.g.u(f"cv{k}"))
         else:
-            L = owl(0.0, 330 + 120 * (1 - s))
+            L = owl(0.0, 340 + 60 * (1 - s))
         extra = {"space": 1.5, "wet": 0.2}
 
     elif st == "sea":
@@ -200,16 +232,25 @@ def ambience(fx: Fx):
     else:   # dungeon
         if loop:
             root = 38 + 10 * fx.g.u("root")
+            # open dungeon ambiences breathe: their level moves 3-8 dB over several seconds
+            swell = gust_curve(fx, 2, 0.35)
             L = [Syllable(0.0, round(LENGTH + XFADE, 3), [(0, f), (1, f)], "glottal", brightness=0.15, sub=0.4,
-                          jitter=0.2, attack=1.0, release=1.0, gain=0.35) for f in (root, root * 1.01, root * 1.5)]
-            L += [band(450, 6.0, 0.25, (0.08, 0.7), amp=gusts(fx, 2, 0.2)),
+                          jitter=0.2, attack=1.0, release=1.0, amp=swell, gain=0.35)
+                 for f in (root, root * 1.01, root * 1.5)]
+            L += [band(450, 6.0, 0.25, (0.08, 0.7), amp=gust_curve(fx, 3, 0.15)),
                   drops([(0, 0.3), (1, 0.3)], (800, 2200), (0.02, 0.05), 0.6, level=(0.3, 1.0))]
             extra = {"space": 3.5, "wet": 0.45}
-        else:   # chains
-            hits = [(round(0.05 * k + 0.04 * fx.rand(f"h{k}"), 3), round(0.3 + 0.7 * fx.rand(f"g{k}"), 3), 0.0008)
-                    for k in range(14)]
-            L = [fx.strike("iron", size=0.05, hits=hits, gain=0.8, prefix="link", dur=1.5),
-                 fx.strike("iron", size=0.2, hits=hits[::2], gain=0.5, prefix="link2", dur=1.5)]
+        else:   # chains, from CC0 recordings: small links clinking 3-15 times a second, strongest at 8-12.5 kHz
+            dur = 1.5 + 1.5 * fx.rand("len")
+            links = []
+            for c in range(2):
+                hits = [(round(dur * fx.rand(f"c{c}t{k}") ** 1.3, 3), round(0.2 + 0.8 * fx.rand(f"c{c}g{k}"), 3),
+                         0.0004) for k in range(int(dur * (4 + 6 * p)))]
+                modes = [(round(3000 * (14000 / 3000) ** ((i + fx.g.u(f"lk{c}{i}")) / 16), 1),
+                          round(0.05 + 0.15 * fx.g.u(f"ld{c}{i}"), 3), round(0.3 + 0.7 * i / 15, 3)) for i in range(16)]
+                links.append(Modal(0.0, round(dur + 0.4, 3), modes, sorted(hits), hardness=16000, click=0.2,
+                                   gain=1.0 - 0.3 * c))
+            L = links
             extra = {"space": 2.5, "wet": 0.35}
 
     if loop:

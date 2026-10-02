@@ -313,7 +313,13 @@ As partes:
 - **Vento (refeito sem a busca do CLAP):** em gravações CC0 de vento, o corpo é mais forte perto de 250 Hz, as rajadas vêm a cada 3–10 s e sobem 4–11 dB, e o assobio é leve (3–9 dB acima do espectro). A versão guiada pelo CLAP tinha um assobio estreito e quase não variava (1–2 dB). Agora as rajadas sobem e voltam, e o assobio acompanha a altura da rajada.
 - **Trovão (`magic.thunder`, refeito com gravações):** um ronco mais forte perto de 250 Hz (−12 dB em 1 kHz, −25 em 2 kHz) que dura 2,5–5 s e rola, com uma rajada nova a cada ~0,3 s, 6–12 dB acima do fundo. Um raio caindo perto rasga antes com alguns estalos secos. A versão anterior tinha tirado os estalos porque o CLAP os ouvia como fogo, e rolava só 4 vezes.
 
-O mar e a floresta já estavam perto. O riacho e a masmorra não têm referência no ESC-50.
+O mar e a floresta já estavam perto. Com amostras CC0 do Freesound (só para análise), também foram refeitos:
+- **Riacho:** largo em 0,5–8 kHz (mais forte em 1–4 kHz), com pouco grave e bolhas destacadas sobre o chiado (crista ~21 dB).
+- **Masmorra:** o fundo respira, com o volume subindo e descendo 3–8 dB.
+- **Coruja:** cinco pios quase puros (corujão-orelhudo, 340–400 Hz): dois curtos e três longos.
+- **Passarinhos:** em vez da voz de criatura, frases de 3–8 elementos entre 2 e 7 kHz: assobios, varreduras de uma oitava em 20–60 ms e trinados. Cada espécie tem seu registro.
+- **Gotas na caverna:** 0,75–5,4 kHz, soando 10–35 ms.
+- **Correntes:** elos pequenos tilintando 3–15 vezes por segundo, mais fortes em 8–12,5 kHz. Antes eram ferro grave.
 
 **Explosões (`explosion`): comparadas com gravações.**
 - **De perto:** mais fortes em 63–250 Hz (−9 dB em 1 kHz, −14 em 4 kHz). Crescem por ~0,1 s e caem 20 dB em ~0,8 s. A primeira versão tinha um buraco em 125–250 Hz e um rugido alto demais perto de 1 kHz; ganhou um "corpo" grave e o crescimento inicial.
