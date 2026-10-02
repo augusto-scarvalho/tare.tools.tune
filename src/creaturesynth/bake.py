@@ -25,10 +25,10 @@ Spoken lines go in an optional ``speakers`` section::
         "fairy":      {"voice": {"preset": "fairy", "rate": 1.2}, "lang": "en", "lines": {"hi": "Hi there!"}}
       }
 
-``role`` picks the engine (see speech/casting.py): ``main`` lines get a natural voice (Kokoro)
-when it is installed, everyone else a formant voice; ``crowd`` and ``creature`` babble.
+``role`` picks the engine (see speech/casting.py): ``main`` lines get a natural voice (a voice
+bank), everyone else a formant voice; ``crowd`` and ``creature`` babble.
 ``style`` (speech, gibberish, animalese, mumble), ``gender`` (f, m) and ``voice`` override.
-A top-level ``"natural_voices": false`` keeps every line procedural.
+A top-level ``"natural_voices": false`` keeps every line on the formant engine.
 
 Sound effects go in an optional ``sounds`` section (see creaturesynth.sfx; ``events``
 defaults to all of the kind's events, loops get one take)::
@@ -119,7 +119,7 @@ def sound_from_entry(name: str, entry: Mapping) -> tuple[Sfx, list[str]]:
 
 def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> tuple[dict[str, Creature], dict]:
     """Returns (creatures by name, settings). `natural` (default: the file's "natural_voices", else
-    whether Kokoro is installed) decides if "main" speakers get natural voices."""
+    true) decides if "main" speakers get natural voices."""
     data = source if isinstance(source, Mapping) else json.loads(Path(source).read_text())
     entries = data.get("creatures", {})
     creatures = {name: creature_from_entry(name, e, entries) for name, e in entries.items()}
@@ -168,8 +168,8 @@ def _bake_sound(job):
 def _bake_line(job):
     name, who, lang, line_id, text, sr, out_dir, specs = job
     stem = f"{name}/{line_id}"
-    voice = who.voice(text, lang)  # natural voices have no spec
-    audio = render(voice, sr) if voice else who.render(text, lang, sr)
+    voice = who.voice(text, lang)
+    audio = render(voice, sr)
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
     entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4)}
     if specs and voice:
@@ -216,7 +216,8 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
         manifest["creatures"][name]["calls"][call][take] = entry
     if speakers:
         manifest["speakers"] = {name: {"speaker": asdict(who.speaker), "lang": lang, "role": who.role,
-                                       "style": who.style, "engine": "kokoro" if who.natural else "formant",
+                                       "style": who.style,
+                                       "engine": "natural" if who.speaker.natural(lang) else "formant",
                                        "lines": {}}
                                 for name, (who, lang, _) in speakers.items()}
         for name, line_id, entry in line_results:

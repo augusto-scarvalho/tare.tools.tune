@@ -63,28 +63,38 @@ Requer Python 3.10 ou mais novo.
 
 ## Fala humana
 
-Texto em **português brasileiro** ou **inglês** vira fala por síntese de formantes, a mesma família de técnica das vozes de computador clássicas. O processo:
+Texto em **português brasileiro** ou **inglês** vira fala. A frente é a mesma para os dois motores:
 
 1. **Texto → fonemas.** No português, por regras: dígrafos, nasais, "t/d" antes de "i", "r"/"s"/"x", sílaba tônica e números por extenso. No inglês, pelo dicionário CMUdict (~126 mil palavras), com regras para palavras que não estão nele, como nomes inventados.
-2. **Fonemas → alvos acústicos.** Cada fonema tem duração e alvos de formantes; a coarticulação suaviza a passagem entre eles.
-3. **Entonação.** Afirmação cai no fim, pergunta sim/não sobe, pergunta com "where/what" cai, exclamação tem pico mais alto, vírgula deixa a frase em suspenso.
-4. **Síntese.** Um sintetizador em cascata/paralelo no estilo Klatt gera o áudio.
+2. **Entonação.** Afirmação cai no fim, pergunta sim/não sobe, pergunta com "where/what" cai, exclamação tem pico mais alto, vírgula deixa a frase em suspenso.
+3. **Som**, por um de dois motores (`Speaker(engine=...)`):
+   - `"formant"` (padrão): cada fonema tem duração e alvos de formantes, a coarticulação suaviza a passagem e um sintetizador em cascata/paralelo no estilo Klatt gera o áudio. Soa robótico e retrô, mas é minúsculo e estica para qualquer voz, de fada a gigante.
+   - `"natural"`: a frase é montada com pedaços de um **banco de voz**, a leitura de ~240 frases por um professor, guardada só como números (tom, envelope espectral e sopro a cada 5 ms; ~3,4 MB por voz). Para cada par de fonemas escolhe-se o melhor pedaço do banco (seleção de unidades por Viterbi), os pedaços são esticados para o nosso ritmo, recebem a nossa entonação e o nosso vocoder refaz o som, levado para a altura e o trato vocal do personagem.
 
-Soa robótico e retrô, mas é 100% procedural, leve, determinístico e portável.
+**Nada de IA em tempo de execução.** Os dois motores são determinísticos e procedurais: tabela, programação dinâmica e aritmética. O professor dos bancos é o [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), usado uma vez, offline, por `tools/build_speech.py`; o pacote não depende dele nem do PyTorch. Os dois motores dão um spec portável (`SpeechProgram` ou `Spoken`).
 
-**Vozes prontas:** `default`, `deep`, `high`, `child`, `cute`, `fairy`, `elder`, `giant`, `monster`, `robot` e `whisper`. Use `Speaker.random(seed)` para dar uma voz humana única a cada NPC, e `Speaker.from_creature(criatura)` para uma criatura falar com voz compatível com o corpo dela. Dá para ajustar `pitch`, `tract` (tamanho do trato vocal), `rate`, `range` (entonação), `breath`, `rough` e outros.
+```python
+from creaturesynth.speech import Speaker
 
-**Vozes naturais (opcional).** Quem quiser voz natural em vez de robótica pode usar o [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), com vozes em português brasileiro (`pf_dora`, `pm_alex`, `pm_santa`) e em inglês. O Whisper acerta essas vozes quase sempre (CER 0,003 nas mesmas frases de teste). O preço: não é procedural, puxa o PyTorch (~1 GB) mais um modelo de ~330 MB, e não vira spec portável para engines; o bake gera WAV normalmente. Os efeitos do motor (reverb, drive, crush) funcionam por cima.
-
-```bash
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # PyTorch só CPU basta
-pip install -e ".[neural]"
-creaturesynth say "Bem-vindo à vila!" --voice kokoro:pm_alex
+guarda = Speaker.preset("deep")                                   # formantes
+rei = Speaker(pitch=105, tract=0.97, engine="natural")            # banco de voz, levado para esta voz
+audio = rei.render("Bem-vindo ao meu reino, viajante.", lang="pt")
+npc = Speaker.random(42).but(engine="natural")                    # uma voz natural única por NPC
 ```
 
-No código, use `speaker_from("kokoro:pf_dora")`; no bestiário, `"voice": "kokoro:pm_alex"`. O Kokoro usa o espeak-ng (GPL) para converter o português em fonemas: tudo bem como ferramenta, mas avalie a licença antes de distribuir junto com um jogo.
+**Vozes prontas (formantes):** `default`, `deep`, `high`, `child`, `cute`, `fairy`, `elder`, `giant`, `monster`, `robot` e `whisper`. Use `Speaker.random(seed)` para dar uma voz humana única a cada NPC, e `Speaker.from_creature(criatura)` para uma criatura falar com voz compatível com o corpo dela. Dá para ajustar `pitch`, `tract` (tamanho do trato vocal), `rate`, `range` (entonação), `breath`, `rough` e outros.
 
-**Inteligibilidade** medida com o Whisper (`tools/intelligibility.py`) em 16 frases de diálogo de jogo por idioma: no inglês, CER entre 0,04 e 0,06 conforme a voz (a maioria das frases sai perfeita); no português, entre 0,24 e 0,34 (cerca de 70 a 75% dos caracteres certos). O português ainda é o ponto a melhorar.
+**Vozes naturais:** `natural`, `natural:m`, `natural:f` ou um banco (`natural:pt/alex`, `natural:pt/dora`), na linha de comando, no bestiário e em `speaker_from`. Qualquer `pitch` e `tract` funcionam: o banco mais próximo do trato é escolhido e o vocoder leva o resto (formantes de 0,75× a 1,35×). `breath`, `whisper`, `tilt`, `rate`, `range`, `jitter`, `drive`, `crush` e `space` também valem. Por enquanto só há bancos em português; em inglês, o motor natural cai para o de formantes.
+
+**Inteligibilidade** medida com o Whisper (`tools/intelligibility.py`, mais 16 frases novas, nenhuma do corpus do professor):
+
+| | português (CER) |
+|---|---|
+| formantes | 0,23 |
+| natural, voz masculina / feminina / NPCs sorteados | 0,08 / 0,11 / 0,10–0,12 |
+| o professor (Kokoro) | 0,003 |
+
+No inglês, os formantes ficam entre 0,04 e 0,06 conforme a voz.
 
 ### Interjeições (jogos sem dublagem completa)
 
@@ -127,13 +137,13 @@ Cada motor tem seu ponto forte, e `speech.casting.cast` faz a escolha pelo papel
 
 | papel (`role`) | para quê | voz |
 |---|---|---|
-| `main` | falas importantes de NPC | natural (Kokoro), se instalado; senão, formantes |
+| `main` | falas importantes de NPC | natural, voz única por nome |
 | `minor` | o resto dos NPCs | formantes, voz única por nome |
 | `crowd` | burburinho de fundo | formantes, língua inventada |
 | `creature` | criaturas que falam | a voz da criatura, balbuciando |
 | `robot` | máquinas, golems | formantes robóticos, palavras reais |
 
-A voz natural soa humana, mas é pesada, não é procedural e não vira spec. A de formantes é leve, determinística, varia sem fim e sabe **balbuciar** (`style`). Os três estilos de balbucio mantêm o ritmo, as tônicas e a pontuação do texto, então perguntas continuam subindo:
+A voz natural soa humana e leva um banco de alguns MB por idioma. A de formantes é minúscula, estica para qualquer criatura e é a melhor para **balbuciar** (`style`; os estilos também funcionam na natural). Os três estilos de balbucio mantêm o ritmo, as tônicas e a pontuação do texto, então perguntas continuam subindo:
 - `gibberish`: língua inventada com os sons do idioma, como os Sims;
 - `animalese`: uma nota por sílaba, rápida e aguda, como Animal Crossing;
 - `mumble`: tudo em "mm".
@@ -141,7 +151,7 @@ A voz natural soa humana, mas é pesada, não é procedural e não vira spec. A 
 ```python
 from creaturesynth.speech.casting import cast
 
-rei = cast("main", "rei", gender="m")              # Kokoro se instalado
+rei = cast("main", "rei", gender="m")              # voz natural
 povo = cast("crowd", "povo")                       # balbucio
 rato = cast("creature", creature=rato_criatura)    # pequeno: animalese
 audio = rei.render("Salve o reino!")
@@ -340,7 +350,7 @@ creaturesynth bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamad
 }
 ```
 
-`"natural_voices": false` no topo do arquivo (ou `bake --no-natural`) deixa todas as falas procedurais.
+`"natural_voices": false` no topo do arquivo (ou `bake --no-natural`) deixa todas as falas no motor de formantes.
 
 Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por chamado.
 
@@ -399,7 +409,9 @@ ruff check .
 pip install -e ".[asr]"
 python tools/intelligibility.py -v    # a fala, transcrita pelo Whisper (taxa de erro por caractere)
 
-pip install -e ".[neural]" pyworld
+pip install -e ".[teacher]"                    # Kokoro, soundfile e pyworld: só para as ferramentas
+python tools/build_speech.py render pt        # o professor lê o corpus (cache em teacher/)
+python tools/build_speech.py build pt         # análise -> bancos de voz em src/creaturesynth/speech/data
 python tools/teacher_calibration.py render    # fala natural do Kokoro como "professor" do português
 python tools/teacher_calibration.py measure   # formantes, durações e fricativas medidos por fonema
 python tools/structure_analysis.py compare    # espectros quadro a quadro contra o professor, por classe de fonema
@@ -410,13 +422,15 @@ python tools/structure_analysis.py compare --set klatt.FRIC_GAIN=2 --speaker til
 python tools/build_barks.py --freesound DIR --oga DIR   # refaz os moldes das interjeições (precisa das gravações e do pyworld)
 ```
 
-O que essas ferramentas mostraram está em [`docs/arquitetura.md`](docs/arquitetura.md): a distância para a voz natural está no envelope espectral quadro a quadro, e nenhum ajuste de parâmetros do motor de formantes a fecha. Por isso a divisão de trabalho: voz natural nas falas importantes, formantes no resto.
+O que essas ferramentas mostraram está em [`docs/arquitetura.md`](docs/arquitetura.md): a distância para a voz natural está no envelope espectral quadro a quadro, e nenhum ajuste de parâmetros do motor de formantes a fecha. Por isso o motor natural pega o envelope de gravações (os bancos de voz) e deixa para as regras o resto: fonemas, ritmo e entonação.
 
 O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som leva de 20 a 250 ms para gerar, e `bake` produz cerca de 40 sons por segundo.
 
 ## Créditos
 
 A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/creaturesynth/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
+
+Os bancos de voz natural vêm de leituras do [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), feitas offline; o pacote leva só os números medidos nelas.
 
 As interjeições partem de gravações CC0 do OpenGameArt ("Voice Clip Pack - Male Adventurer RPG", "Female RPG Voice Starter Pack" de Cici Fyre, "Male Grunt/Yelling sounds") e do Freesound (os ids estão em `tools/build_barks.py`). O pacote leva só os números medidos nelas; a síntese segue o desenho do vocoder [WORLD](https://github.com/mmorise/World), de Masanori Morise.
 

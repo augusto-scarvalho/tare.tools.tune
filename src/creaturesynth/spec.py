@@ -8,7 +8,7 @@ from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "creaturesynth.voice"
 VERSION = 5   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
-              # 5: vocoded clips
+              # 5: vocoded clips and natural speech
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -147,6 +147,29 @@ class Vocoded:
 
 
 @dataclass
+class Spoken:
+    """Natural speech (speech/concat.py): pieces of a voice bank's analysed recordings, stretched to our timing, with
+    our intonation, rebuilt by the vocoder."""
+
+    bank: str                         # "<lang>/<voice>", e.g. "pt/alex"
+    pieces: list[tuple[float, float, int]]      # bank frames [from, to) laid over n output frames (5 ms each)
+    joins: list[int] = field(default_factory=list)   # pieces that cross-fade with the one before
+    f0: list[float] = field(default_factory=list)    # pitch per output frame, Hz (used where the bank has voice)
+    start: float = 0.0
+    warp: float = 1.0                 # formant ratio (the speaker's vocal tract / the teacher's)
+    breath: float = 0.0               # -1..1, as in Vocoded
+    tilt: float = 0.0                 # dB per octave around 1 kHz
+    gain: float = 1.0
+    text: str = ""
+    lang: str = ""
+    phonemes: str = ""                # informational: the transcription in the teacher's accent
+
+    @property
+    def duration(self) -> float:
+        return sum(p[2] for p in self.pieces) * 0.005
+
+
+@dataclass
 class Voice:
     syllables: list[Syllable] = field(default_factory=list)
     chips: list[ChipProgram] = field(default_factory=list)
@@ -155,6 +178,7 @@ class Voice:
     noise: list[Noise] = field(default_factory=list)
     scatter: list[Scatter] = field(default_factory=list)
     vocoded: list[Vocoded] = field(default_factory=list)
+    spoken: list[Spoken] = field(default_factory=list)
     drive: float = 0.0                # tanh saturation amount
     crush: float = 0.0                # 0..1 sample-rate/bit-depth reduction
     space: float = 0.0                # reverb tail length, seconds (engines may use their own reverb)
@@ -173,7 +197,7 @@ class Voice:
         from .chip import program_duration  # chip imports this module
         ends = [s.start + s.dur for s in self.syllables]
         ends += [c.start + program_duration(c) for c in self.chips]
-        ends += [p.start + p.duration for p in (*self.speech, *self.vocoded)]
+        ends += [p.start + p.duration for p in (*self.speech, *self.vocoded, *self.spoken)]
         ends += [e.start + e.dur for e in (*self.modal, *self.noise, *self.scatter)]
         return max(ends, default=0.0)
 
@@ -187,7 +211,7 @@ class Voice:
         out["syllables"] = [compact(s) for s in self.syllables]
         out["chips"] = [compact(c) for c in self.chips]
         out["speech"] = [compact(p) for p in self.speech]
-        for name in ("modal", "noise", "scatter", "vocoded"):
+        for name in ("modal", "noise", "scatter", "vocoded", "spoken"):
             out[name] = [compact(e) for e in getattr(self, name)]
         return json.loads(json.dumps(out))  # tuples -> lists: exactly what JSON round-trips to
 
@@ -209,6 +233,7 @@ class Voice:
         for name, kind in (("modal", Modal), ("noise", Noise), ("scatter", Scatter)):
             kwargs[name] = [_element(kind, e) for e in data.get(name, [])]
         kwargs["vocoded"] = [Vocoded(**v) for v in data.get("vocoded", [])]
+        kwargs["spoken"] = [Spoken(**{**v, "pieces": [tuple(x) for x in v["pieces"]]}) for v in data.get("spoken", [])]
         return cls(**kwargs)
 
     @classmethod

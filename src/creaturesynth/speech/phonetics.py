@@ -154,15 +154,25 @@ def segments(phrases: list[Phrase], lang: str, rate: float = 1.0) -> tuple[list[
     segs: list[_Seg] = [_Seg("_", 0.03, (500, 1500, 2500))]
     sylls: list[dict] = []
     table = phone_table(lang)
+    where: list = [None, 0]           # the phone being laid out and its first segment: segments get word positions
+
+    def mark(info=None):
+        if where[0] is not None:
+            for seg in segs[where[1]:]:
+                seg.meta.update(where[0])
+        where[0], where[1] = info, len(segs)
+
     for pi, phrase in enumerate(phrases):
         flat = [(w, si, s) for w in phrase.words for si, s in enumerate(w.syllables)]
-        for fi, (word, _si, syl) in enumerate(flat):
+        for fi, (word, si, syl) in enumerate(flat):
             last_syl = fi == len(flat) - 1
             stressed = syl.stressed and not word.clitic
             info = {"phrase": pi, "kind": phrase.kind, "wh": phrase.wh, "accent": stressed, "last": last_syl}
             sylls.append(info)
             phones = syl.phones
             for k, ph in enumerate(phones):
+                mark({"word_initial": si == 0 and k == 0, "word_final": si == len(word.syllables) - 1
+                      and k == len(phones) - 1, "syllable": len(sylls) - 1})
                 spec = table.get(ph)
                 if spec is None:
                     continue
@@ -236,6 +246,7 @@ def segments(phrases: list[Phrase], lang: str, rate: float = 1.0) -> tuple[list[
                             vot *= VELAR_VOT
                         mid = tuple((a + b) / 2 for a, b in zip(F, nxt_v.F if nxt_v else F, strict=True))
                         segs.append(_Seg(ph, vot / rate, mid, ah=STOP_ASPIRATION))
+        mark()
         segs.append(_Seg("_", PAUSES[phrase.kind] / rate if pi < len(phrases) - 1 else 0.08, segs[-1].F))
     for s in segs:
         s.B = _bandwidths(s.F, PHONES[s.phone].kind if s.phone in PHONES else "")

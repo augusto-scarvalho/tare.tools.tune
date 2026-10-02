@@ -32,7 +32,7 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `bake.py` | uso offline: bestiário → WAVs + manifest |
 | `runtime.py` | uso em jogo Python: `VoiceBank` |
 | `cli.py` | linha de comando |
-| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `neural.py` (Kokoro), `vocoder.py` (moldes de gravações + síntese), `emote.py` (interjeições), `Speaker` |
+| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `concat.py` (motor natural: bancos de voz), `vocoder.py` (síntese a partir de quadros medidos), `emote.py` (interjeições), `Speaker` |
 | `clap.py`, `designer.py`, `analysis.py` | calibração: CLAP (texto ↔ som), busca evolutiva (`design`, `match`), medidas de gravações |
 | `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `magic.py`, `ambience.py` |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
@@ -84,6 +84,7 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 | `air` | 0..1, ruído de fundo de gravação, de -70 a -30 dB do pico (v3) |
 | `modal`, `noise`, `scatter` | listas de `Modal`, `Noise` e `Scatter` (efeitos sonoros, v4) |
 | `vocoded` | lista de `Vocoded` (performances refeitas pelo vocoder, v5) |
+| `spoken` | lista de `Spoken` (fala do motor natural, v5) |
 | `loop` | segundos de crossfade; > 0 gera um loop sem emenda de `duração − loop` segundos (v4) |
 | `seed` | semente de todos os fluxos aleatórios |
 | `meta` | informativo (arquétipo, chamado, traços) |
@@ -111,6 +112,8 @@ Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` c
 **Scatter** (v4), uma nuvem de eventos: `start`, `dur`; `rate` (curva em eventos por segundo); `event` (`pop`, `drop` ou `ping`); `freq`, `decay` e `level` (faixas [mín, máx]); `gain`.
 
 **Vocoded** (v5), uma performance curta refeita pelo vocoder (`speech/vocoder.py`) a partir de um molde: `clip` (nome do molde, `<tipo>/<intérprete>/<take>`, por exemplo `attack/adventurer/attack3`); `start`; `pitch` (razão de tom); `warp` (razão das formantes: trato mais curto, formantes mais altas); `stretch` (razão de duração); `breath` (−1..1: menos ar, até voz pura, ou mais ar, até sussurro); `tilt` (dB por oitava em torno de 1 kHz); `swing` (largura do contorno de tom: 1 = como foi gravado, 0 = monótono); `gain`. Os moldes ficam em `speech/data/barks.npz` e uma port precisa levá-los junto (ver o algoritmo abaixo).
+
+**Spoken** (v5), fala do motor natural (`speech/concat.py`): `bank` (`<idioma>/<voz>`, por exemplo `pt/alex`); `pieces` [[quadro inicial, quadro final, quadros de saída], ...] (trechos do banco, em quadros de 5 ms, esticados sobre a saída); `joins` (índices dos trechos que entram com crossfade); `f0` (tom por quadro de saída, Hz, usado onde o banco tem voz); `start`; `warp`, `breath` e `tilt` (como em `Vocoded`); `gain`; e `text`, `lang` e `phonemes` como informação. Os bancos ficam em `speech/data/bank_<idioma>_<voz>.npz`, no mesmo formato dos moldes das interjeições.
 
 Specs das versões 1 a 4 continuam sendo lidos.
 
@@ -193,6 +196,12 @@ Na voz inteira:
   - voz: a resposta de fase mínima com atraso fracionário (`e^(−2πif·frac/sr)`), menos o DC (subtraído com uma janela de Hann na primeira metade), vezes `√n`;
   - os dois somados a partir da amostra `floor(t·sr)`.
 - No fim, corta-se a cauda abaixo de −80 dB do pico, e a camada é normalizada para `gain`.
+
+**Fala natural (`speech/concat.py`)**, a partir de um `Spoken`:
+- **Quadros:** cada trecho `[a, b, n]` dá `n` quadros nas posições `a + (j + 0,5)/n · (b − a)` do banco, com envelope e aperiodicidade interpolados linearmente entre quadros vizinhos; a voz (sim/não) vem do quadro mais próximo (`f0 > 0`).
+- **Junções:** em cada trecho listado em `joins`, os ±3 quadros em volta do começo dele misturam os dois trechos, cada um continuando além do corte no próprio passo, com peso linear de 0 a 1 (a voz segue quem pesa mais).
+- **Tom:** `f0` do spec onde há voz, 0 no resto.
+- **Som:** o vocoder acima, com `warp`, `breath` e `tilt`; semente `key(seed, "spoken")`; normalizado para `gain`.
 
 **Coeficientes variáveis sem clique:** entre blocos, os filtros carregam o histórico de forma direta I (duas entradas e duas saídas) e recalculam o estado para os coeficientes novos (`render.time_varying`). Reaproveitar o estado do `lfilter` através de uma troca de coeficientes gera um estalo audível a cada transição de fonema.
 
@@ -611,24 +620,52 @@ A distância está no envelope espectral quadro a quadro, nas vogais e nas conso
 
 *Teste de viabilidade.* Trocamos a cascata por envelopes aprendidos do professor: um molde por fonema e terço de segmento, interpolado no nosso ritmo e na nossa entonação, sintetizado com WORLD. O UTMOS deu 1,25-1,28, com a segmentação por DTW e também com a segmentação do próprio Kokoro. Moldes médios por fonema saem borrados. Esse caminho exigiria modelos por contexto (difones) ou um modelo neural pequeno, ou seja, outro motor.
 
-*Conclusão.* Dentro da síntese de formantes por regras, nenhum ajuste de parâmetros fecha a distância para a voz natural. O nosso motor continua com o papel em que é bom (procedural, leve, determinístico, balbucio), e as falas importantes ficam com a voz natural (`casting.py`). As ferramentas ficam no repositório para medir qualquer mudança futura nos dois juízes.
+*Conclusão.* Dentro da síntese de formantes por regras, nenhum ajuste de parâmetros fecha a distância para a voz natural. O motor de formantes continua com o papel em que é bom (minúsculo, estica para qualquer criatura, balbucio). Para a voz natural sem IA em tempo de execução, veio o motor natural, abaixo.
+
+### Motor natural (`speech/concat.py`, `tools/build_speech.py`)
+
+Síntese concatenativa com o nosso vocoder: o envelope espectral vem de gravações, as regras dão o resto (fonemas, ritmo, entonação). O Kokoro é só o professor: lê um corpus uma vez, offline, e o que fica são números.
+
+**Banco de voz.** 240 frases por voz (as 60 de calibração + 180 de diálogo de jogo, foneticamente variadas, nenhuma das frases de teste), ~10,5 min. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 32 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. Cada fronteira anda até a maior mudança espectral em ±15 ms. Dois bancos em português: `pt/alex` (masculino, trato 1,0) e `pt/dora` (feminino, 1,15), ~3,4 MB cada.
+
+**Montagem de uma frase nova:**
+1. A nossa frente (g2p + `phonetics.segments`, que agora marca começo e fim de palavra) dá fonemas, tônicas e a entonação.
+2. **Sotaque do professor** (`accent_pt`): alinhando a nossa transcrição com a do professor nas 240 frases, as diferenças caíram de 988 para 438 em 7.137 fonemas (94% iguais) com regras como: "r" de fim de sílaba vira tap, com um schwa curto antes de consoante dentro da palavra; "em" vira [ẽj] + [ŋ]; "lh" vira [lj]; "a" reduzido só na última sílaba de palavra longa ("a", "da", "na" ficam [a]); "a" tônico antes de m/n/nh nasaliza ("cama" [ˈkɐ̃mɐ]); "s" antes de consoante sonora vira [z]; [ŋ] depois de vogal nasal antes de fricativa ("cansado") e no fim de "sim", "um".
+3. **Durações do professor:** regressão ridge em log da duração, com fonema, tônica, começo e fim de palavra, última palavra antes de pausa, vizinhos e interações (r = 0,50 no banco; o alinhamento de 25 ms limita).
+4. **Seleção de unidades:** um pedaço do banco por difone (do meio de um fonema ao meio do seguinte). Custo de alvo: fonema certo ou substituto (tabela de grupos: [a]/[ɐ] 0,3, [e]/[ɛ] 0,3, [u]/[w] 0,1...), tônica, vizinhos e duração. Custo de junção: 0 se os pedaços são contíguos no banco; senão, a distância espectral média no meio do fonema (dB/10) + 0,2. Viterbi com os 25 melhores por difone. Quando o banco não tem o difone, junta meios de lugares diferentes.
+5. **Junções:** o ponto de corte dentro do fonema é o par de quadros (entre 25% e 75% de cada pedaço) com espectros mais próximos; em volta dele, crossfade de ±15 ms em que cada pedaço continua com a própria dinâmica.
+6. O tom da nossa entonação onde o banco tem voz; o vocoder refaz o som com `warp = trato do personagem / trato do professor`.
+
+**Medidas** (Whisper, CER, frases fora do corpus):
+
+| | CER |
+|---|---|
+| ressíntese direta de frases do professor pelo nosso vocoder, 32 faixas | 0,011 |
+| primeira montagem, 60 frases no banco | 0,22 (masc.) / 0,34 (fem.) |
+| 240 frases no banco | 0,17 / 0,18 |
+| + sotaque do professor + durações por regressão | **0,11 / 0,11** |
+| o mesmo, pelo `Speaker` (com jitter); NPCs sorteados (`Speaker.random(7)`, `(12)`) | 0,08 / 0,11; 0,12 e 0,10 |
+| motor de formantes | 0,23 |
+
+Onde ainda se perde (16 frases do corpus, deixando a própria frase fora do banco): com fonemas, durações e tom do professor, 0,046; com as durações do professor e o **nosso** tom, 0,035 (a entonação não atrapalha); com durações médias, 0,06-0,09; com a nossa transcrição, 0,13. O que falta está nas durações e nas diferenças de transcrição que sobraram (vogais abertas e fechadas, [u]/[w]).
 
 **Balbucio** (`speech/babble.py`). Depois do g2p, as sílabas podem ser trocadas antes da prosódia, e por isso o ritmo, as tônicas e o tipo de frase continuam os do texto:
 - `gibberish`: cada sílaba vira ataque + vogal sorteados do inventário do idioma, às vezes com coda no fim da palavra; a semente é a fala + o nome do personagem.
 - `mumble`: toda sílaba vira "m" + schwa.
 - `animalese`: mantém as sílabas, mas a voz fica 1,5× mais aguda, 2,2× mais rápida, com metade da entonação e uma nota aleatória (±5 semitons) por sílaba somada ao contorno.
 
-**Elenco** (`speech/casting.py`). `cast(role, name, lang, gender, creature, voice, style, natural)` devolve um `Cast` (voz + estilo + papel) com `render()` e `voice()`; `voice()` é `None` para vozes naturais, que não têm spec. As regras:
-- `main` usa Kokoro quando `natural` (padrão: Kokoro instalado); o nome escolhe a voz entre as do idioma e gênero.
-- Nos outros casos, a voz de formantes é sorteada pelo nome; com `gender`, fica a primeira semente com pitch ≥ 165 Hz (f) ou ≤ 150 Hz (m).
-- `voice` explícita sempre vence. Uma voz `kokoro:` sem Kokoro vira uma voz de formantes do mesmo gênero.
+**Elenco** (`speech/casting.py`). `cast(role, name, lang, gender, creature, voice, style, natural)` devolve um `Cast` (voz + estilo + papel) com `render()` e `voice()` (o spec). As regras:
+- A voz é sorteada pelo nome; com `gender`, fica a primeira semente com pitch ≥ 165 Hz (f) ou ≤ 150 Hz (m).
+- `main` usa o motor natural com essa voz (a não ser com `natural=False`); os outros papéis, o de formantes.
+- `voice` explícita sempre vence. Os nomes antigos `kokoro:<id>` viram vozes naturais do mesmo registro (`pm_alex` → `pt/alex`, `pf_dora` → `pt/dora`).
 
 O bestiário e o `bake` usam o elenco. O manifesto registra `role`, `style` e `engine` de cada personagem.
 
 **Próximos passos da fala:**
-- Melhorar o português (nasais, "v", encontros consonantais).
+- Bancos de voz em inglês (o mapeamento dos símbolos do misaki para o inglês ainda falta).
+- Durações: um alinhamento mais fino que 25 ms deixaria a regressão melhor.
+- Micro-prosódia: somar ao nosso tom o desvio do professor em cada pedaço.
 - Mais idiomas: o front-end é plugável (`speech.LANGS`).
-- Envelope por contexto (difones aprendidos do professor) ou um vocoder neural pequeno, medidos com `tools/structure_analysis.py` (UTMOS + Whisper).
 
 ### Interjeições (`speech/emote.py`, `speech/vocoder.py`)
 

@@ -56,19 +56,13 @@ def _cast(a):
     voice = a.voice if a.voice or a.role or a.gender else "default"
     who = cast(a.role or "minor", a.name or "", a.lang, a.gender, voice=voice, style=a.style)
     overrides = {k: getattr(a, k) for k in ("pitch", "tract", "rate", "range", "breath") if getattr(a, k) is not None}
-    if who.natural:
-        if set(overrides) - {"rate"}:
-            raise ValueError("natural (kokoro) voices only take --rate")
-        return replace(who, speaker=replace(who.speaker, speed=overrides.get("rate", who.speaker.speed)))
     return replace(who, speaker=who.speaker.but(**overrides))
 
 
 def cmd_say(a):
     who = _cast(a)
-    print(f"{who.role}: {'natural (kokoro)' if who.natural else 'formant'} voice, {who.style}", file=sys.stderr)
-    if who.natural:  # natural voice: audio only, no spec or phonemes
-        _write(who.render(a.text, a.lang, a.sr), a.output or "fala.wav", a.sr, a.png)
-        return
+    engine = "natural" if who.speaker.natural(a.lang) else "formant"
+    print(f"{who.role}: {engine} voice, {who.style}", file=sys.stderr)
     if a.phonemes:
         print(who.speaker.phonemes(a.text, a.lang))
     voice = who.voice(a.text, a.lang)
@@ -78,14 +72,16 @@ def cmd_say(a):
 
 
 def cmd_voices(a):
-    from .speech import PRESETS, neural
+    from .speech import PRESETS, concat
+    print("formant voices:")
     for name, sp in PRESETS.items():
         print(f"  {name:8s} pitch {sp.pitch:5.0f} Hz  tract {sp.tract:.2f}  rate {sp.rate:.2f}")
     print("  npc:<seed>  a unique human voice per seed (Speaker.random)")
-    state = "installed" if neural.available() else 'not installed: pip install "creaturesynth[neural]"'
-    print(f"natural voices (Kokoro, {state}):")
-    for lang, ids in neural.VOICES.items():
-        print(f"  {lang}: " + ", ".join(f"kokoro:{v}" for v in ids))
+    print("natural voices (voice banks; any pitch and tract with --pitch/--tract):")
+    print("  natural, natural:m, natural:f   a man's or a woman's register, nearest bank per language")
+    for name in concat.banks():
+        b = concat.bank(name)
+        print(f"  natural:{name:10s} pitch {b.pitch:5.0f} Hz  tract {b.tract:.2f}  ({b.meta['teacher']})")
 
 
 def _save_designed(creature, score, a):
@@ -241,9 +237,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("say", help="speak text with a procedural human voice (pt or en)")
     p.add_argument("text")
     p.add_argument("--lang", choices=["pt", "en"], default="pt")
-    p.add_argument("--voice", help="preset (see 'voices'), npc:<seed> or kokoro:<voice id>")
+    p.add_argument("--voice", help="preset (see 'voices'), npc:<seed> or natural[:m|f|<bank>]")
     p.add_argument("--role", choices=[r for r in ROLES if r != "creature"],
-                   help="let the cast pick the engine: main = natural voice when installed")
+                   help="let the cast pick the engine: main = natural voice")
     p.add_argument("--gender", choices=["f", "m"])
     p.add_argument("--name", help="character name (seeds its unique voice)")
     p.add_argument("--style", choices=STYLES, help="speech, or babble: gibberish, animalese, mumble")

@@ -1,6 +1,6 @@
 """Calibrate the formant voices against a natural teacher voice (Kokoro, pt-BR).
 
-    pip install -e ".[neural]"
+    pip install -e ".[teacher]"
     python tools/teacher_calibration.py render      # corpus -> teacher/corpus.{npz,json} (~2 min on CPU)
     python tools/teacher_calibration.py measure     # -> teacher/corpus_stats.json + summary table
 
@@ -57,8 +57,8 @@ CORPUS = [
 
 
 def render(voices=("pm_alex", "pf_dora")):
-    from creaturesynth.speech.neural import _pipeline
-    pipe = _pipeline("pt")
+    from build_speech import kokoro
+    pipe = kokoro("pt")
     OUT.mkdir(exist_ok=True)
     items, audio = [], {}
     for voice in voices:

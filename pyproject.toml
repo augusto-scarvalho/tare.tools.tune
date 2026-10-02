@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "creaturesynth"
 version = "0.1.0"
-description = "Procedural creature voices and human speech (pt-BR, English) for games: species genes, traits and calls, formant speech synthesis, and a Game Boy cry engine."
+description = "Procedural game audio: creature voices, human speech (pt-BR, English), sound effects and music, deterministic and portable, with a Game Boy cry engine."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -15,7 +15,7 @@ keywords = ["procedural audio", "sound design", "game audio", "creature", "synth
 [project.optional-dependencies]
 plot = ["matplotlib>=3.7"]
 asr = ["faster-whisper>=1.0"]   # tools/intelligibility.py
-neural = ["kokoro>=0.9", "soundfile"]   # natural voices (pulls PyTorch; CPU wheels work)
+teacher = ["kokoro>=0.9", "soundfile", "pyworld"]   # tools/build_speech.py and the calibration tools only
 clap = ["transformers>=4.40", "torch", "soundfile"]   # design/match/judge creatures with CLAP
 dev = ["pytest>=8", "ruff>=0.6", "matplotlib>=3.7"]
 

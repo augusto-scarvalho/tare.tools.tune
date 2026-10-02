@@ -4,7 +4,7 @@ import pytest
 from creaturesynth import Creature
 from creaturesynth.bake import bake, load_bestiary
 from creaturesynth.cli import main
-from creaturesynth.speech import NeuralSpeaker, Speaker, g2p_pt
+from creaturesynth.speech import Speaker, g2p_pt
 from creaturesynth.speech.babble import gibberish, melody, mumble
 from creaturesynth.speech.casting import ROLES, cast
 
@@ -43,9 +43,9 @@ def test_cast_divides_the_work():
     king = cast("main", "rei", gender="m", natural=False)
     assert not king.natural and isinstance(king.speaker, Speaker) and king.speaker.pitch <= 150
     assert cast("main", "rei", gender="m", natural=False) == king                # repeatable per name
-    queen = cast("main", "rainha", gender="f", natural=True)
-    assert queen.natural and queen.speaker.voice in ("pf_dora",) and queen.voice("Olá") is None
-    assert cast("main", "rei", "en", "m", natural=True).speaker.voice.startswith("am_")
+    queen = cast("main", "rainha", gender="f")                                  # natural by default
+    assert queen.natural and queen.speaker.pitch >= 165 and queen.voice("Olá").spoken
+    assert queen.speaker.but(engine="formant") == cast("main", "rainha", gender="f", natural=False).speaker
     assert cast("minor", "ana", gender="f").speaker.pitch >= 165
     assert cast("minor", "ana") != cast("minor", "bia")
     assert cast("crowd", "povo").style == "gibberish"
@@ -54,8 +54,9 @@ def test_cast_divides_the_work():
     assert cast("creature", creature=small).style == "animalese"
     assert cast("creature", creature=big).style == "gibberish" and cast("creature", creature=big).speaker.rough > 0
     assert cast("creature", creature=big, style="speech").style == "speech"
-    fallback = cast("main", "rei", voice="kokoro:pm_alex", natural=False)     # no Kokoro: a male formant voice
+    fallback = cast("main", "rei", voice="natural:m", natural=False)          # formant only: same register
     assert not fallback.natural and fallback.speaker.pitch <= 150
+    assert cast("main", "rei", voice="kokoro:pm_alex").speaker.bank == "pt/alex"   # old names: natural voices
     assert cast(voice="deep", name="ferreiro").speaker == Speaker.preset("deep").but(name="ferreiro")
     with pytest.raises(ValueError):
         cast("hero")
@@ -80,7 +81,7 @@ def test_bestiary_roles_bake(tmp_path):
     assert s["povo"]["style"] == "gibberish" and s["rato"]["style"] == "animalese" and s["rato"]["role"] == "creature"
     assert s["guarda"]["style"] == "mumble" and s["guarda"]["speaker"]["pitch"] == Speaker.preset("deep").pitch
     _, natural = load_bestiary({**data, "natural_voices": True})
-    assert isinstance(natural["speakers"]["rei"][0].speaker, NeuralSpeaker)
+    assert natural["speakers"]["rei"][0].natural
     _, forced = load_bestiary({**data, "natural_voices": True}, natural=False)
     assert not forced["speakers"]["rei"][0].natural
     for bad in ({"rato": {"creature": "gato"}}, {"rei": {"roll": "main"}}):

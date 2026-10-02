@@ -1,6 +1,6 @@
 """Compare the formant voices with a natural teacher (Kokoro) frame by frame, and judge naturalness.
 
-    pip install -e ".[neural]" pyworld
+    pip install -e ".[teacher]"
     python tools/teacher_calibration.py render      # teacher/corpus.{npz,json}: the teacher speaking pt-BR
     python tools/structure_analysis.py compare      # spectral distance + spectra per phone class (DTW-aligned)
     python tools/structure_analysis.py mos          # predicted naturalness (UTMOS 1..5): teacher vs ours

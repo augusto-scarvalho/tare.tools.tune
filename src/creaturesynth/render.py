@@ -197,6 +197,10 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
         from .speech.vocoder import render_vocoded
         for i, v in enumerate(voice.vocoded):
             parts.append((int(v.start * sr), render_vocoded(v, sr, rng.key(voice.seed, "vocoded", i))))
+    if voice.spoken:
+        from .speech.concat import render_spoken
+        for i, v in enumerate(voice.spoken):
+            parts.append((int(v.start * sr), render_spoken(v, sr, rng.key(voice.seed, "spoken", i))))
     if voice.modal or voice.noise or voice.scatter:
         from .layers import render_modal, render_noise, render_scatter
         for name, fn in (("modal", render_modal), ("noise", render_noise), ("scatter", render_scatter)):

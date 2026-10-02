@@ -1,13 +1,17 @@
-"""Human speech by formant synthesis: Brazilian Portuguese ("pt") and English ("en").
+"""Human speech: Brazilian Portuguese ("pt") and English ("en"), with two engines.
 
     >>> from creaturesynth.speech import Speaker
     >>> guard = Speaker.preset("deep")
     >>> audio = guard.render("Alto lá! Quem vem?", lang="pt")
     >>> npc = Speaker.random(42)                 # a unique, repeatable voice per NPC
     >>> audio = npc.render("Welcome, traveler!", lang="en")
+    >>> king = Speaker(pitch=105, tract=0.97, engine="natural")
+    >>> audio = king.render("Bem-vindo ao meu reino.", lang="pt")
 
-Text -> phonemes (g2p_pt rules / g2p_en CMUdict) -> timed targets + intonation (phonetics)
--> frame tracks in a SpeechProgram -> Klatt-style synthesiser (klatt).
+Text -> phonemes (g2p_pt rules / g2p_en CMUdict) -> timed targets + intonation (phonetics), then
+    formant   frame tracks in a SpeechProgram -> Klatt-style synthesiser (klatt)
+    natural   pieces of a voice bank (a teacher's analysed recordings) -> our vocoder (concat, vocoder)
+Both are deterministic and procedural at run time; nothing neural runs in either.
 """
 from dataclasses import dataclass, replace
 
@@ -15,9 +19,8 @@ import numpy as np
 
 from .. import rng
 from ..render import DEFAULT_SR, render
-from ..spec import SpeechProgram, Voice
+from ..spec import SpeechProgram, Spoken, Voice
 from . import babble, g2p_en, g2p_pt
-from .neural import NeuralSpeaker
 from .phonetics import FRAME_RATE, frames
 from .units import transcription
 
@@ -40,12 +43,13 @@ class Speaker:
     drive: float = 0.0        # saturation
     space: float = 0.0        # reverb, seconds
     name: str = ""
+    engine: str = "formant"   # "formant" (Klatt rules: light, babbles, any voice) or "natural" (a voice bank)
+    bank: str = ""            # natural: "pt/alex", "pt/dora"... ("" = the bank nearest this vocal tract)
 
     def phonemes(self, text: str, lang: str = "pt") -> str:
         return transcription(_frontend(lang).text_to_phrases(text))
 
-    def speech(self, text: str, lang: str = "pt", style: str = "speech") -> SpeechProgram:
-        """`style`: "speech" (the words), or non-verbal "gibberish", "animalese", "mumble" (see babble.py)."""
+    def _plan(self, text: str, lang: str, style: str):
         g2p = _frontend(lang)
         phrases = g2p.text_to_phrases(text)
         if not phrases:
@@ -61,6 +65,17 @@ class Speaker:
         elif style == "animalese":  # fast, high and sing-song
             pitch, rate, range_ = pitch * 1.5, rate * 2.2, range_ * 0.5
             notes = babble.melody(phrases, seed)
+        return phrases, pitch, rate, range_, notes
+
+    def natural(self, lang: str) -> bool:
+        """Whether this voice speaks `lang` with the natural engine (there is a voice bank for it)."""
+        from . import concat
+        return self.engine == "natural" and bool(concat.banks(lang))
+
+    def speech(self, text: str, lang: str = "pt", style: str = "speech") -> SpeechProgram:
+        """The formant engine's program. `style`: "speech" (the words), or non-verbal "gibberish", "animalese",
+        "mumble" (see babble.py)."""
+        phrases, pitch, rate, range_, notes = self._plan(text, lang, style)
         tracks = frames(phrases, lang, pitch=pitch, tract=self.tract, range_=range_, rate=rate,
                         breath=self.breath, melody=notes)
         if self.whisper:
@@ -71,10 +86,24 @@ class Speaker:
                              rough=(self.rough, 32.0), sub=self.sub, text=text, lang=lang,
                              phonemes=transcription(phrases))
 
+    def spoken(self, text: str, lang: str = "pt", style: str = "speech") -> Spoken:
+        """The natural engine's layer: pieces of the nearest voice bank, our timing and intonation, this voice."""
+        from . import concat
+        phrases, pitch, rate, range_, notes = self._plan(text, lang, style)
+        name = self.bank if self.bank.startswith(lang + "/") else concat.closest(lang, self.tract)
+        b = concat.bank(name)
+        parts, joins, f0, phones = concat.plan(phrases, lang, name, pitch, range_, rate, notes, jitter=self.jitter,
+                                               seed=rng.seed32("spoken", text, repr(self)))
+        return Spoken(name, parts, joins, f0, warp=round(float(np.clip(self.tract / b.tract, 0.75, 1.35)), 4),
+                      breath=round(min(max(1.5 * (self.breath - 0.05), self.whisper), 1.0), 4),
+                      tilt=round(3 * float(np.log2(self.tilt / 3000)), 3), text=text, lang=lang, phonemes=phones)
+
     def voice(self, text: str, lang: str = "pt", seed: int | None = None, style: str = "speech") -> Voice:
         seed = rng.seed32("speech", text, lang, repr(self), style) if seed is None else seed
-        return Voice(speech=[self.speech(text, lang, style)], crush=self.crush, drive=self.drive, space=self.space,
-                     wet=0.18, seed=seed, meta={"speaker": self.name, "text": text, "lang": lang, "style": style})
+        layer = {"spoken": [self.spoken(text, lang, style)]} if self.natural(lang) else \
+            {"speech": [self.speech(text, lang, style)]}
+        return Voice(**layer, crush=self.crush, drive=self.drive, space=self.space, wet=0.18, seed=seed,
+                     meta={"speaker": self.name, "text": text, "lang": lang, "style": style, "engine": self.engine})
 
     def render(self, text: str, lang: str = "pt", sr: int = DEFAULT_SR, style: str = "speech") -> np.ndarray:
         return render(self.voice(text, lang, style=style), sr)
@@ -146,22 +175,41 @@ def _frontend(lang: str):
         raise ValueError(f"unsupported language {lang!r}; choose from {', '.join(LANGS)}") from None
 
 
-def speaker_from(voice) -> "Speaker | NeuralSpeaker":
-    """Resolve a voice description: a Speaker, a preset name, "npc:<seed>", "kokoro[:<voice id>]",
-    or a dict ({"preset": ..., overrides} / {"engine": "kokoro", "voice": ..., "speed": ...})."""
-    if isinstance(voice, (Speaker, NeuralSpeaker)):
+KOKORO_GENDER = {"pm_alex": ("pt/alex", "m"), "pf_dora": ("pt/dora", "f"), "pm_santa": ("pt/alex", "m")}
+
+
+def natural(gender: str = "m", bank: str = "", name: str = "") -> Speaker:
+    """A natural-engine voice: a man's (gender "m") or a woman's ("f") register, or a given bank's own voice."""
+    if bank:
+        from . import concat
+        b = concat.bank(bank)
+        return Speaker(pitch=b.pitch, tract=b.tract, engine="natural", bank=bank, name=name or bank)
+    return Speaker(pitch=115.0 if gender == "m" else 210.0, tract=1.0 if gender == "m" else 1.15,
+                   engine="natural", name=name)
+
+
+def speaker_from(voice) -> Speaker:
+    """Resolve a voice description: a Speaker, a preset name, "npc:<seed>", "natural[:m|f|<bank>]", or a dict
+    ({"preset": ..., overrides}). The old "kokoro[:<voice id>]" names map to natural voices of the same register."""
+    if isinstance(voice, Speaker):
         return voice
     if isinstance(voice, dict):
         voice = dict(voice)
-        if voice.pop("engine", "formant") == "kokoro":
-            return NeuralSpeaker(**voice)
+        engine = voice.pop("engine", "formant")
+        if engine == "kokoro":
+            return speaker_from(f"kokoro:{voice.get('voice', '')}")
         base = Speaker.preset(voice.pop("preset")) if "preset" in voice else Speaker()
-        return base.but(**voice)
+        return base.but(**voice, **({"engine": engine} if engine != "formant" else {}))
     voice = str(voice)
     if voice.startswith("npc:"):
         return Speaker.random(int(voice[4:]))
-    if voice == "kokoro" or voice.startswith("kokoro:"):
-        return NeuralSpeaker(voice=voice.partition(":")[2])
+    kind, _, arg = voice.partition(":")
+    if kind == "natural":
+        return natural(arg) if arg in ("", "m", "f") else natural(bank=arg)
+    if kind == "kokoro":
+        if arg in KOKORO_GENDER:
+            return natural(bank=KOKORO_GENDER[arg][0])
+        return natural("f" if arg[1:2] == "f" or not arg else "m")
     return Speaker.preset(voice)
 
 
@@ -169,4 +217,4 @@ def say(text: str, voice="default", lang: str = "pt", sr: int = DEFAULT_SR) -> n
     return speaker_from(voice).render(text, lang, sr)
 
 
-__all__ = ["LANGS", "PRESETS", "NeuralSpeaker", "Speaker", "say", "speaker_from"]
+__all__ = ["LANGS", "PRESETS", "Speaker", "natural", "say", "speaker_from"]
