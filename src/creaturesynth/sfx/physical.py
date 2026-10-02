@@ -873,6 +873,60 @@ def item(fx: Fx, style: str, event: str) -> list:
         return [gem, fx.strike("stone", size=0.6, hits=[(0.0, 1.0, 0.001)], gain=0.3, prefix="g", click=0.2)]
     return [gem]
 
+
+# --- breakables -------------------------------------------------------------------------------------------------------
+#
+# From recordings of crates, clay jars, pots and glass breaking. A wooden crate splinters: low-mid (strongest
+# 250-1600 Hz), 9-18 cracks in the first half second, pieces still falling up to ~1 s. Clay and ceramic burst short
+# and mid-bright (strongest ~1.6 kHz, -40 dB in 130-180 ms): a crack and a few shards. Glass is bright and long
+# (strong up to 16 kHz, -40 dB in 0.3-0.9 s): a burst and many shards ringing as they fall.
+
+BREAK_BODIES = {   # the intact object's own modes (Hz, T60 s, gain)
+    "crate": [(160, 0.08, 0.6), (290, 0.07, 1.0), (450, 0.06, 0.8), (720, 0.05, 0.6), (1100, 0.04, 0.4)],
+    "barrel": [(130, 0.12, 0.8), (240, 0.1, 1.0), (410, 0.08, 0.7), (650, 0.06, 0.5), (1600, 0.3, 0.3),
+               (2700, 0.25, 0.25)],
+    "pot": [(1250, 0.16, 0.8), (1700, 0.14, 1.0), (2600, 0.1, 0.7), (3600, 0.1, 0.7), (5200, 0.08, 0.8),
+            (7400, 0.06, 0.7), (9800, 0.04, 0.5)],
+    "glass": [(2200, 0.4, 1.0), (3500, 0.3, 0.8), (5300, 0.25, 0.6), (7800, 0.2, 0.4), (10500, 0.15, 0.3)],
+}
+
+
+def breakable(fx: Fx, style: str, broken: bool, size: float) -> list:
+    k = 2 ** (-0.6 * (size - 0.5))
+    body = _jittered(fx, BREAK_BODIES[style], style, 0.1, k)
+    hard = {"crate": 3500, "barrel": 4000, "pot": 9000, "glass": 14000}[style]
+    out = [Modal(0.0, 1.0, body, [(0.0, 1.0, 0.003 if style in ("crate", "barrel") else 0.001)], hardness=hard,
+                 click=0.3),
+           Noise(0.0, 0.06, [(0, 300 * k), (1, 150 * k)], "low", 0.9, amp=decay_curve(5), attack=0.001, release=0.01,
+                 gain=0.6 if style in ("crate", "barrel") else 0.25)]
+    if not broken:
+        return out
+    if style in ("crate", "barrel"):   # planks splinter and snap, then the pieces land
+        snaps = [(round(0.02 + 0.35 * fx.rand(f"s{j}") ** 1.6, 4), round(0.3 + 0.7 * fx.rand(f"sg{j}"), 3), 0.002)
+                 for j in range(9 + int(9 * fx.rand("snaps")))]
+        out += [Modal(0.0, 0.6, wood_modes(fx, 0.45 * k, 0.025, 6), sorted(snaps), hardness=5000, click=0.2, gain=0.8),
+                Scatter(0.0, 0.45, [(0, 200), (0.4, 120), (1, 0)], "pop", (400, 3000), (0.002, 0.008), (0.2, 1.0),
+                        0.6),
+                Scatter(0.15, 0.8, [(0, 25), (1, 0)], "pop", (200, 1200), (0.004, 0.012), (0.3, 1.0), 0.45),
+                Noise(0.0, 0.3, [(0, 4000), (1, 3000)], "high", 0.7, amp=[(0, 1), (0.1, 0.3), (1, 0)], attack=0.0005,
+                      wobble=(60.0, 0.9), gain=0.12)]   # fibres tearing
+        if style == "barrel":   # the iron hoops ring and clatter
+            out.append(fx.strike("iron", size=0.6, hits=[(0.0, 0.6, 0.001), (round(0.3 + 0.2 * fx.rand("hoop"), 3),
+                                                                             0.4, 0.001)], gain=0.4, prefix="hoop"))
+        return out
+    if style == "pot":   # a short burst and a few shards
+        return out + [Noise(0.0, 0.03, [(0, 2500), (1, 1800)], "band", 0.7, amp=decay_curve(4), attack=0.0005,
+                            gain=0.8),
+                      Noise(0.0, 0.02, [(0, 4500), (1, 4000)], "high", 0.7, amp=decay_curve(4), attack=0.0005,
+                            gain=0.6),
+                      Scatter(0.01, 0.3, [(0, 60), (1, 0)], "pop", (2000, 10000), (0.002, 0.008), (0.3, 1.0), 0.7),
+                      Scatter(0.05, 0.3, [(0, 15), (1, 0)], "ping", (2500, 6000), (0.01, 0.04), (0.2, 0.7), 0.35)]
+    out[1] = replace(out[1], gain=1.3)   # glass breaks with a thump of whatever broke it
+    return out + [Noise(0.0, 0.08, [(0, 800), (1, 700)], "high", 0.7, amp=decay_curve(5), attack=0.0005, gain=0.9),
+                  Scatter(0.0, round(0.6 + 0.4 * size, 3), [(0, 220), (0.3, 80), (1, 0)], "ping", (2500, 12000),
+                          (0.005, 0.03), (0.2, 1.0), 0.8),
+                  Scatter(0.1, 0.9, [(0, 30), (1, 0)], "ping", (3000, 9000), (0.02, 0.08), (0.1, 0.6), 0.4)]
+
 # --- weapons ----------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -985,6 +1039,12 @@ def chest(fx: Fx):
 def item_recipe(fx: Fx):
     """Inventory items: coins, a potion, a scroll or book, a gem; picked up, used (paid, drunk, read), dropped."""
     return fx.voice(fx.level(0.7), **splits(item(fx, fx.style, fx.event)))
+
+
+@recipe("breakable", ("hit", "break"), ("crate", "barrel", "pot", "glass"))
+def breakable_recipe(fx: Fx):
+    """Things to smash: wooden crates and barrels, clay pots, glass. Hit (it holds) or break."""
+    return fx.voice(fx.level(0.95), **splits(breakable(fx, fx.style, fx.event == "break", fx.size)))
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))

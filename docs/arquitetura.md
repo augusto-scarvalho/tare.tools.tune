@@ -281,6 +281,12 @@ As partes:
 - **Página virando:** estala em 1–6 kHz por 0,3–0,6 s e termina num abano suave.
 - **Gema:** soa como cristal.
 
+**Quebrar (`breakable`): medido em gravações** de caixas, potes de barro, cerâmica e vidro quebrando.
+- **Caixa de madeira:** lasca. É grave-média (mais forte em 250–1600 Hz), com 9 a 18 estalos no primeiro meio segundo e pedaços caindo até ~1 s. O barril ainda tem os aros de ferro.
+- **Barro e cerâmica:** estouram curto, com agudo médio (mais forte perto de 1,6 kHz, 40 dB em 130–180 ms): um estalo e alguns cacos. Nosso vaso ainda tem menos agudo que as gravações acima de 4 kHz.
+- **Vidro:** agudo e longo (forte até 16 kHz, 40 dB em 0,3–0,9 s): um estouro e muitos cacos tilintando ao cair.
+- **`hit`:** a pancada sem quebrar.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.

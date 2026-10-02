@@ -127,6 +127,7 @@ audio = rei.render("Salve o reino!")
 | `door` (portas e portões) | wood, iron | open, close, locked, unlock, knock |
 | `chest` (baús) | wood, iron | open, close, locked, unlock |
 | `item` (itens) | coins, potion, scroll, gem | pickup, use, drop |
+| `breakable` (coisas para quebrar) | crate, barrel, pot, glass | hit, break |
 | `footstep` | stone, wood, metal, gravel, dirt, grass, snow, water | walk, run, land, scuff |
 | `explosion` | fire, stone, magic | blast, distant, debris |
 | `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal | charge, cast, travel (loop), impact |

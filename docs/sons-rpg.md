@@ -28,7 +28,7 @@ As gravações servem só para medir e não entram no repositório.
 | 10 | Baú: abrir, fechar, trancado, destrancar | `chest` open, close, locked, unlock | medido |
 | 11 | Porta e portão: abrir rangendo, fechar, trancada, destrancar, bater | `door` open, close, locked, unlock, knock | medido |
 | 12 | Itens: moedas, poção, pergaminho, gema × pegar, usar, derrubar | `item` pickup, use, drop | medido |
-| 13 | Quebrar: caixa ou barril de madeira, vaso de cerâmica, vidro | `breakable` | falta |
+| 13 | Quebrar: caixa ou barril de madeira, vaso de cerâmica, vidro | `breakable` hit, break | medido |
 | 14 | Interface: clique, abrir inventário, subir de nível, missão cumprida, erro | `ui` | falta |
 | 15 | Mundo: alavanca, armadilha, tocha acendendo, água (respingo, mergulho) | `world` | falta |
 | 16 | Magias: 8 elementos × carregar, lançar, viajar, impacto | `spell` | antigo |
