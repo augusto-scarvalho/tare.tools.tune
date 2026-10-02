@@ -244,6 +244,8 @@ cena.add(Sfx("blade", "steel").render("clash"), at=cena.beats(4), pan=0.5, send=
 write_wav("cena.wav", cena.render(), 48000)
 ```
 
+Para cenas inteiras (efeitos, criaturas, uma fala e música sobre um ambiente, em estéreo), veja [`examples/scenes.py`](examples/scenes.py): uma luta na masmorra, um tesouro numa caverna e um duelo de magia.
+
 Notas são `(nota, tempo, duração[, intensidade])`. A nota pode ser um nome (`"C#5"`), um número MIDI ou uma lista (um acorde). A intensidade muda o timbre, não só o volume: o trompete forte abre os agudos, e uma batida suave é mais escura.
 
 As medidas vêm de notas soltas da orquestra [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) (CC0) e de notas de violão CC0 do Freesound. Elas foram usadas só para medir e não estão no repositório. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md#música-e-composição).
