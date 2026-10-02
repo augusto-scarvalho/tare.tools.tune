@@ -320,6 +320,8 @@ O mar e a floresta já estavam perto. Com amostras CC0 do Freesound (só para an
 - **Passarinhos:** em vez da voz de criatura, frases de 3–8 elementos entre 2 e 7 kHz: assobios, varreduras de uma oitava em 20–60 ms e trinados. Cada espécie tem seu registro.
 - **Gotas na caverna:** 0,75–5,4 kHz, soando 10–35 ms.
 - **Correntes:** elos pequenos tilintando 3–15 vezes por segundo, mais fortes em 8–12,5 kHz. Antes eram ferro grave.
+- **Fogueira, evento solto:** o que se destaca nas fogueiras CC0 é uma bolsa de seiva estourando: 20–140 ms, mais forte em 2–12 kHz (−8 a −14 dB em 0,5–1 kHz) e 20–30 dB acima do fundo, às vezes com faíscas. O antigo "tronco assentando" durava 1,5 s e era mais forte em 1–2 kHz. Agora o evento é o estalo; em ~30% das vezes vem junto uma tora mudando de lugar, com uma batida grave.
+- **Grilos da noite:** conferidos com o ESC-50. Portadoras de 3–10 kHz e pulsos de 8–62 Hz em trinados de 2–4 por segundo; os nossos (4,2–4,8 kHz, ~35 Hz, ~3 por segundo) já estavam dentro da faixa.
 
 **Explosões (`explosion`): comparadas com gravações.**
 - **De perto:** mais fortes em 63–250 Hz (−9 dB em 1 kHz, −14 em 4 kHz). Crescem por ~0,1 s e caem 20 dB em ~0,8 s. A primeira versão tinha um buraco em 125–250 Hz e um rugido alto demais perto de 1 kHz; ganhou um "corpo" grave e o crescimento inicial.

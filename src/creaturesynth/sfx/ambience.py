@@ -156,11 +156,19 @@ def ambience(fx: Fx):
                  drops(8 + 14 * p, (800, 7000), (0.0005, 0.003), 2.0, event="pop", level=(0.05, 1.0)),
                  drops(2 + 4 * p, (300, 1500), (0.004, 0.015), 0.5, event="pop"),
                  band(5000, 0.7, 0.04, (2.0, 0.5), kind="high")]
-        else:  # a log settles
-            L = [fx.strike("wood", start=0.0, size=0.5, gain=0.6, prefix="log"),
-                 fx.strike("wood", start=0.12, size=0.3, gain=0.4, prefix="log2"),
-                 drops([(0, 200), (1, 0)], (1000, 7000), (0.0003, 0.002), 0.8, 1.5, event="pop"),
-                 band(600, 0.6, 0.7, (8.0, 0.6), dur=1.8, amp=decay_curve(2))]
+        else:
+            # what stands out over CC0 campfires: a pocket of sap bursting, 20-140 ms, strongest at 2-12 kHz and
+            # 20-30 dB over the bed, sometimes with a spray of sparks; now and then a log shifting, a low knock
+            spray = 0.05 + 0.1 * fx.rand("spray")
+            L = [Noise(0.0, 0.03, [(0, 3000), (1, 3000)], "high", 0.7, amp=decay_curve(6), attack=0.0005,
+                       release=0.005, gain=1.0),
+                 Noise(0.0, 0.04, [(0, 1000), (1, 800)], "band", 0.8, amp=decay_curve(6), attack=0.0005,
+                       release=0.005, gain=1.0),   # the crack's body, -8 to -14 dB at 0.5-1 kHz
+                 drops([(0, 400), (1, 0)], (2000, 11_000), (0.0003, 0.0015), 0.15, round(spray, 3), 0.005,
+                       event="pop")]
+            if fx.rand("log") > 0.7:
+                L += [fx.strike("wood", start=0.08, size=0.7, gain=0.6, prefix="log", ring=0.4, click=0.0),
+                      drops([(0, 150), (1, 0)], (800, 7000), (0.0005, 0.003), 0.5, 0.5, 0.08, event="pop")]
 
     elif st == "stream":
         if loop:
