@@ -640,6 +640,39 @@ def gear_move(fx: Fx, style: str, dur: float, energy: float) -> list:
     return [body, Noise(0.0, round(dur, 3), [(0, 600), (1, 750)], "low", 0.9, amp=swell, attack=0.02, release=0.05,
                         wobble=(20.0, 0.7), gain=0.35)]
 
+
+# --- bodies -----------------------------------------------------------------------------------------------------------
+#
+# From recordings of body falls: not one thud but 3-6 low impacts over 0.2-0.5 s (knees, hips, the torso - the
+# loudest - then an arm or the head, 60-150 ms apart, 4-14 dB under the torso), each a thump near 110-180 Hz;
+# strongest 250-500 Hz, ~-14 dB at 2.5 kHz, ~-20 dB at 8 kHz; cloth rustling throughout.
+
+def body_fall(fx: Fx, floor: str, weight: float, dead: bool = False) -> list:
+    """A body collapsing (knees, hips, torso, arm) or dropped dead weight (torso, a small bounce)."""
+    parts = [(0.0, 1.0), (0.09, 0.3)] if dead else [(0.0, 0.5), (0.1, 0.7), (0.21, 1.0), (0.33, 0.3), (0.43, 0.18)]
+    slow = 1 + 0.4 * weight
+    hits = [(round(t * slow * (0.85 + 0.3 * fx.rand(f"t{k}")), 4), round(g * (0.8 + 0.4 * fx.rand(f"g{k}")), 3))
+            for k, (t, g) in enumerate(parts)]
+    thump = 145 * (0.75 + 0.5 * fx.g.base("frame")) * 2 ** (-0.5 * weight)
+    out = [Modal(0.0, round(hits[-1][0] + 0.5, 3), [(round(thump, 1), 0.14, 1.0), (round(thump * 1.9, 1), 0.08, 0.5),
+                                                    (round(thump * 3.1, 1), 0.05, 0.25)],
+                 [(t, g, 0.008) for t, g in hits], hardness=900, click=0.0)]
+    out += [Noise(t, 0.08, [(0, 420), (1, 200)], "low", 0.9, amp=decay_curve(5), attack=0.002, release=0.015,
+                  gain=0.7 * g) for t, g in hits]
+    end = hits[-1][0] + 0.15
+    out.append(Noise(0.0, round(end, 3), [(0, 1500), (1, 1100)], "band", 0.8, amp=bell_curve(0.4, 1.2), attack=0.02,
+                     wobble=(25.0, 0.7), gain=0.18))   # cloth
+    if floor == "wood":
+        out.append(fx.strike("wood", size=0.8, hits=[(t, g, 0.006) for t, g in hits], hardness=1500, gain=0.4,
+                             prefix="floor", click=0.0))
+    elif floor == "stone":
+        out.append(Noise(0.0, round(end, 3), [(0, 2500), (1, 2000)], "band", 0.9, amp=decay_curve(3), attack=0.002,
+                         gain=0.07))
+    else:   # dirt: a little grit and dust
+        out.append(Scatter(0.0, round(end, 3), [(0, 250), (1, 0)], "pop", (600, 4000), (0.0008, 0.003), (0.2, 1.0),
+                           0.15))
+    return out
+
 # --- weapons ----------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -725,6 +758,13 @@ def gear(fx: Fx):
         return fx.voice(fx.level(0.7), **splits([*a, *b, latch]))
     dur = (0.5 + 0.3 * s) * (0.55 if e == "run" else 1.0) * (0.85 + 0.3 * fx.rand("dur"))
     return fx.voice(fx.level(0.5 + 0.2 * (e == "run")), **splits(gear_move(fx, fx.style, dur, 0.6 + 0.4 * p)))
+
+
+@recipe("body", ("fall", "drop"), ("stone", "wood", "dirt"))
+def body(fx: Fx):
+    """A body falling to the floor: collapsing (fall) or dropped as dead weight (drop)."""
+    weight = max(fx.size - 0.5, 0) * 2
+    return fx.voice(fx.level(0.9), **splits(body_fall(fx, fx.style, weight, dead=fx.event == "drop")))
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))

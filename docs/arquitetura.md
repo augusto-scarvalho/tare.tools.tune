@@ -261,6 +261,10 @@ As partes:
 - **Couro:** um rangido de escorregões densos (70–100 por segundo) lá embaixo (mais forte em 250–500 Hz, −20 dB acima de 2,5 kHz) sobre um farfalhar suave. É o mesmo mecanismo do arco sendo puxado, mais grave e mais amortecido.
 - **Eventos:** `move` para um passo ou um gesto, `run` para um movimento mais curto e forte, `equip` para vestir (dois movimentos e uma fivela).
 
+**Corpo caindo (`body`): medido em gravações.** Não é um baque só.
+- **Queda (`fall`):** 3 a 6 batidas graves em 0,2–0,5 s: joelhos, quadril, o tronco (a mais forte) e depois um braço ou a cabeça, separadas por 60–150 ms e 4–14 dB abaixo do tronco. Cada uma é um baque perto de 110–180 Hz. O som é mais forte em 250–500 Hz, cai ~14 dB em 2,5 kHz e ~20 dB em 8 kHz, com a roupa farfalhando o tempo todo.
+- **Peso morto (`drop`):** só o tronco e um quique pequeno.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.
