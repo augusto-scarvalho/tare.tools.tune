@@ -3,6 +3,8 @@
 Struck bodies are modal (Fx.strike): the material sets the modes, size their pitch and decay,
 power how hard the contact is. Air and debris are moving noise bands and scattered events.
 """
+import numpy as np
+
 from ..spec import Modal, Noise, Scatter, Syllable
 from . import Fx, bell_curve, decay_curve, recipe
 
@@ -92,6 +94,62 @@ def bounces(fx: Fx, count: int = 5, first: float = 0.22, e: float = 0.55, ends: 
     return hits
 
 
+# --- creaks ---------------------------------------------------------------------------------------------------------
+#
+# Modelled on a recording of a bow being drawn, measured at millisecond scale: stick-slip events
+# ~70 per second in locally regular trains whose rate drifts, each one swelling over 1-2 ms and
+# ringing ~10 ms in the wood (broad bands near 1.7, 2.9, 5.5 and 7.9 kHz, a main bending note near
+# 1.2-1.7 kHz), getting louder as the tension grows, over faint friction noise.
+
+WOOD_BANDS = [(1700, 1000, -5.0), (2900, 1900, -3.6), (5550, 1500, -8.0), (7900, 1600, -10.0),
+              (10400, 2300, -12.8), (750, 500, -12.0)]   # centre Hz, width Hz, level dB
+
+
+def wood_modes(fx: Fx, scale: float, t60: float, per_khz: int = 12) -> list:
+    """Wood rings in many close, damped modes: a dense random set inside each measured band (fixed per species)."""
+    out, k = [], 0
+    for centre, width, db in WOOD_BANDS:
+        n = max(int(width / 1000 * per_khz), 3)
+        for _ in range(n):
+            f = (centre + (fx.g.base(f"wm{k}") - 0.5) * width) * scale
+            g = 10 ** (db / 20) / n ** 0.5 * (0.5 + fx.g.base(f"wg{k}"))
+            decay = t60 * (0.6 + 0.8 * fx.g.base(f"wt{k}")) * (1700 / f) ** 0.3
+            out.append((round(f, 1), round(decay, 4), round(g, 4)))
+            k += 1
+    for j in range(5):  # the main bending modes ring a little longer: the note of the creak
+        f = (1150 + 600 * fx.g.base(f"main{j}")) * scale
+        out.append((round(f, 1), round(2.3 * t60, 4), round(0.8 / (1 + 0.3 * j), 4)))
+    return out
+
+
+def stick_slip(fx: Fx, dur: float, ioi: float, spread: float = 0.25, drift: float = 0.6) -> list:
+    """Hits for a creak: trains of slips whose rate drifts, louder as tension grows, a few big ones."""
+    ctrl = [2 * fx.rand(f"drift{j}") - 1 for j in range(12)]
+    t, hits, k = 0.02, [], 0
+    while t < dur:
+        u1, u2, u3, u4 = (fx.rand(f"slip{k}.{j}") for j in range(4))
+        z = (-2 * np.log(max(u1, 1e-9))) ** 0.5 * np.cos(2 * np.pi * u2)
+        prog = t / dur
+        wander = 2 ** (drift * np.interp(prog * 11, np.arange(12), ctrl))
+        tension = 0.3 + 0.7 * prog
+        gain = tension * (0.3 + 0.7 * u3 ** 1.5) * (2.2 if u4 < 0.15 else 1.0)
+        hits.append((round(t, 5), round(float(gain), 4), 0.0022))
+        t += max(ioi * wander * np.exp(spread * z), 0.004)
+        k += 1
+    return hits
+
+
+def creak(fx: Fx, dur: float) -> list:
+    """Wood under growing strain (a bow drawn, a door, a ship's timber). Bigger means lower, slower, longer ringing."""
+    scale = 0.72 * 2 ** (-0.8 * (fx.size - 0.5))
+    ioi = 0.015 * (0.8 + 0.4 * fx.size)
+    body = Modal(0.0, round(dur + 0.15, 3), wood_modes(fx, scale, 0.03 * (0.8 + 0.4 * fx.size) / 0.7),
+                 stick_slip(fx, dur, ioi), hardness=4500, click=0.05)
+    friction = Noise(0.0, round(dur, 3), [(0, 1500 * scale), (1, 1700 * scale)], "band", 1.2,
+                     amp=[(0, 0.2), (0.5, 0.6), (1, 1.0)], attack=0.05, release=0.03, wobble=(30.0, 0.6), gain=0.03)
+    return [body, friction]
+
+
 # --- weapons --------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -152,15 +210,7 @@ def bow(fx: Fx):
             clicks = [(round(i / 11 + 0.004 * fx.rand(f"c{i}"), 4), 0.8, 0.0006) for i in range(int(dur * 11))]
             return fx.voice(modal=[fx.strike("iron", size=0.05, hits=clicks, prefix="pawl", dur=dur + 0.2),
                                    fx.strike("wood", size=0.3, hits=[(dur, 1.0, 0.002)], prefix="lock")])
-        # wood under strain: a high, very irregular stick-slip squeal through the limb's resonances
-        # (structure from a CLAP-guided search; the held-out judge agreed)
-        f0 = 400 * (0.9 + 0.2 * fx.g.u("creak"))
-        creak = Syllable(0.0, round(dur * 1.4, 3), [(0, f0), (0.7, f0 * 2.3), (1, f0 * 2.7)], "pulse", 0.1, 0.0,
-                         jitter=3.0, rough=(0.3, 23.0), formants=[(2450, 980, 1.0), (5650, 1470, 0.6)],
-                         attack=0.08, release=0.05, amp=[(0, 0.3), (1, 1)], gain=0.8)
-        stretch = Noise(0.0, round(dur * 1.4, 3), [(0, 1500), (1, 3000)], "band", 4.0, amp=[(0, 0.2), (1, 1)],
-                        gain=0.2)
-        return fx.voice(syllables=[creak], noise=[stretch], gain=0.6)
+        return fx.voice(**splits(creak(fx, 0.9 * (0.8 + 0.4 * s))), gain=0.7)
     if e == "release":
         string = fx.strike("string", size=0.4 + 0.5 * s, hits=[(0.0, 1.0, 0.002)], prefix="s", gain=0.7,
                            dur=0.3 if cross else 0.45)
