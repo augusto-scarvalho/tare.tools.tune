@@ -30,7 +30,7 @@ As gravações servem só para medir e não entram no repositório.
 | 12 | Itens: moedas, poção, pergaminho, gema × pegar, usar, derrubar | `item` pickup, use, drop | medido |
 | 13 | Quebrar: caixa ou barril de madeira, vaso de cerâmica, vidro | `breakable` hit, break | medido |
 | 14 | Interface: clique, abrir e fechar inventário, subir de nível, missão cumprida, erro | `ui` (fantasy, retro) | medido |
-| 15 | Mundo: alavanca, armadilha, tocha acendendo, água (respingo, mergulho) | `world` | falta |
+| 15 | Mundo: alavanca, armadilhas (dardos, espinhos, lâmina), tocha, água (gota, respingo, mergulho) | `lever`, `trap`, `torch`, `water` | medido |
 | 16 | Magias: 8 elementos × carregar, lançar, viajar, impacto | `spell` | antigo |
 | 17 | Ambientes: 10 lugares em loop, com eventos soltos | `ambience` | antigo |
 | 18 | Explosões: perto, longe, destroços | `explosion` | antigo |

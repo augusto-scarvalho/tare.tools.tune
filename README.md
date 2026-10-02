@@ -129,6 +129,10 @@ audio = rei.render("Salve o reino!")
 | `item` (itens) | coins, potion, scroll, gem | pickup, use, drop |
 | `breakable` (coisas para quebrar) | crate, barrel, pot, glass | hit, break |
 | `ui` (interface) | fantasy, retro | click, open, close, levelup, quest, error |
+| `lever` (alavancas) | iron, wood | pull, push |
+| `trap` (armadilhas) | darts, spikes, blade | trigger, fire |
+| `torch` (fogo) | torch, brazier | ignite, extinguish |
+| `water` (água) | small, big | splash, dive, drip |
 | `footstep` | stone, wood, metal, gravel, dirt, grass, snow, water | walk, run, land, scuff |
 | `explosion` | fire, stone, magic | blast, distant, debris |
 | `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal | charge, cast, travel (loop), impact |

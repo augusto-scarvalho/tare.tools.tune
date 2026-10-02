@@ -296,6 +296,13 @@ As partes:
 - **Estilos:** `fantasy`, com sinos de barra (modos 1 : 2,76 : 5,40 : 8,93), pano e madeira; `retro`, com notas de onda quadrada como num console de 8 bits.
 - **Tom:** cada espécie (cada jogo) fica num tom perto de Dó5.
 
+**Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
+- **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.
+- **Tocha:** acende com um raspado e uma labareda que vira crepitar (larga, 1–6 kHz, ~1 s). Apagar é um chiado.
+- **Água:** um respingo é agudo (mais forte em 2,5–8 kHz, 0,2–1 s), com um "ploc" grave e gotas. O mergulho tem bolhas subindo depois.
+- **Armadilha de espinhos:** sai com um "shing" metálico (modos de 5–8 kHz) sobre o mecanismo. Os dardos são voos curtos de flecha batendo na parede; a lâmina é um golpe pesado e lento.
+- **Placa de pressão:** a pedra afunda e uma trava solta.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.
