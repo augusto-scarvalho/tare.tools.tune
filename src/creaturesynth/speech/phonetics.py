@@ -100,6 +100,18 @@ PHONES: dict[str, Phone] = {
     "R": Phone("h", 80, voiced=False, place="glot"),
 }
 PAUSES = {",": 0.18, ".": 0.38, "!": 0.38, "?": 0.38}
+
+# Per-language adjustments on top of PHONES: {lang: {phone: {field: value}}}
+LANG_PHONES: dict[str, dict[str, dict]] = {"pt": {}}
+R_FRIC_HZ = 1700.0     # pt strong r [x]: upper limit of its frication centre
+
+
+def phone_table(lang: str) -> dict[str, Phone]:
+    from dataclasses import replace
+    table = dict(PHONES)
+    for ph, changes in LANG_PHONES.get(lang, {}).items():
+        table[ph] = replace(table[ph], **changes)
+    return table
 NASAL_ZERO = {"m": 450, "n": 450, "J": 450, "N": 450}     # nasal murmur antiresonance (A/B-tuned)
 NASAL_VOWEL_ZERO = 600
 HOMORGANIC_NASAL = {"p": "m", "b": "m", "t": "n", "d": "n", "tS": "n", "dZ": "n", "k": "N", "g": "N"}
@@ -141,6 +153,7 @@ def segments(phrases: list[Phrase], lang: str, rate: float = 1.0) -> tuple[list[
     """Lay out segments; also return per-syllable info for the intonation model."""
     segs: list[_Seg] = [_Seg("_", 0.03, (500, 1500, 2500))]
     sylls: list[dict] = []
+    table = phone_table(lang)
     for pi, phrase in enumerate(phrases):
         flat = [(w, si, s) for w in phrase.words for si, s in enumerate(w.syllables)]
         for fi, (word, _si, syl) in enumerate(flat):
@@ -150,13 +163,13 @@ def segments(phrases: list[Phrase], lang: str, rate: float = 1.0) -> tuple[list[
             sylls.append(info)
             phones = syl.phones
             for k, ph in enumerate(phones):
-                spec = PHONES.get(ph)
+                spec = table.get(ph)
                 if spec is None:
                     continue
                 prev = phones[k - 1] if k else (flat[fi - 1][2].phones[-1] if fi else None)
-                nxt_v = next((PHONES[p] for p in phones[k + 1:] if is_vowel(p)), None)
+                nxt_v = next((table[p] for p in phones[k + 1:] if is_vowel(p)), None)
                 if nxt_v is None and fi + 1 < len(flat):
-                    nxt_v = next((PHONES[p] for p in flat[fi + 1][2].phones if is_vowel(p)), None)
+                    nxt_v = next((table[p] for p in flat[fi + 1][2].phones if is_vowel(p)), None)
                 scale = 1.0
                 if spec.kind == "vowel":
                     if lang == "pt":
@@ -191,13 +204,13 @@ def segments(phrases: list[Phrase], lang: str, rate: float = 1.0) -> tuple[list[
                         flat[fi + 1][2].phones[0] if fi + 1 < len(flat) and flat[fi + 1][0] is word else None)
                     if lang == "pt" and spec.kind == "vowel" and spec.nasal and nxt_ph in HOMORGANIC_NASAL:
                         nas = HOMORGANIC_NASAL[nxt_ph]
-                        segs.append(_Seg(nas, 0.04 / rate, PHONES[nas].F, av=0.6, nasal=1.0, fnz=NASAL_ZERO[nas]))
+                        segs.append(_Seg(nas, 0.04 / rate, table[nas].F, av=0.6, nasal=1.0, fnz=NASAL_ZERO[nas]))
                 elif spec.kind == "h":
                     target = nxt_v.F if nxt_v else segs[-1].F
                     if ph == "R" and R_STYLE == "h":
                         segs.append(_Seg(ph, dur, target, ah=0.9))
                     elif ph == "R":  # pt strong r as a velar fricative [x]: noise at the next vowel's F2/F3
-                        f2 = min(target[1] * 0.8 + 300, 1700)  # higher would sound like "ch"
+                        f2 = min(target[1] * 0.8 + 300, R_FRIC_HZ)  # much higher would sound like "ch"
                         segs.append(_Seg(ph, dur, target, ah=0.4, af=0.3, fric=((f2, 700, 1.0), (target[2], 900, 0.4))))
                     else:
                         segs.append(_Seg(ph, dur, target, ah=0.6))

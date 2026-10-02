@@ -48,14 +48,24 @@ def _write(audio, path, sr, png=False):
 
 
 def _speaker(a):
-    from .speech import Speaker
-    sp = Speaker.random(int(a.voice[4:])) if a.voice.startswith("npc:") else Speaker.preset(a.voice)
+    from dataclasses import replace
+
+    from .speech import NeuralSpeaker, speaker_from
+    sp = speaker_from(a.voice)
     overrides = {k: getattr(a, k) for k in ("pitch", "tract", "rate", "range", "breath") if getattr(a, k) is not None}
+    if isinstance(sp, NeuralSpeaker):
+        if set(overrides) - {"rate"}:
+            raise ValueError("natural (kokoro) voices only take --rate")
+        return replace(sp, speed=overrides.get("rate", sp.speed))
     return sp.but(**overrides)
 
 
 def cmd_say(a):
+    from .speech import NeuralSpeaker
     speaker = _speaker(a)
+    if isinstance(speaker, NeuralSpeaker):  # natural voice: audio only, no spec or phonemes
+        _write(speaker.render(a.text, a.lang, a.sr), a.output or "fala.wav", a.sr, a.png)
+        return
     if a.phonemes:
         print(speaker.phonemes(a.text, a.lang))
     voice = speaker.voice(a.text, a.lang)
@@ -65,10 +75,14 @@ def cmd_say(a):
 
 
 def cmd_voices(a):
-    from .speech import PRESETS
+    from .speech import PRESETS, neural
     for name, sp in PRESETS.items():
         print(f"  {name:8s} pitch {sp.pitch:5.0f} Hz  tract {sp.tract:.2f}  rate {sp.rate:.2f}")
     print("  npc:<seed>  a unique human voice per seed (Speaker.random)")
+    state = "installed" if neural.available() else 'not installed: pip install "creaturesynth[neural]"'
+    print(f"natural voices (Kokoro, {state}):")
+    for lang, ids in neural.VOICES.items():
+        print(f"  {lang}: " + ", ".join(f"kokoro:{v}" for v in ids))
 
 
 def cmd_list(a):
@@ -162,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("say", help="speak text with a procedural human voice (pt or en)")
     p.add_argument("text")
     p.add_argument("--lang", choices=["pt", "en"], default="pt")
-    p.add_argument("--voice", default="default", help="preset (see 'voices') or npc:<seed>")
+    p.add_argument("--voice", default="default", help="preset (see 'voices'), npc:<seed> or kokoro:<voice id>")
     for knob in ("pitch", "tract", "rate", "range", "breath"):
         p.add_argument(f"--{knob}", type=float)
     p.add_argument("--phonemes", action="store_true", help="print the phonetic transcription")
@@ -205,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
     a = parser.parse_args(argv)
     try:
         a.fn(a)
-    except (ValueError, FileNotFoundError, json.JSONDecodeError) as e:
+    except (ValueError, FileNotFoundError, ImportError, json.JSONDecodeError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     return 0

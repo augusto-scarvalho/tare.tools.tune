@@ -83,7 +83,7 @@ class VoiceBank:
         with self._lock:
             fut = self._cache.get(k)
             if fut is None:
-                fut = self._pool.submit(lambda: render(speaker.voice(text, lang), self.sample_rate))
+                fut = self._pool.submit(lambda: speaker.render(text, lang, self.sample_rate))
                 self._cache[k] = fut
                 while len(self._cache) > self.max_items:
                     self._cache.popitem(last=False)

@@ -68,6 +68,16 @@ Soa robótico e retrô, mas é 100% procedural, leve, determinístico e portáve
 
 **Vozes prontas:** `default`, `deep`, `high`, `child`, `cute`, `fairy`, `elder`, `giant`, `monster`, `robot` e `whisper`. Use `Speaker.random(seed)` para dar uma voz humana única a cada NPC, e `Speaker.from_creature(criatura)` para uma criatura falar com voz compatível com o corpo dela. Dá para ajustar `pitch`, `tract` (tamanho do trato vocal), `rate`, `range` (entonação), `breath`, `rough` e outros.
 
+**Vozes naturais (opcional).** Quem quiser voz natural em vez de robótica pode usar o [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), com vozes em português brasileiro (`pf_dora`, `pm_alex`, `pm_santa`) e em inglês. O Whisper acerta essas vozes quase sempre (CER 0,003 nas mesmas frases de teste). O preço: não é procedural, puxa o PyTorch (~1 GB) mais um modelo de ~330 MB, e não vira spec portável para engines; o bake gera WAV normalmente. Os efeitos do motor (reverb, drive, crush) funcionam por cima.
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu   # PyTorch só CPU basta
+pip install -e ".[neural]"
+creaturesynth say "Bem-vindo à vila!" --voice kokoro:pm_alex
+```
+
+No código, use `speaker_from("kokoro:pf_dora")`; no bestiário, `"voice": "kokoro:pm_alex"`. O Kokoro usa o espeak-ng (GPL) para converter o português em fonemas: tudo bem como ferramenta, mas avalie a licença antes de distribuir junto com um jogo.
+
 **Inteligibilidade** medida com o Whisper (`tools/intelligibility.py`) em 16 frases de diálogo de jogo por idioma: no inglês, CER entre 0,04 e 0,06 conforme a voz (a maioria das frases sai perfeita); no português, entre 0,24 e 0,34 (cerca de 70 a 75% dos caracteres certos). O português ainda é o ponto a melhorar.
 
 ## Duas formas de usar
@@ -152,6 +162,10 @@ ruff check .
 
 pip install -e ".[asr]"
 python tools/intelligibility.py -v    # a fala, transcrita pelo Whisper (taxa de erro por caractere)
+
+pip install -e ".[neural]"
+python tools/teacher_calibration.py render    # fala natural do Kokoro como "professor" do português
+python tools/teacher_calibration.py measure   # formantes, durações e fricativas medidos por fonema
 ```
 
 O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som leva de 20 a 250 ms para gerar, e `bake` produz cerca de 40 sons por segundo.

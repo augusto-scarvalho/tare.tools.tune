@@ -19,6 +19,9 @@ ACUTE_OR_CIRC = set("áéíóúâêô")
 FRONT = set("eéêiíy")
 OBSTRUENTS = set("pbtdcgfvkG")
 VOICED_C = set("bdgvzjmnlr") | {"lh", "nh", "Z"}
+OPEN_MID = True  # stressed unaccented e/o open before a coda r/l (porta, certo) and in -a paroxytones (nossa)
+CLOSED_MID = {"mesa", "boca", "moça", "toda", "todas", "força", "forças", "verde", "verdes", "cerca", "cercas",
+              "pessoa", "pessoas", "esposa", "esposas", "seda", "medo", "pelo", "pela", "pelas", "perda", "cedo"}
 CODA_R = "R"   # r at the end of a syllable: "R" fricative (Rio, A/B-tuned) or "r" tap (São Paulo)
 KW_WORDS = {"cinquenta", "frequente", "frequência", "tranquilo", "tranquila", "linguiça", "aguentar", "aguenta",
             "consequência", "sequência", "pinguim", "bilíngue", "eloquente", "delinquente", "quinquênio",
@@ -209,6 +212,13 @@ def word_to_phonemes(word: str, clitic: bool = False) -> Word:
             post = True  # unstressed function words reduce like post-tonic syllables
         if x.kind == "V":
             x.ph = _vowel(x.g, st, final, post)
+            if OPEN_MID and st and x.g in "eo" and word not in CLOSED_MID and not re.search(r"(e[sz]a|oa)s?$", word):
+                after, after2 = nxt(k), nxt(k, 2)
+                # coda r/l inside the word (porta, certo) or final l (papel, sol); final -er/-or stay closed (fazer)
+                coda_rl = after is not None and ((after.g in ("r", "l") and after2 is not None and after2.kind == "C")
+                                                 or (after.g == "l" and after2 is None))
+                if coda_rl or (si == len(sylls) - 2 and re.search(r"as?$", word)):
+                    x.ph = "E" if x.g == "e" else "O"
             following = nxt(k)
             # nasal vowel before a coda m/n (the consonant disappears)
             if following and following.g in ("m", "n") and (nxt(k, 2) is None or nxt(k, 2).kind == "C"):

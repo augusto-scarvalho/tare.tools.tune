@@ -36,23 +36,17 @@ from .audio_io import write_wav
 from .calls import CALLS
 from .creature import Creature
 from .render import DEFAULT_SR, render
-from .speech import Speaker
+from .speech import NeuralSpeaker, Speaker, speaker_from
 
 MANIFEST = "manifest.json"
 
 
-def speaker_from_entry(name: str, entry: Mapping) -> Speaker:
-    voice = entry.get("voice", "default")
-    if isinstance(voice, Mapping):
-        voice = dict(voice)
-        base = Speaker.preset(voice.pop("preset")) if "preset" in voice else Speaker()
-        try:
-            return base.but(name=name, **voice)
-        except TypeError as e:
-            raise ValueError(f"speaker {name!r}: {e}") from None
-    if str(voice).startswith("npc:"):
-        return Speaker.random(int(str(voice)[4:]), name=name)
-    return Speaker.preset(voice).but(name=name)
+def speaker_from_entry(name: str, entry: Mapping):
+    from dataclasses import replace
+    try:
+        return replace(speaker_from(entry.get("voice", "default")), name=name)
+    except TypeError as e:
+        raise ValueError(f"speaker {name!r}: {e}") from None
 
 
 def creature_from_entry(name: str, entry: Mapping, entries: Mapping[str, Mapping], _seen=()) -> Creature:
@@ -107,12 +101,12 @@ def _bake_one(job):
 
 def _bake_line(job):
     name, speaker, lang, line_id, text, sr, out_dir, specs = job
-    voice = speaker.voice(text, lang)
-    audio = render(voice, sr)
     stem = f"{name}/{line_id}"
+    voice = None if isinstance(speaker, NeuralSpeaker) else speaker.voice(text, lang)  # natural voices: no spec
+    audio = render(voice, sr) if voice else speaker.render(text, lang, sr)
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
     entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4)}
-    if specs:
+    if specs and voice:
         (Path(out_dir) / f"{stem}.json").write_text(voice.to_json())
         entry["spec"] = f"{stem}.json"
     return name, line_id, entry
@@ -120,7 +114,7 @@ def _bake_line(job):
 
 def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable[str] | None = None,
          takes: int = 4, sr: int = DEFAULT_SR, specs: bool = True, workers: int | None = None,
-         speakers: Mapping[str, tuple[Speaker, str, Mapping[str, str]]] | None = None) -> dict:
+         speakers: Mapping[str, tuple["Speaker", str, Mapping[str, str]]] | None = None) -> dict:
     """Render every creature x call x take (and every speaker line) to ``out_dir``; write ``manifest.json``."""
     out_dir = Path(out_dir)
     calls = list(calls or CALLS)
@@ -147,7 +141,8 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
     for name, call, take, entry in results:
         manifest["creatures"][name]["calls"][call][take] = entry
     if speakers:
-        manifest["speakers"] = {name: {"speaker": asdict(sp), "lang": lang, "lines": {}}
+        manifest["speakers"] = {name: {"speaker": asdict(sp), "lang": lang, "lines": {},
+                                       "engine": "kokoro" if isinstance(sp, NeuralSpeaker) else "formant"}
                                 for name, (sp, lang, _) in speakers.items()}
         for name, line_id, entry in line_results:
             manifest["speakers"][name]["lines"][line_id] = entry

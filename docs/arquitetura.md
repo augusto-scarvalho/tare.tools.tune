@@ -186,11 +186,28 @@ texto ─► g2p (pt: regras | en: CMUdict + regras) ─► frases/palavras/síl
 
 **Como foi afinado:** com o Whisper como "ouvido" (`tools/intelligibility.py`), comparando versões A/B num conjunto fixo de frases de jogo. Um teste mostrou que a fricção estava ~10 dB abaixo do natural; outro achou o clique de troca de coeficientes. Execuções idênticas do Whisper variam cerca de ±0,03 de CER, então diferenças menores que isso não significam nada.
 
+**Professor natural (Kokoro).** `tools/teacher_calibration.py` gera 60 frases pt-BR com o Kokoro (vozes masculina e feminina, ~5 minutos). As frases são diferentes das frases de teste. Como o Kokoro informa a duração prevista de cada fonema (quadros de 25 ms), o alinhamento sai de graça. A ferramenta mede:
+- formantes de vogais tônicas longas;
+- durações por tonicidade;
+- o espectro do trecho ruidoso das fricativas.
+
+O que se aprendeu, sempre conferindo com o Whisper em A/B:
+- **Fricativas:** confirmaram os valores que já usávamos ("s" ~6,3 kHz, "f" ~7,5 kHz). "Ch"/"j" ficaram em ~3,15 kHz e o [x] em ~2,1 kHz, mas aplicar esses valores não mudou a inteligibilidade além do ruído.
+- **Vogais:** copiar os formantes medidos piorou (CER 0,24 → 0,34). Na fala corrida a vogal não alcança o alvo, e nosso sintetizador já suaviza os alvos; copiar as medidas encurtaria a vogal duas vezes. O ritmo mais rápido do Kokoro também piorou.
+- **O ganho real veio do texto, não da acústica.** Comparando as transcrições do professor com as nossas, apareceu um erro sistemático: o "e"/"o" tônico sem acento era sempre fechado. Agora ele abre:
+  - antes de "r"/"l" no meio da palavra (porta, certo);
+  - em "-el"/"-ol" finais (papel, sol);
+  - em paroxítonas terminadas em "-a" (nossa, janela, guerra);
+  - ficam de fora uma lista de exceções e os sufixos "-esa"/"-eza"/"-oa".
+- **Teto:** o Whisper transcreve o próprio Kokoro com CER 0,003. A distância que resta para o nosso motor está na estrutura (fonte glotal, explosões, coarticulação), não nos valores das tabelas.
+
+`phonetics.LANG_PHONES` guarda ajustes por idioma sobre a tabela comum. Está vazio para o português, porque nenhum ajuste acústico passou no A/B.
+
 **Próximos passos da fala:**
 - Melhorar o português (nasais, "v", encontros consonantais).
 - Mais idiomas: o front-end é plugável (`speech.LANGS`).
 - Um modo "balbucio" estilo Animal Crossing.
-- Opcionalmente, um backend neural para quem quiser voz natural e aceitar o custo.
+- Usar o professor de outro jeito: ajustar os parâmetros por análise-por-síntese, comparando espectros quadro a quadro com o Kokoro na mesma sequência de fonemas, em vez de copiar medidas.
 
 ## Motor da 1ª geração
 

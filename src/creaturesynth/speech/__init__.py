@@ -17,6 +17,7 @@ from .. import rng
 from ..render import DEFAULT_SR, render
 from ..spec import SpeechProgram, Voice
 from . import g2p_en, g2p_pt
+from .neural import NeuralSpeaker
 from .phonetics import FRAME_RATE, frames
 from .units import transcription
 
@@ -120,9 +121,27 @@ def _frontend(lang: str):
         raise ValueError(f"unsupported language {lang!r}; choose from {', '.join(LANGS)}") from None
 
 
-def say(text: str, voice: str | Speaker = "default", lang: str = "pt", sr: int = DEFAULT_SR) -> np.ndarray:
-    speaker = Speaker.preset(voice) if isinstance(voice, str) else voice
-    return speaker.render(text, lang, sr)
+def speaker_from(voice) -> "Speaker | NeuralSpeaker":
+    """Resolve a voice description: a Speaker, a preset name, "npc:<seed>", "kokoro[:<voice id>]",
+    or a dict ({"preset": ..., overrides} / {"engine": "kokoro", "voice": ..., "speed": ...})."""
+    if isinstance(voice, (Speaker, NeuralSpeaker)):
+        return voice
+    if isinstance(voice, dict):
+        voice = dict(voice)
+        if voice.pop("engine", "formant") == "kokoro":
+            return NeuralSpeaker(**voice)
+        base = Speaker.preset(voice.pop("preset")) if "preset" in voice else Speaker()
+        return base.but(**voice)
+    voice = str(voice)
+    if voice.startswith("npc:"):
+        return Speaker.random(int(voice[4:]))
+    if voice == "kokoro" or voice.startswith("kokoro:"):
+        return NeuralSpeaker(voice=voice.partition(":")[2])
+    return Speaker.preset(voice)
 
 
-__all__ = ["LANGS", "PRESETS", "Speaker", "say"]
+def say(text: str, voice="default", lang: str = "pt", sr: int = DEFAULT_SR) -> np.ndarray:
+    return speaker_from(voice).render(text, lang, sr)
+
+
+__all__ = ["LANGS", "PRESETS", "NeuralSpeaker", "Speaker", "say", "speaker_from"]

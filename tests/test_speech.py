@@ -15,11 +15,14 @@ SR = 22_050
 @pytest.mark.parametrize("word, expected", [
     ("Laíse", "la.'i.zI"), ("viajante", "vi.a.'Z6~.tSI"), ("dragão", "dra.'g6~w~"), ("montanha", "mo~.'ta.J6"),
     ("noite", "'noj.tSI"), ("cidade", "si.'da.dZI"), ("carro", "'ka.RU"), ("caro", "'ka.rU"), ("rato", "'Ra.tU"),
-    ("casa", "'ka.z6"), ("guerra", "'ge.R6"), ("água", "'a.gw6"), ("cinquenta", "si~.'kwe~.t6"),
+    ("casa", "'ka.z6"), ("guerra", "'gE.R6"), ("água", "'a.gw6"), ("cinquenta", "si~.'kwe~.t6"),
     ("homem", "'o.me~j~"), ("também", "t6~.'be~j~"), ("pão", "'p6~w~"), ("põe", "'po~j~"), ("falam", "'fa.l6~w~"),
     ("Brasil", "bra.'ziw"), ("saída", "sa.'i.d6"), ("rainha", "Ra.'i.J6"), ("sair", "sa.'iR"),
     ("música", "'mu.zi.k6"), ("filho", "'fi.LU"), ("chuva", "'Su.v6"), ("exemplo", "e.'ze~.plU"),
     ("nascer", "na.'seR"), ("quatro", "'kwa.trU"), ("linguiça", "li~.'gwi.s6"),
+    # open stressed mid vowels (taught by comparing with the Kokoro teacher's transcriptions)
+    ("nossa", "'nO.s6"), ("porta", "'pOR.t6"), ("certo", "'sER.tU"), ("janela", "Za.'nE.l6"), ("papel", "pa.'pEw"),
+    ("mesa", "'me.z6"), ("beleza", "be.'le.z6"), ("pessoa", "pe.'so.6"), ("fazer", "fa.'zeR"), ("amor", "a.'moR"),
 ])
 def test_portuguese_words(word, expected):
     assert g2p_pt.transcribe(word) == expected + " ."
