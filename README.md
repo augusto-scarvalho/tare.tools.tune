@@ -1,6 +1,6 @@
 # creaturesynth
 
-Vozes procedurais para jogos: **criaturas** e **fala humana** (português e inglês). Para criaturas, você descreve **quem** chama (espécie, tamanho, agressividade) e **por quê** (idle, alerta, ataque, dor, morte). Para pessoas, você escolhe uma voz e escreve o texto. A mesma entrada sempre gera o mesmo som, e cada indivíduo e cada repetição varia um pouco.
+Áudio procedural para jogos: **criaturas**, **fala humana** (português e inglês) e **efeitos sonoros** (armas, passos, explosões, magia, ambientes). Para criaturas, você descreve **quem** chama (espécie, tamanho, agressividade) e **por quê** (idle, alerta, ataque, dor, morte). Para pessoas, você escolhe uma voz e escreve o texto. Para efeitos, você escolhe o objeto (uma espada de aço, uma bola de fogo, uma tempestade) e o evento (golpe, choque, impacto, loop). A mesma entrada sempre gera o mesmo som, e cada indivíduo e cada repetição varia um pouco.
 
 Nasceu de um fork do [sintetizador de gritos da 1ª geração de Pokémon](https://github.com/ardean/pokemon-gen1-cry-synthesizer). A ideia do jogo, que tira 151 gritos de 38 moldes mais tom e duração, virou o modelo geral aqui: **espécie = genes estáveis; indivíduo = pequenas variações; traços = evolução**. O motor original continua disponível como arquétipo `chip` e como reprodução fiel dos 151 gritos.
 
@@ -19,6 +19,12 @@ ferreiro = Speaker.preset("deep")
 write_wav("ferreiro.wav", ferreiro.render("Bem-vindo à forja, viajante!", lang="pt"), 48000)
 npc = Speaker.random(42)                                   # uma voz única e repetível por NPC
 write_wav("npc.wav", npc.render("Did you see the dragon?", lang="en"), 48000)
+
+from creaturesynth import Sfx
+
+excalibur = Sfx("blade", "steel", species="excalibur")
+write_wav("choque.wav", excalibur.render("clash", take=3), 48000)   # cada take é um choque diferente
+write_wav("bola_de_fogo.wav", Sfx("spell", "fire", power=0.8).render("impact"), 48000)
 ```
 
 ## Instalação
@@ -106,6 +112,74 @@ rato = cast("creature", creature=rato_criatura)    # pequeno: animalese
 audio = rei.render("Salve o reino!")
 ```
 
+## Efeitos sonoros
+
+`Sfx` funciona como `Creature`: um **tipo** (receita), um **estilo** (material, elemento ou lugar), uma **identidade** (`species`: esta espada, não espadas em geral), **tamanho** e **força**, e **eventos** que tocam como os chamados. Cada take varia: o golpe pega num ponto diferente da lâmina, o fogo crepita de outro jeito.
+
+| tipo | estilos | eventos |
+|---|---|---|
+| `blade` (espadas, adagas, machados) | steel, iron, glass, wood | swing, clash, hit_flesh, hit_wood, hit_metal, hit_stone, draw, drop |
+| `blunt` (clavas, maças, martelos) | wood, iron, stone | swing, hit_flesh, hit_wood, hit_metal, hit_stone, drop |
+| `bow` | longbow, crossbow | draw, release, fly, hit_wood, hit_flesh, hit_stone |
+| `footstep` | stone, wood, metal, gravel, dirt, grass, snow, water | walk, run, land, scuff |
+| `explosion` | fire, stone, magic | blast, distant, debris |
+| `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal | charge, cast, travel (loop), impact |
+| `ambience` | rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon | loop (16 s, sem emenda), accent |
+
+Cada família usa a técnica certa para o tipo de som:
+- **Corpos batidos** (metal, madeira, pedra, vidro, sinos, corda de arco) usam **síntese modal**: um impacto ou uma raspagem faz soar um conjunto de modos. O material define os modos, o tamanho a altura e o decaimento, a força a dureza do contato.
+- **Ar e massa** (golpes no ar, rugido de fogo, vento, estrondos) usam **ruído com filtro em movimento**.
+- **Texturas** (gotas, crepitar, faíscas, cascalho, estilhaços) usam **nuvens de eventos minúsculos**.
+- **Magia** soma tudo isso com os blocos das vozes: coral com vogais, zumbido elétrico, sinos.
+- **Ambientes** de floresta e noite usam os pássaros e grilos dos arquétipos de criaturas.
+
+```bash
+creaturesynth sounds                                         # tipos, estilos e eventos
+creaturesynth sfx blade steel --event clash --species excalibur -o choque.wav
+creaturesynth sfx spell lightning --event impact --power 0.9 -o raio.wav
+creaturesynth sfx ambience rain --event loop -o chuva_loop.wav
+```
+
+No bestiário, os efeitos entram numa seção `sounds` (o `bake` gera os takes, e os loops saem com um take só e `"loop": true` no manifesto):
+
+```json
+"sounds": {
+  "excalibur": {"kind": "blade", "style": "steel", "species": "excalibur", "power": 0.7},
+  "fireball":  {"kind": "spell", "style": "fire", "power": 0.8},
+  "storm":     {"kind": "ambience", "style": "storm", "events": ["loop", "accent"]}
+}
+```
+
+Dentro do jogo, o `VoiceBank` aceita efeitos como aceita criaturas (`bank.get(espada, "clash")` nunca repete o mesmo take duas vezes seguidas). O `AmbiencePlayer` toca um lugar sem fim: o loop, mais os eventos soltos (trovões, pássaros, gotas) em momentos sorteados, e qualquer outro som que você acrescentar:
+
+```python
+from creaturesynth.runtime import AmbiencePlayer
+
+floresta = AmbiencePlayer(Sfx("ambience", "forest"), accents_per_minute=6)
+floresta.add(Creature("bird", species=4), "alert", per_minute=2)
+bloco = floresta.read(1024)        # float32 para o stream de áudio da engine
+```
+
+O demo do pygame tem espada (Q/W), bola de fogo (E), raio (R) e tempestade (A).
+
+**Como soam, segundo o CLAP.** Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
+
+| família | descrição certa em 1º | entre as 3 primeiras |
+|---|---|---|
+| magia (8 elementos × 4 eventos) | 50% | 80% |
+| armas, arco e explosões | 29% | 45% |
+| ambientes (loop + evento) | ~30% | ~40% |
+| passos | 0% | 0% |
+
+- **Fortes:** golpes em carne e em madeira, golpes no ar, flechas voando e acertando, explosão distante, a maioria das magias, e os loops de chuva, caverna, noite, tempestade e mar (todos em 1º).
+- **Fracos:**
+  - choque de espadas: o juiz ouve "espada acertando armadura", perto mas não igual;
+  - sacar e derrubar a espada, maça em metal ou pedra, disparo do arco;
+  - quase todos os eventos soltos dos ambientes;
+  - **passos**. Gravações reais de passos são reconhecidas (6 de 8 em 1º), as nossas não, mesmo depois de uma busca guiada pelo CLAP.
+
+O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e ajustar a estrutura, sempre conferindo no juiz. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
+
 ## Calibração com CLAP
 
 O [CLAP](https://huggingface.co/laion/clap-htsat-unfused) é um modelo que põe som e texto no mesmo espaço: dá para perguntar "isto soa como um gato miando?". O creaturesynth usa dois modelos: um para otimizar (`laion/clap-htsat-unfused`) e outro, que nunca é usado na otimização, como juiz (`laion/larger_clap_general`). Assim o ajuste não "decora" o gosto de um modelo só.
@@ -191,6 +265,9 @@ creaturesynth say "Olá, viajante!" --voice child -o ola.wav --phonemes  # fala
 creaturesynth say "Hello there!" --lang en --voice npc:7 --pitch 140
 creaturesynth say "Que dia bonito!" --role crowd --name povo            # balbucio de multidão
 creaturesynth say "Oi, tudo bem?" --voice cute --style animalese
+creaturesynth sounds                                                  # efeitos: tipos, estilos, eventos
+creaturesynth sfx blade steel --event clash --species excalibur -o choque.wav
+creaturesynth sfx ambience storm --event loop -o tempestade.wav       # loop sem emenda
 creaturesynth voices                                                  # vozes prontas
 ```
 
@@ -208,7 +285,7 @@ Os dados dos gritos (`data/gen1/cries.json`) são dados de jogo de terceiros. Fi
 ## Desenvolvimento
 
 ```bash
-pytest -q          # ~290 testes, incluindo os 151 gritos contra a referência
+pytest -q          # ~310 testes, incluindo os 151 gritos contra a referência
 ruff check .
 
 pip install -e ".[asr]"

@@ -159,10 +159,36 @@ def cmd_bake(a):
     sr = a.sr or settings.get("sample_rate", DEFAULT_SR)
     speakers = settings.get("speakers", {})
     manifest = bake(creatures, a.output, calls, takes, sr, specs=not a.no_specs, workers=a.workers,
-                    speakers=speakers)
+                    speakers=speakers, sounds=settings.get("sounds"))
     n = sum(len(t) for c in manifest["creatures"].values() for t in c["calls"].values())
     lines = sum(len(s["lines"]) for s in manifest.get("speakers", {}).values())
-    print(f"{n} sounds for {len(creatures)} creatures, {lines} spoken lines -> {a.output}/manifest.json")
+    fx = sum(len(t) for s in manifest.get("sounds", {}).values() for t in s["events"].values())
+    print(f"{n} calls for {len(creatures)} creatures, {lines} spoken lines, {fx} sound effects"
+          f" -> {a.output}/manifest.json")
+
+
+def _sfx(a):
+    from .sfx import Sfx
+    genes = {name: float(value) for name, value in (g.split("=", 1) for g in a.gene)}
+    return Sfx(a.kind, a.style or "", a.species, a.size, a.power, genes=genes)
+
+
+def cmd_sfx(a):
+    sx = _sfx(a)
+    event = a.event or sx.events[0]
+    voice = sx.voice(event, a.take)
+    if a.spec:
+        Path(a.spec).write_text(voice.to_json(indent=1))
+    out = a.output or f"{a.kind}_{sx.style}_{event}.wav"
+    _write(render(voice, a.sr), out, a.sr, a.png)
+
+
+def cmd_sounds(a):
+    from .sfx import RECIPES
+    for kind, r in RECIPES.items():
+        print(f"{kind:10s} {r.description}")
+        print(f"{'':10s} styles: {', '.join(r.styles)}")
+        print(f"{'':10s} events: {', '.join(e + (' (loop)' if e in r.loops else '') for e in r.events)}")
 
 
 def cmd_zoo(a):
@@ -231,6 +257,24 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=cmd_say)
 
     sub.add_parser("voices", help="speech voice presets").set_defaults(fn=cmd_voices)
+
+    from .sfx import RECIPES
+    p = sub.add_parser("sfx", help="render a sound effect: weapons, footsteps, explosions, magic, ambience")
+    p.add_argument("kind", choices=list(RECIPES))
+    p.add_argument("style", nargs="?", help="material, element or place (see 'sounds')")
+    p.add_argument("--event", help="swing, clash, cast, impact, loop... (default: the first)")
+    p.add_argument("--species", type=_species, default=0, help="the object's identity: number or any name")
+    p.add_argument("--size", type=float, default=0.5)
+    p.add_argument("--power", type=float, default=0.5)
+    p.add_argument("--take", type=int, default=0)
+    p.add_argument("--gene", action="append", default=[], metavar="NAME=VALUE")
+    p.add_argument("-o", "--output")
+    p.add_argument("--spec", help="also save the voice spec (JSON)")
+    p.add_argument("--png", action="store_true")
+    p.add_argument("--sr", type=int, default=DEFAULT_SR)
+    p.set_defaults(fn=cmd_sfx)
+
+    sub.add_parser("sounds", help="sound effect kinds, styles and events").set_defaults(fn=cmd_sounds)
 
     for name, fn, what, helptext in (("design", cmd_design, "prompt", "creature from a text prompt (CLAP)"),
                                      ("match", cmd_match, "sample", "creature closest to a recording (CLAP)")):

@@ -34,6 +34,8 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `cli.py` | linha de comando |
 | `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `neural.py` (Kokoro), `Speaker` |
 | `clap.py`, `designer.py`, `analysis.py` | calibração: CLAP (texto ↔ som), busca evolutiva (`design`, `match`), medidas de gravações |
+| `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `magic.py`, `ambience.py` |
+| `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
 
 ## Determinismo
 
@@ -59,7 +61,7 @@ Vetores de teste para conferir uma port estão em `tests/test_rng_genome.py`. O 
 
 **Atenção:** mudar a fórmula de um arquétipo muda a voz das espécies que já existem. Assets "bakeados" não sofrem com isso, porque guardam o WAV e o spec.
 
-## Spec (versão 3)
+## Spec (versão 4)
 
 Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 
@@ -77,6 +79,8 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 | `lowpass` | Hz, 0 = desligado: perda de agudos (distância, microfone) (v3) |
 | `room` | 0..1, mix de reflexões curtas de sala (v3) |
 | `air` | 0..1, ruído de fundo de gravação, de -70 a -30 dB do pico (v3) |
+| `modal`, `noise`, `scatter` | listas de `Modal`, `Noise` e `Scatter` (efeitos sonoros, v4) |
+| `loop` | segundos de crossfade; > 0 gera um loop sem emenda de `duração − loop` segundos (v4) |
 | `seed` | semente de todos os fluxos aleatórios |
 | `meta` | informativo (arquétipo, chamado, traços) |
 
@@ -94,7 +98,15 @@ Uma curva é `[[t, valor], ...]` com `t` de 0 a 1. O tom é interpolado em escal
 - `fnp`, `fnz`: polo e zero nasais;
 - `fa`/`wa`/`ga` e `fb`/`wb`/`gb`: duas ressonâncias de fricção (Hz, largura, ganho).
 
-Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` como informação. Specs das versões 1 e 2 continuam sendo lidos.
+Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` como informação.
+
+**Modal** (v4), um corpo batido ou raspado: `start`, `dur`; `modes` [[Hz, T60 em s, ganho], ...]; `hits` [[s, ganho, duração do contato em s], ...]; `scrape` [início s, duração s, ganho, trepidação Hz]; `hardness` (passa-baixa da excitação, Hz); `click` (o ruído do contato, misturado); `gain`.
+
+**Noise** (v4), uma faixa de ruído: `start`, `dur`; `freq` (curva em Hz); `filter` (`band`, `low` ou `high`); `q`; `color` (`white` ou `brown`); `amp` (curva); `attack`, `release`; `wobble` [Hz, profundidade]; `gain`.
+
+**Scatter** (v4), uma nuvem de eventos: `start`, `dur`; `rate` (curva em eventos por segundo); `event` (`pop`, `drop` ou `ping`); `freq`, `decay` e `level` (faixas [mín, máx]); `gain`.
+
+Specs das versões 1 a 3 continuam sendo lidos.
 
 ## Algoritmo do render (para ports)
 
@@ -125,7 +137,7 @@ Por sílaba, com `n = max(floor(dur·sr), 16)` e `t = i/sr`:
 5. A sílaba é `x·env`, normalizada para pico = `gain`.
 
 Na voz inteira:
-1. Soma as sílabas em `floor(start·sr)` e os chips, que vêm do motor Game Boy normalizados para pico = `gain`.
+1. Soma, em `floor(start·sr)`, as sílabas, os chips (normalizados para pico = `gain`), a fala e as camadas de efeito (abaixo).
 2. Passa-alta Butterworth de 2ª ordem em 40 Hz, depois normaliza para pico 1.
 3. `crush`: sample-and-hold de `1 + floor(11·crush)` amostras, quantizado em `2^(14 − 10·crush)` níveis.
 4. `drive`: `tanh(d·x)/tanh(d)`.
@@ -136,7 +148,26 @@ Na voz inteira:
 6. Reverb:
    - IR: `noise(key(seed,"space"), N)·exp(−6.9·i/N)`, com `N = space·sr`, passada por um passa-baixa Butterworth de 2ª ordem em 5 kHz.
    - Saída: `(1−wet)·seco + wet·cauda·pico(seco)/pico(cauda)`.
-7. Fade de 4 ms no fim e normalização para pico `0.89·gain`.
+7. Com `loop`: o trecho depois de `T = (duração − loop)·sr` amostras volta para o início. Os primeiros `L = loop·sr` são cruzados em potência constante, `início·sin(πw/2) + fim·cos(πw/2)` com `w` de 0 a 1, e o resto (cauda de reverb) é somado em `(L + i) mod T`. Sem `loop`: fade de 4 ms no fim.
+8. Normalização para pico `0.89·gain`.
+
+**Camadas de efeito (`layers.py`, v4)**, cada uma normalizada para pico = `gain`, com `k = key(seed, tipo, índice)`:
+- **Modal:**
+  - A excitação soma, para cada `hit` `i`, `noise(key(k,"hit",i), L)·hann(L)·ganho` com `L = max(contato·sr, 2)`.
+  - A raspagem soma `0.3·ganho·noise(key(k,"scrape"), L)·sin²(π·j/L)`, vezes `1 + 0.8·sin(2π·trepidação·t)` quando há trepidação.
+  - Tudo passa por um passa-baixa de 1ª ordem em `hardness`.
+  - Cada modo (20 Hz ≤ f < 0.45·sr) é um ressonador `b = [sin w]`, `a = [1, −2r·cos w, r²]`, com `w = 2πf/sr` e `r = 10^(−3/(T60·sr))`: resposta ao impulso de amplitude 1, −60 dB em T60.
+  - Saída: `click·excitação + Σ ganho·modo`.
+- **Noise:**
+  - Fonte `noise(key(k,"noise"), n)`; a `brown` passa por `1/(1 − 0.997·z⁻¹)` e é normalizada.
+  - Filtro RBJ (band-pass com largura `f/q`, passa-baixa ou passa-alta com Q = `q`), coeficientes a cada 64 amostras pela forma direta I do `time_varying`, frequência pela curva em log.
+  - Envelope como o das sílabas, vezes `max(0, 1 + profundidade·smooth(key(k,"wobble"), Hz))`.
+- **Scatter:**
+  - `M = ceil(máx(rate)·dur)` tempos candidatos `sort(uniforms(key(k,"times"), M))·dur`, mantidos onde `uniforms(key(k,"keep"), M)·máx(rate) < rate(t)`.
+  - Por evento `i`: `f` log-uniforme, decaimento e nível uniformes (streams `freq`, `decay`, `level`), comprimento `max(5·decaimento·sr, 8)`, envelope `e^(−t/decaimento)`.
+  - `pop`: `noise(key(k,"ev",i))` por um Butterworth de 2ª ordem em banda `[f/1.5, 1.5f]`.
+  - `drop`: `sin(2πf(t + t²/(4·decaimento)))`.
+  - `ping`: `(sin(2πft) + 0.4·sin(2π·2.76ft)·env)·env`.
 
 **Fala (`speech/klatt.py`)**, com trilhas interpoladas: amplitudes e `f0` por amostra, coeficientes a cada 48 amostras.
 1. **Fonte:** serra PolyBLEP em `f0` (com jitter), passa-baixa de 1ª ordem em `tilt`, opcionalmente `sub`. Soma-se `av·fonte` com `ah·ruído`; o ruído pulsa com o ciclo glotal quando há vozeamento.
@@ -150,6 +181,41 @@ Na voz inteira:
 **Coeficientes variáveis sem clique:** entre blocos, os filtros carregam o histórico de forma direta I (duas entradas e duas saídas) e recalculam o estado para os coeficientes novos (`render.time_varying`). Reaproveitar o estado do `lfilter` através de uma troca de coeficientes gera um estalo audível a cada transição de fonema.
 
 **Validar uma port:** os fluxos aleatórios devem bater bit a bit (vetores de teste). O áudio não será bit-exato, por ordem de operações em ponto flutuante e convolução por FFT. Para ter material de comparação, rode `creaturesynth bake` com specs: cada entrada do manifest traz o spec e o WAV de referência. Renderize os specs na engine e compare os espectros. Com `space = 0` a diferença deve ser mínima.
+
+## Efeitos sonoros
+
+`Sfx(kind, style, species, size, power)` é o `Creature` dos efeitos. O `kind` escolhe a receita (`@recipe` em `sfx/`), o `style` o material, o elemento ou o lugar. A `species` é a identidade do objeto: os modos desta espada e o tom desta magia ficam fixos (genes por nome, como nas criaturas), enquanto cada take sorteia o resto (onde o golpe pega, o tempo entre os contatos). O design só monta um `Voice`, então `bake`, `VoiceBank`, specs e ports funcionam igual.
+
+**Materiais** (`MATERIALS`): faixa de modos (o mais grave depende do tamanho), número de modos, T60 do mais grave, amortecimento (`T60·(f/f₀)^−d`), dureza do contato, distribuição e uma frequência abaixo da qual o corpo irradia pouco.
+- **Distribuições:** `dense` para lâminas e placas de metal, `sparse` para madeira, pedra e vidro, `bell` para sinos com terça menor, `string` para harmônicos com leve rigidez.
+- **Irradiação:** é o que faz uma espada soar como "shiiing" agudo e não como sino.
+
+**`AmbiencePlayer`** (runtime): toca o loop do lugar sem parar e agenda eventos com intervalos exponenciais (processo de Poisson com `per_minute`). Cada evento tem alguns takes renderizados em segundo plano e é pulado se não estiver pronto; a saída passa por `tanh`, para um trovão sobre a chuva não estourar.
+
+**Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
+- **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
+- **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.
+- **Comparação de espectrogramas com o real:**
+  - o vidro quebrando real é uma explosão de ruído de banda larga, não tons puros (antes soava como "sininhos");
+  - o trovão real é um ronco longo até ~1 kHz, e um estalo ou crepitar por cima faz soar como fogo;
+  - fogueira pede estalos densos.
+- **Passos:** uma busca guiada pelo CLAP sobre sequências de caminhada encontrou a estrutura de cada superfície (`physical.STEPS`).
+
+**Resultado no juiz** (2 identidades por estilo, 80 rótulos; o acaso ficaria em ~1% para o 1º lugar):
+
+| família | 1º | top 3 | destaques | fracos |
+|---|---|---|---|---|
+| magia | 50% | 80% | carga, disparo e trajeto de quase todos os elementos; impacto de fogo, arcano, sombra | impacto do raio, trajeto arcano |
+| armas, arco, explosões | 29% | 45% | golpes em carne e madeira, golpes no ar, flechas, explosão distante | choque de espadas ("espada acertando armadura"), sacar e derrubar a espada, maça em metal/pedra, disparo do arco |
+| ambientes | ~30% | ~40% | loops de chuva, caverna, noite, tempestade e mar em 1º | quase todos os eventos soltos |
+| passos | 0% | 0% | — | todos |
+
+Os loops têm 16 s, e o CLAP recorta aleatoriamente áudios com mais de 10 s, então os números dos ambientes variam um pouco entre execuções.
+
+**O que a busca guiada pelo CLAP ensinou:**
+- **Quando o juiz confirma, adotamos:** rangido do arco (do 22º para 6º–9º lugar no juiz) e vento (do 9º–10º para 3º–4º).
+- **Quando o otimizador gosta e o juiz não, descartamos.** No choque de espadas e na queda da espada, a busca levou o otimizador ao 2º–5º lugar, mas o juiz ficou em 20º–40º. Os dois modelos discordam sobre impactos metálicos, que eles separam mal ("espadas se chocando" × "espada acertando armadura").
+- **Passos:** a busca sobre sequências de caminhada levou o cascalho ao 1º lugar no otimizador, mas o juiz ficou em 8º–10º; pedra, madeira e grama não chegaram ao top 10. A estrutura encontrada está em `physical.STEPS`. Nossos passos ainda soam como impactos ("bola quicando", "flecha na madeira").
 
 ## Calibração com CLAP
 
@@ -306,3 +372,5 @@ A verificação contra o motor TypeScript original está em `tests/test_chip.py`
 - Qualidade: fonte glotal LF, IRs de reverb reais, normalização por loudness (LUFS) nos pacotes.
 - Mais arquétipos (aquático, dragão dedicado, enxame) e mistura entre arquétipos (híbridos).
 - Redesenhar os arquétipos que o juiz CLAP não reconhece (mamífero, pássaro, inseto, robô), medindo com `creaturesynth judge`.
+- Efeitos fracos no juiz: passos, choque de espadas, eventos soltos dos ambientes. Comparar com gravações reais, como foi feito com vidro, trovão e fogueira.
+- Levar `design`/`match` (CLAP) também para os efeitos sonoros, buscando genes por receita.

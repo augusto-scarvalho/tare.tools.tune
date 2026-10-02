@@ -5,8 +5,8 @@ Signal flow per syllable:
     -> subharmonics, breath, ring modulation
     -> time-varying formant bank (parallel band-passes, coefficients updated every 64 samples)
     -> envelope (attack/release, amp curve, growl AM, pulse trains)
-Then for the whole voice: sum syllables + chip programs -> 40 Hz high-pass -> crush
--> saturation -> reverb -> normalise to `gain`.
+Then for the whole voice: sum syllables + chip programs + speech + effect layers (layers.py)
+-> 40 Hz high-pass -> crush -> saturation -> realism -> reverb -> loop folding -> normalise to `gain`.
 
 Every block is a simple per-sample recurrence (one-pole, biquad, PolyBLEP) or a seeded
 SplitMix64 stream, so engine ports can reproduce it.
@@ -188,8 +188,13 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
         from .speech.klatt import render_speech  # the speech module builds on this one
         for i, p in enumerate(voice.speech):
             parts.append((int(p.start * sr), render_speech(p, sr, rng.key(voice.seed, "speech", i))))
+    if voice.modal or voice.noise or voice.scatter:
+        from .layers import render_modal, render_noise, render_scatter
+        for name, fn in (("modal", render_modal), ("noise", render_noise), ("scatter", render_scatter)):
+            for i, e in enumerate(getattr(voice, name)):
+                parts.append((int(e.start * sr), fn(e, sr, rng.key(voice.seed, name, i))))
     if not parts:
-        raise ValueError("voice has no syllables, chip programs or speech")
+        raise ValueError("voice has no syllables, chip programs, speech or effect layers")
     out = np.zeros(max(k + len(y) for k, y in parts))
     for k, y in parts:
         out[k:k + len(y)] += y
@@ -208,6 +213,23 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
         out = out + pink / (np.max(np.abs(pink)) + 1e-12) * 10 ** ((-70 + 40 * voice.air) / 20)
     if voice.space:
         out = _reverb(out, sr, voice.space, voice.wet, rng.key(voice.seed, "space"))
-    fade = min(int(0.004 * sr), len(out))
-    out[len(out) - fade:] *= np.linspace(1, 0, fade)
+    if voice.loop:
+        out = _fold_loop(out, int(voice.loop * sr), int(round((voice.duration - voice.loop) * sr)))
+    else:
+        fade = min(int(0.004 * sr), len(out))
+        out[len(out) - fade:] *= np.linspace(1, 0, fade)
     return (PEAK * voice.gain * out / (np.max(np.abs(out)) + 1e-12)).astype(np.float32)
+
+
+def _fold_loop(x: np.ndarray, xfade: int, length: int) -> np.ndarray:
+    """A seamless loop of `length` samples: the end crossfades (equal power) into the start and
+    anything past the loop point (the crossfade region, reverb tail) wraps around."""
+    length = max(min(length, len(x)), 1)
+    xfade = min(xfade, length, len(x) - length)
+    out = x[:length].copy()
+    tail = x[length:]
+    w = np.linspace(0, 1, xfade)
+    out[:xfade] = out[:xfade] * np.sin(0.5 * np.pi * w) + tail[:xfade] * np.cos(0.5 * np.pi * w)
+    rest = tail[xfade:]
+    np.add.at(out, (xfade + np.arange(len(rest))) % length, rest)
+    return out

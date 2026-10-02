@@ -7,7 +7,7 @@ import json
 from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "creaturesynth.voice"
-VERSION = 3   # 2: added `speech`; 3: realism (air, room, lowpass, shimmer)
+VERSION = 4   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop)
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -79,10 +79,58 @@ class SpeechProgram:
 
 
 @dataclass
+class Modal:
+    """A struck or scraped resonant body (steel, wood, stone, glass): an excitation rings a bank of modes."""
+
+    start: float                      # seconds from the start of the voice
+    dur: float                        # seconds
+    modes: list[tuple[float, float, float]]                    # Hz, T60 decay seconds, gain
+    hits: list[tuple[float, float, float]] = field(default_factory=lambda: [(0.0, 1.0, 0.001)])  # s, gain, contact s
+    scrape: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)  # start s, dur s, gain, judder Hz
+    hardness: float = 8000.0          # excitation low-pass, Hz: soft (mallet, flesh) .. hard (steel on steel)
+    click: float = 0.0                # the contact noise itself, mixed in
+    gain: float = 1.0
+
+
+@dataclass
+class Noise:
+    """A band of filtered noise whose filter moves: whooshes, wind, roar, rumble, hiss."""
+
+    start: float
+    dur: float
+    freq: Curve                       # filter frequency over time, Hz (interpolated in log space)
+    filter: str = "band"              # band | low | high
+    q: float = 1.0                    # band: centre / bandwidth; low, high: resonance (0.707 = flat)
+    color: str = "white"              # white | brown (deep rumble)
+    amp: Curve = field(default_factory=lambda: [(0.0, 1.0), (1.0, 1.0)])
+    attack: float = 0.01
+    release: float = 0.05
+    wobble: tuple[float, float] = (0.0, 0.0)    # rate Hz, depth: turbulence, gusts, flicker
+    gain: float = 1.0
+
+
+@dataclass
+class Scatter:
+    """Many tiny random events: rain drops, crackle, sparks, debris, bubbles."""
+
+    start: float
+    dur: float
+    rate: Curve                       # events per second over time
+    event: str = "pop"                # pop (noise tick) | drop (rising blip: water) | ping (glassy ring)
+    freq: tuple[float, float] = (1000.0, 4000.0)    # Hz range, log-uniform
+    decay: tuple[float, float] = (0.002, 0.01)      # seconds range
+    level: tuple[float, float] = (0.2, 1.0)         # amplitude range
+    gain: float = 1.0
+
+
+@dataclass
 class Voice:
     syllables: list[Syllable] = field(default_factory=list)
     chips: list[ChipProgram] = field(default_factory=list)
     speech: list[SpeechProgram] = field(default_factory=list)
+    modal: list[Modal] = field(default_factory=list)
+    noise: list[Noise] = field(default_factory=list)
+    scatter: list[Scatter] = field(default_factory=list)
     drive: float = 0.0                # tanh saturation amount
     crush: float = 0.0                # 0..1 sample-rate/bit-depth reduction
     space: float = 0.0                # reverb tail length, seconds (engines may use their own reverb)
@@ -91,6 +139,7 @@ class Voice:
     air: float = 0.0                  # recording noise floor, 0..1 (-70 .. -30 dB under the peak)
     room: float = 0.0                 # short early reflections, 0..1 mix (a real space, not a tail)
     lowpass: float = 0.0              # Hz, 0 = off: distance/microphone loss of highs
+    loop: float = 0.0                 # seconds of crossfade: > 0 renders a seamless loop (ambience beds)
     seed: int = 0                     # drives every random stream of the renderer
     meta: dict = field(default_factory=dict)  # informational: archetype, call, traits...
 
@@ -101,6 +150,7 @@ class Voice:
         ends = [s.start + s.dur for s in self.syllables]
         ends += [c.start + program_duration(c) for c in self.chips]
         ends += [p.start + p.duration for p in self.speech]
+        ends += [e.start + e.dur for e in (*self.modal, *self.noise, *self.scatter)]
         return max(ends, default=0.0)
 
     def to_dict(self) -> dict:
@@ -113,6 +163,8 @@ class Voice:
         out["syllables"] = [compact(s) for s in self.syllables]
         out["chips"] = [compact(c) for c in self.chips]
         out["speech"] = [compact(p) for p in self.speech]
+        for name in ("modal", "noise", "scatter"):
+            out[name] = [compact(e) for e in getattr(self, name)]
         return json.loads(json.dumps(out))  # tuples -> lists: exactly what JSON round-trips to
 
     def to_json(self, indent: int | None = None) -> str:
@@ -130,6 +182,8 @@ class Voice:
         kwargs["chips"] = [ChipProgram(**c) for c in data.get("chips", [])]
         kwargs["speech"] = [SpeechProgram(**{**sp, "rough": tuple(sp.get("rough", (0.0, 30.0)))})
                             for sp in data.get("speech", [])]
+        for name, kind in (("modal", Modal), ("noise", Noise), ("scatter", Scatter)):
+            kwargs[name] = [_element(kind, e) for e in data.get(name, [])]
         return cls(**kwargs)
 
     @classmethod
@@ -145,6 +199,20 @@ def _required(obj) -> dict:
     """Fields without defaults, so a default instance can be built for comparison."""
     return {f.name: getattr(obj, f.name) for f in fields(obj)
             if f.default is MISSING and f.default_factory is MISSING}
+
+
+_ELEMENT_TUPLES = {"Modal": {"scrape"}, "Noise": {"wobble"}, "Scatter": {"freq", "decay", "level"}}
+
+
+def _element(kind, d: dict):
+    """JSON lists back to the tuples and lists of points the dataclasses use."""
+    d = dict(d)
+    for k, v in d.items():
+        if k in _ELEMENT_TUPLES[kind.__name__]:
+            d[k] = tuple(v)
+        elif isinstance(v, list):
+            d[k] = [tuple(p) for p in v]
+    return kind(**d)
 
 
 def _syllable(d: dict) -> Syllable:

@@ -24,6 +24,18 @@
   "mystery":     {"random": 7}
  },
  "lang": "pt",
+ "sounds": {
+  "excalibur":  {"kind": "blade", "style": "steel", "species": "excalibur", "size": 0.55, "power": 0.7},
+  "war_hammer": {"kind": "blunt", "style": "iron", "size": 0.8, "power": 0.9, "events": ["swing", "hit_metal", "hit_flesh"]},
+  "longbow":    {"kind": "bow", "style": "longbow"},
+  "steps":      {"kind": "footstep", "style": "gravel", "events": ["walk", "run"]},
+  "fireball":   {"kind": "spell", "style": "fire", "power": 0.8},
+  "frost_nova": {"kind": "spell", "style": "ice", "size": 0.7, "events": ["cast", "impact"]},
+  "heal":       {"kind": "spell", "style": "heal", "events": ["cast", "impact"]},
+  "barrel":     {"kind": "explosion", "style": "fire", "size": 0.4},
+  "storm":      {"kind": "ambience", "style": "storm", "power": 0.7},
+  "forest":     {"kind": "ambience", "style": "forest"}
+ },
  "speakers": {
   "rei":       {"role": "main", "gender": "m", "lines": {"missao": "Traga o cristal antes do anoitecer, e o reino será seu."}},
   "rainha":    {"role": "main", "gender": "f", "lines": {"aviso": "Cuidado com a floresta ao norte."}},

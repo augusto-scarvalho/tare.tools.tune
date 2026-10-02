@@ -29,6 +29,15 @@ Spoken lines go in an optional ``speakers`` section::
 when it is installed, everyone else a formant voice; ``crowd`` and ``creature`` babble.
 ``style`` (speech, gibberish, animalese, mumble), ``gender`` (f, m) and ``voice`` override.
 A top-level ``"natural_voices": false`` keeps every line procedural.
+
+Sound effects go in an optional ``sounds`` section (see creaturesynth.sfx; ``events``
+defaults to all of the kind's events, loops get one take)::
+
+      "sounds": {
+        "excalibur": {"kind": "blade", "style": "steel", "species": "excalibur", "events": ["swing", "clash"]},
+        "fireball":  {"kind": "spell", "style": "fire", "power": 0.8},
+        "rain":      {"kind": "ambience", "style": "rain", "power": 0.4}
+      }
 """
 import json
 import os
@@ -44,6 +53,7 @@ from .audio_io import write_wav
 from .calls import CALLS
 from .creature import Creature
 from .render import DEFAULT_SR, render
+from .sfx import RECIPES, Sfx
 from .speech import Speaker
 from .speech.casting import Cast, cast
 
@@ -92,6 +102,21 @@ def creature_from_entry(name: str, entry: Mapping, entries: Mapping[str, Mapping
         raise ValueError(f"creature {name!r}: {e}") from None
 
 
+def sound_from_entry(name: str, entry: Mapping) -> tuple[Sfx, list[str]]:
+    entry = dict(entry)
+    events = entry.pop("events", None)
+    if isinstance(entry.get("species"), str):
+        entry["species"] = rng.seed32(entry["species"])
+    try:
+        sfx = Sfx(name=name, **entry)
+    except TypeError as e:
+        raise ValueError(f"sound {name!r}: {e}") from None
+    for ev in events or ():
+        if ev not in sfx.events:
+            raise ValueError(f"sound {name!r}: {sfx.kind} has no event {ev!r}")
+    return sfx, list(events or sfx.events)
+
+
 def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> tuple[dict[str, Creature], dict]:
     """Returns (creatures by name, settings). `natural` (default: the file's "natural_voices", else
     whether Kokoro is installed) decides if "main" speakers get natural voices."""
@@ -105,6 +130,8 @@ def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> 
         settings["speakers"] = {name: (speaker_from_entry(name, e, creatures, lang, natural),
                                        e.get("lang", lang), dict(e.get("lines", {})))
                                 for name, e in data["speakers"].items()}
+    if data.get("sounds"):
+        settings["sounds"] = {name: sound_from_entry(name, e) for name, e in data["sounds"].items()}
     return creatures, settings
 
 
@@ -122,6 +149,22 @@ def _bake_one(job):
     return name, call, take, entry
 
 
+def _bake_sound(job):
+    name, sfx, event, take, sr, out_dir, specs = job
+    stem = f"{name}/{event}_{take:02d}"
+    voice = sfx.voice(event, take)
+    audio = render(voice, sr)
+    write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
+    entry = {"file": f"{stem}.wav", "duration": round(len(audio) / sr, 4),
+             "peak": round(float(np.max(np.abs(audio))), 4)}
+    if voice.loop:
+        entry["loop"] = True
+    if specs:
+        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(indent=1))
+        entry["spec"] = f"{stem}.json"
+    return name, event, take, entry
+
+
 def _bake_line(job):
     name, who, lang, line_id, text, sr, out_dir, specs = job
     stem = f"{name}/{line_id}"
@@ -137,8 +180,9 @@ def _bake_line(job):
 
 def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable[str] | None = None,
          takes: int = 4, sr: int = DEFAULT_SR, specs: bool = True, workers: int | None = None,
-         speakers: Mapping[str, tuple["Cast | Speaker", str, Mapping[str, str]]] | None = None) -> dict:
-    """Render every creature x call x take (and every speaker line) to ``out_dir``; write ``manifest.json``."""
+         speakers: Mapping[str, tuple["Cast | Speaker", str, Mapping[str, str]]] | None = None,
+         sounds: Mapping[str, "Sfx | tuple[Sfx, list[str]]"] | None = None) -> dict:
+    """Render every creature x call x take, speaker line and sound effect to ``out_dir``; write ``manifest.json``."""
     out_dir = Path(out_dir)
     speakers = {name: (who if isinstance(who, Cast) else Cast(who, name=name), lang, lines)
                 for name, (who, lang, lines) in (speakers or {}).items()}
@@ -150,14 +194,19 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
             for name, c in creatures.items() for call in calls for take in range(takes)]
     line_jobs = [(name, sp, lang, line_id, text, sr, str(out_dir), specs)
                  for name, (sp, lang, lines) in speakers.items() for line_id, text in lines.items()]
+    sounds = {name: s if isinstance(s, tuple) else (s, list(s.events)) for name, s in (sounds or {}).items()}
+    sound_jobs = [(name, sx, ev, t, sr, str(out_dir), specs) for name, (sx, events) in sounds.items()
+                  for ev in events for t in range(1 if ev in RECIPES[sx.kind].loops else takes)]
     workers = workers or min(os.cpu_count() or 1, 8)
-    if workers > 1 and len(jobs) + len(line_jobs) > 1:
+    if workers > 1 and len(jobs) + len(line_jobs) + len(sound_jobs) > 1:
         with ProcessPoolExecutor(workers) as pool:
             results = list(pool.map(_bake_one, jobs))
             line_results = list(pool.map(_bake_line, line_jobs))
+            sound_results = list(pool.map(_bake_sound, sound_jobs))
     else:
         results = [_bake_one(j) for j in jobs]
         line_results = [_bake_line(j) for j in line_jobs]
+        sound_results = [_bake_sound(j) for j in sound_jobs]
 
     manifest = {"format": "creaturesynth.bake", "version": 1, "generator": f"creaturesynth {__version__}",
                 "sample_rate": sr, "takes": takes, "calls": calls,
@@ -172,6 +221,11 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
                                 for name, (who, lang, _) in speakers.items()}
         for name, line_id, entry in line_results:
             manifest["speakers"][name]["lines"][line_id] = entry
+    if sounds:
+        manifest["sounds"] = {name: {"sfx": sx.to_dict(), "events": {ev: [] for ev in events}}
+                              for name, (sx, events) in sounds.items()}
+        for name, event, _take, entry in sorted(sound_results, key=lambda r: r[:3]):
+            manifest["sounds"][name]["events"][event].append(entry)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / MANIFEST).write_text(json.dumps(manifest, indent=1))
     return manifest
