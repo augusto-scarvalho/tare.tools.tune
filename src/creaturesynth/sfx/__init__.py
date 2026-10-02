@@ -83,9 +83,10 @@ class Fx:
         """Fresh randomness for every take (strike position, timing), independent of the species."""
         return rng.uniform(rng.key(self.sfx.species, self.take, self.event, name))
 
-    def modes(self, material: str, size: float | None = None, prefix: str = "") -> list[tuple[float, float, float]]:
+    def modes(self, material: "str | Material", size: float | None = None, prefix: str = "") -> list:
         """A body's modes: fixed by the species (its shape), gains re-weighted per take (where it was struck)."""
-        m = MATERIALS[material]
+        m = MATERIALS[material] if isinstance(material, str) else material
+        material = material if isinstance(material, str) else "body"
         size = self.size if size is None else size
         g = self.g
         low = m.low[0] * (m.low[1] / m.low[0]) ** size * (0.85 + 0.3 * g.base(prefix + material + "low"))
@@ -109,11 +110,11 @@ class Fx:
             out.append((round(f, 1), round(t60 * (f / low) ** -m.damping, 4), round(gain, 4)))
         return out
 
-    def strike(self, material: str, start: float = 0.0, size: float | None = None, hits=None, hardness=None,
-               scrape=(0.0, 0.0, 0.0, 0.0), gain: float = 1.0, prefix: str = "", dur: float | None = None,
-               ring: float = 1.0, click: float | None = None) -> Modal:
+    def strike(self, material: "str | Material", start: float = 0.0, size: float | None = None, hits=None,
+               hardness=None, scrape=(0.0, 0.0, 0.0, 0.0), gain: float = 1.0, prefix: str = "",
+               dur: float | None = None, ring: float = 1.0, click: float | None = None) -> Modal:
         """`ring` scales every decay (< 1: held, lying on the floor, muffled)."""
-        m = MATERIALS[material]
+        m = MATERIALS[material] if isinstance(material, str) else material
         modes = [(f, round(t * ring, 4), g) for f, t, g in self.modes(material, size, prefix)]
         dur = dur or min(max(t for _, t, _ in modes) * 1.2 + 0.05, 4.0)
         return Modal(start, round(dur, 3), modes, hits or [(0.0, 1.0, 0.0012 if m.hardness > 8000 else 0.003)],
