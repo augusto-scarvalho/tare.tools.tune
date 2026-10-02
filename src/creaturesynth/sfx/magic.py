@@ -108,17 +108,18 @@ def spell(fx: Fx):
                  crackle(0, charge, [(0, 10), (1, 60 + 120 * p)]),
                  tone(0, charge, 55 * low, 80 * low, 0.35, "glottal", rough=(0.5, 18.0), attack=0.3)]
         elif e == "cast":
-            L = [*whoosh(fx, 0.0, 0.7, 1800 * low, 0.9, gain=1.0), burst(0.0, 0.08, 2500, 0.6),
-                 swell(0.02, 0.8, 900 * low, 300 * low, gain=0.8, wobble=(14, 0.8), amp=decay_curve(3)),
-                 crackle(0.05, 0.8, [(0, 150), (1, 0)])]
+            L = [*whoosh(fx, 0.0, 0.7, 900 * low, 0.9, gain=0.5), burst(0.0, 0.08, 2500, 0.3),
+                 swell(0.02, 0.8, 500 * low, 200 * low, gain=0.5, wobble=(14, 0.8), amp=decay_curve(3)),
+                 boom(0.0, 0.9, 140 * low, 1.6),   # the roar of the fire leaving the hand
+                 crackle(0.05, 0.8, [(0, 150), (1, 0)], gain=0.4)]
         elif e == "travel":
             L = [bed(0, trip + LOOP, 700 * low, 0.6, 1.0, (13, 0.8)), bed(0, trip + LOOP, 110 * low, 0.9, 0.6, (6, 0.5),
                                                                        "brown", "low"),
                  crackle(0, trip + LOOP, [(0, 70), (1, 70)])]
         else:
-            L = [boom(0, 2.0 + s, 120 * low), burst(0.0, 0.06, 1500, 0.9),
-                 swell(0.0, 1.5 + s, 1200 * low, 300 * low, gain=0.8, wobble=(14, 0.8), amp=decay_curve(3)),
-                 crackle(0.05, 1.8 + s, [(0, 200), (0.3, 60), (1, 0)])]
+            L = [boom(0, 2.0 + s, 120 * low, 1.2), burst(0.0, 0.06, 1500, 0.5),
+                 swell(0.0, 1.5 + s, 700 * low, 250 * low, gain=0.5, wobble=(14, 0.8), amp=decay_curve(3)),
+                 crackle(0.05, 1.8 + s, [(0, 200), (0.3, 60), (1, 0)], gain=0.4)]
             extra = {"space": 1.5, "wet": 0.2}
 
     elif el == "ice":
@@ -127,13 +128,21 @@ def spell(fx: Fx):
                  sparkle(0, charge, [(0, 4), (1, 30 + 30 * p)], (2500 * low, 9000), (0.08, 0.4)),
                  crackle(0, charge, [(0, 0), (1, 40)], (4000, 10_000), 0.4)]
         elif e == "cast":
-            L = [*whoosh(fx, 0.0, 0.5, 4500, 1.4, gain=0.8), sparkle(0, 0.5, [(0, 120), (1, 0)], (3000, 10_000)),
-                 burst(0.0, 0.05, 5000, 0.4)]
+            L = [*whoosh(fx, 0.0, 0.5, 2500, 1.2, gain=0.8), burst(0.0, 0.05, 5000, 0.3),
+                 sparkle(0, 0.5, [(0, 120), (1, 0)], (3000, 10_000), gain=0.4),
+                 swell(0.0, 0.5, 900, 1800, q=0.9, gain=0.5, wobble=(20, 0.6), amp=decay_curve(3)),
+                 boom(0.0, 0.5, 300 * low, 0.3)]
         elif e == "travel":
             L = [bed(0, trip + LOOP, 4200, 2.5, 0.6, (2.5, 0.5)),
                  sparkle(0, trip + LOOP, [(0, 18), (1, 18)], (2500 * low, 9000), (0.08, 0.4))]
-        else:
-            L = shatter(fx, 0.3 + 0.4 * s, p)
+        else:   # the ice block lands and bursts: a thump and a crunch under the shards
+            crash, pane, shards, rings = shatter(fx, 0.3 + 0.4 * s, p)
+            crash.gain, shards.gain, rings.gain, pane.gain = 0.5, 0.3, 0.15, 0.3
+            L = [crash, pane, shards, rings,
+                 Noise(0.0, 0.3, [(0, 300 * low), (1, 200 * low)], "band", 0.8, amp=decay_curve(5), attack=0.002,
+                       gain=0.5),
+                 Noise(0.0, 0.25, [(0, 1400), (1, 800)], "band", 0.8, amp=decay_curve(4), attack=0.002,
+                       wobble=(50, 0.8), gain=0.7)]
             extra = {"space": 1.2, "wet": 0.18}
 
     elif el == "lightning":
@@ -150,8 +159,9 @@ def spell(fx: Fx):
         elif e == "travel":
             L = [buzz(0, trip + LOOP, 0.6), crackle(0, trip + LOOP, [(0, 150), (1, 150)], (2000, 11_000), 0.7),
                  bed(0, trip + LOOP, 3500, 1.0, 0.3, (25, 0.9))]
-        else:
-            L = thunder(fx, 3.5 + 2 * s)
+        else:   # the bolt strikes (a bright zap, crackle) and the thunder rolls after it
+            L = [*thunder(fx, 2.0 + 1.5 * s), buzz(0, 0.25, 0.8, 0.5), burst(0.0, 0.15, 3000, 1.0, q=0.5),
+                 crackle(0, 0.6, [(0, 1500), (0.3, 400), (1, 0)], (2000, 11_000), 1.0)]
             extra = {"space": 2.0, "wet": 0.25}
 
     elif el == "arcane":
@@ -163,13 +173,15 @@ def spell(fx: Fx):
             L = [*shimmer(0, charge, 2.0, 0.8), sparkle(0, charge, [(0, 5), (1, 60)]),
                  swell(0, charge, 1500, 6000, q=3, gain=0.4, wobble=(6, 0.3))]
         elif e == "cast":
-            L = [tone(0, 0.5, 500 * low, 55 * low, 1.0, "sine", attack=0.005, release=0.2),
-                 *whoosh(fx, 0.0, 0.6, 2500, 1.2, gain=0.6), sparkle(0, 0.6, [(0, 150), (1, 0)])]
+            L = [tone(0, 0.5, 500 * low, 150 * low, 0.6, "sine", attack=0.005, release=0.2),
+                 *shimmer(0, 0.7, 1.5, 0.8), *whoosh(fx, 0.0, 0.6, 1500, 1.2, gain=0.6),
+                 sparkle(0, 0.6, [(0, 150), (1, 0)])]
         elif e == "travel":
             L = [*shimmer(0, trip + LOOP, 1.0, 0.7), sparkle(0, trip + LOOP, [(0, 25), (1, 25)]),
                  bed(0, trip + LOOP, 2000, 2.0, 0.25, (4, 0.5))]
         else:
-            L = [burst(0.0, 0.1, 1200, 0.9, q=0.6), tone(0, 0.8, 300 * low, 40, 0.8, "sine", attack=0.002),
+            L = [burst(0.0, 0.1, 1200, 0.9, q=0.6), tone(0, 0.8, 300 * low, 120 * low, 0.5, "sine", attack=0.002),
+                 *shimmer(0, 1.2, 0.7, 0.7),
                  *bells(fx, 0.0, [c * 2 for c in chord], 0.0, 0.5, "glass"),
                  sparkle(0, 1.5, [(0, 200), (1, 0)])]
             extra = {"space": 2.0, "wet": 0.25}
@@ -242,14 +254,16 @@ def spell(fx: Fx):
             L = [*choir(0, charge, root, (0, 7, 12), "o", 0.5, 0.4, [(0, 0), (1, 1)], 0.4),
                  sparkle(0, charge, [(0, 5), (1, 30)], (3000, 8000), (0.2, 0.6), 0.4)]
         elif e == "cast":
-            L = [*bells(fx, 0.0, notes, 0.08 + 0.04 * fx.g.u("tempo"), 0.6),
+            L = [*bells(fx, 0.0, notes, 0.08 + 0.04 * fx.g.u("tempo"), 0.6, "glass"),
+                 *choir(0, 1.1, root * 2, (0, 7), "o", 0.2, 0.05, decay_curve(2), 0.4),
                  sparkle(0.1, 1.0, [(0, 60), (1, 0)], (4000, 10_000), (0.1, 0.4), 0.4),
                  bed(0.0, 1.2, 7000, 2.0, 0.15, (3, 0.3))]
         elif e == "travel":
             L = [*choir(0, trip + LOOP, root * 2, (0, 4, 7), "o", 0.5, 0.4, breath=0.4),
                  sparkle(0, trip + LOOP, [(0, 12), (1, 12)], (3000, 9000), (0.2, 0.6), 0.4)]
         else:
-            L = [*bells(fx, 0.0, [notes[0], notes[2], notes[4]], 0.0, 0.7), bed(0.0, 1.8, 7000, 2.0, 0.25, (3, 0.3)),
+            L = [*bells(fx, 0.0, [notes[0], notes[2], notes[4]], 0.0, 0.7, "glass"),
+                 bed(0.0, 1.8, 7000, 2.0, 0.25, (3, 0.3)),
                  sparkle(0.0, 1.6, [(0, 100), (1, 0)], (4000, 10_000), (0.1, 0.5), 0.5),
                  *choir(0, 1.6, root * 2, (0, 4, 7), "o", 0.4, 0.05, decay_curve(2), 0.4)]
             extra = {"space": 2.0, "wet": 0.25}

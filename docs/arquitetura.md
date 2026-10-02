@@ -317,6 +317,14 @@ O mar e a floresta já estavam perto. O riacho e a masmorra não têm referênci
 - **De perto:** mais fortes em 63–250 Hz (−9 dB em 1 kHz, −14 em 4 kHz). Crescem por ~0,1 s e caem 20 dB em ~0,8 s. A primeira versão tinha um buraco em 125–250 Hz e um rugido alto demais perto de 1 kHz; ganhou um "corpo" grave e o crescimento inicial.
 - **De longe:** quase só o ronco mais grave (mais forte em 31 Hz, −34 dB em 2 kHz).
 
+**Magias (`spell`): comparadas com efeitos de magia de jogos** (não existem gravações reais de magia, então a régua são sons desenhados por outros).
+- **Fogo:** a bola de fogo de referência é sobretudo grave (centroide ~280 Hz). A nossa era um chiado médio-agudo; ganhou o ronco grave ao sair da mão e no impacto.
+- **Gelo:** tinha só agudo. O lançar ganhou corpo nos médios (a geada se formando); o impacto ganhou o baque do bloco, com menos cacos lá em cima.
+- **Raio:** o impacto era só trovão grave (centroide ~100 Hz). Agora o raio cai primeiro, com estalo brilhante e crepitar, e o trovão rola depois.
+- **Cura:** os sinos tinham um ronco grave por baixo (a nota "hum" do sino). Agora são carrilhões de vidro sobre um coro baixinho.
+- **Arcano:** a queda de tom ia até 40–55 Hz e deixava um buraco nos médios, onde as magias genéricas concentram energia. Agora termina mais alto, com o acorde cintilando junto.
+- **Sombra, sagrado e natureza:** sem referência específica; continuam como estavam.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.
