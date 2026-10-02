@@ -19,7 +19,11 @@ def hz(midi: float) -> float:
 
 def chime(start: float, midi: float, ring: float = 1.0, gain: float = 1.0) -> Modal:
     """A struck metal bar at a note."""
-    f = hz(midi)
+    return bar(start, hz(midi), ring, gain)
+
+
+def bar(start: float, f: float, ring: float = 1.0, gain: float = 1.0) -> Modal:
+    """A struck metal bar whose lowest mode is `f`."""
     modes = [(round(f * r, 1), round(ring * 1.2 / (1 + 1.5 * i), 4), round(1 / (1 + i) ** 0.6, 4))
              for i, r in enumerate(BAR) if f * r < 18000]
     return Modal(round(start, 4), round(ring * 1.4 + 0.1, 3), modes, [(0.0, 1.0, 0.0006)], hardness=12000,

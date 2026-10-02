@@ -691,7 +691,12 @@ PANELS = {   # (Hz, T60 s, gain): a door, an iron gate, a chest's box and lid
 }
 
 
-def squeak(fx: Fx, start: float, dur: float, lo: float, hi: float, gain: float = 1.0, name: str = "sq") -> Syllable:
+HINGE = [(1500, 700, 1.0), (3000, 1000, 0.6), (5200, 1600, 0.35)]
+TRUNK = [(820, 250, 1.0), (1100, 300, 0.8), (1750, 500, 0.4)]   # a tree creaking: stick-slip near 90 Hz, wood ringing
+
+
+def squeak(fx: Fx, start: float, dur: float, lo: float, hi: float, gain: float = 1.0, name: str = "sq",
+           body: list = HINGE) -> Syllable:
     """A hinge: stick-slip at a steady rate, its pitch rising as the swing speeds up and sinking as it slows."""
     peak = 0.3 + 0.4 * fx.rand(name + "p")
     # stick-slip is not steady: the squeak catches and lets go, its loudness stuttering
@@ -699,8 +704,7 @@ def squeak(fx: Fx, start: float, dur: float, lo: float, hi: float, gain: float =
                         for i in range(1, 8)] + [(1, 0.2)]
     return Syllable(round(start, 4), round(dur, 4), [(0, lo), (round(peak, 3), hi), (1, lo * 0.9)], "pulse", 0.15,
                     0.8, jitter=1.2, rough=(0.55, 11.0), breath=0.25, shimmer=0.4,
-                    formants=[(1500, 700, 1.0), (3000, 1000, 0.6), (5200, 1600, 0.35)], attack=0.03, release=0.04,
-                    amp=amp, gain=gain)
+                    formants=body, attack=0.03, release=0.04, amp=amp, gain=gain)
 
 
 def latch(fx: Fx, start: float, gain: float = 0.6, name: str = "latch") -> Modal:

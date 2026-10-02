@@ -332,7 +332,14 @@ O mar e a floresta já estavam perto. Com amostras CC0 do Freesound (só para an
 - **Raio:** o impacto era só trovão grave (centroide ~100 Hz). Agora o raio cai primeiro, com estalo brilhante e crepitar, e o trovão rola depois.
 - **Cura:** os sinos tinham um ronco grave por baixo (a nota "hum" do sino). Agora são carrilhões de vidro sobre um coro baixinho.
 - **Arcano:** a queda de tom ia até 40–55 Hz e deixava um buraco nos médios, onde as magias genéricas concentram energia. Agora termina mais alto, com o acorde cintilando junto.
-- **Sombra, sagrado e natureza:** sem referência específica; continuam como estavam.
+- **Sagrado (refeito sem o CLAP):** nas fanfarras angelicais CC0, vozes puras entram uma a uma subindo um acorde maior (dó, mi, sol, dó), 0,3–0,5 s uma da outra. A nota mais nova lidera e o acorde se sustenta por 2,5–3,5 s, com −17 a −19 dB em 2 kHz. Os "brilhos" são um cacho de sininhos em 2–3 kHz batidos de novo e de novo. A versão antiga durava 1 s e tinha o ronco grave de um sino; agora o lançar sobe o acorde, o impacto soa o acorde inteiro com vozes mais altas subindo por cima, e os sininhos cintilam acima.
+- **Sombra (refeita sem o CLAP):** nas magias sombrias CC0, a energia fica em 250–500 Hz (63 Hz a −27 dB), e uma voz pula entre as notas de um acorde diminuto (fundamental, terça menor, trítono) umas 10 vezes por segundo. O eco junta tudo num cacho que bate. A versão antiga era quase toda sub‑grave (mais forte em 63 Hz, buraco em 125–250 Hz).
+- **Natureza (refeita sem o CLAP):** não há magia de natureza gravada, então a régua são gravações reais do que ela mexe:
+  - folhagem farfalhando: mais forte em 2–8 kHz, −9 a −14 dB em 125–500 Hz;
+  - árvores rangendo: atrito de ~90 Hz passando por ressonâncias da madeira em 0,8–1,8 kHz;
+  - raízes arrancadas: ronco terroso em 63–250 Hz.
+
+  A versão antiga tinha bolhas d'água e um coaxar; agora é folhagem com rajadas, troncos rangendo e, no impacto, a terra se abrindo.
 
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.

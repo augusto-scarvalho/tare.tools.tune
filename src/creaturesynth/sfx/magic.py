@@ -7,8 +7,9 @@ chord, the shape of its sparkle.
 """
 from ..archetypes import VOWELS
 from ..spec import Noise, Scatter, Syllable
-from . import Fx, decay_curve, recipe
-from .physical import burst, splits, whoosh
+from . import Fx, bell_curve, decay_curve, recipe
+from .physical import TRUNK, burst, splits, squeak, whoosh
+from .ui import bar
 
 ELEMENTS = ("fire", "ice", "lightning", "arcane", "holy", "shadow", "nature", "heal")
 SCALE = (0, 2, 4, 7, 9, 12, 14, 16, 19)          # major pentatonic, two octaves
@@ -43,17 +44,34 @@ def boom(start, length, hz=110, gain=1.0):
                  attack=0.004, release=0.2, wobble=(4.0, 0.3), gain=gain)
 
 
-def choir(start, dur, root, chord=(0, 4, 7, 12), vowel="a", gain=0.6, attack=0.4, amp=None, breath=0.25):
-    """Sustained voices: glottal sources through vowel formants, gently detuned and vibrating."""
+def choir(start, dur, root, chord=(0, 4, 7, 12), vowel="a", gain=0.6, attack=0.4, amp=None, breath=0.25,
+          stagger=0.0, brightness=0.35):
+    """Sustained voices: glottal sources through vowel formants, gently detuned and vibrating. With `stagger` the
+    voices come in one after the other, up the chord, each stepping back when the next one enters (the newest note
+    leads, as in a fanfare), and all end together."""
     out = []
     for i, st in enumerate(chord):
         f = root * 2 ** (st / 12) * (1 + 0.004 * (i - 1.5))
-        out.append(Syllable(round(start, 3), round(dur, 3), [(0, f), (1, f)], "glottal", brightness=0.35,
-                            vibrato=(4.8 + 0.4 * i, 0.12), jitter=0.05, breath=breath,
+        d = dur - i * stagger
+        a = amp or [(0, 1), (1, 1)]
+        if stagger and i < len(chord) - 1:
+            a = times(a, [(0, 1), (stagger / d, 1), (min(2 * stagger / d, 0.9), 0.35), (1, 0.35)])
+        out.append(Syllable(round(start + i * stagger, 3), round(d, 3), [(0, f), (1, f)], "glottal",
+                            brightness=brightness, vibrato=(4.8 + 0.4 * i, 0.12), jitter=0.05, breath=breath,
                             formants=[(hz, bw * 1.5, g) for hz, bw, g in zip(VOWELS[vowel], (90, 110, 160, 250),
                                                                              (1.0, 0.6, 0.3, 0.15), strict=True)],
-                            attack=attack, release=min(0.5, dur / 3), amp=amp or [(0, 1), (1, 1)], gain=gain))
+                            attack=attack, release=min(0.5, dur / 3), amp=a, gain=gain))
     return out
+
+
+def times(a, b):
+    """The product of two breakpoint curves."""
+    def at(c, x):
+        for (x0, y0), (x1, y1) in zip(c, c[1:], strict=False):
+            if x <= x1:
+                return y0 + (y1 - y0) * (x - x0) / max(x1 - x0, 1e-9)
+        return c[-1][1]
+    return [(round(x, 4), round(at(a, x) * at(b, x), 4)) for x in sorted({x for x, _ in a} | {x for x, _ in b})]
 
 
 def bells(fx: Fx, start, notes_hz, gap, gain=0.7, material="bell"):
@@ -194,27 +212,50 @@ def spell(fx: Fx):
                  sparkle(0, 1.5, [(0, 200), (1, 0)])]
             extra = {"space": 2.0, "wet": 0.25}
 
-    elif el == "holy":
+    elif el == "holy":   # angelic fanfares: pure voices come in up a major chord, 0.3-0.5 s apart, held for 3 s;
+        top = [root * 8 * 2 ** (st / 12) for st in (0, 4, 7, 12)]   # glimmers: a cluster of chimes at 2-3 kHz above
+        def glimmer(start, dur, gain):
+            out = []
+            for k in range(int(dur / 0.12)):   # the chord's top notes struck over and over, softer and softer
+                t = start + 0.12 * k + 0.08 * fx.rand(f"gt{k}")
+                out.append(bar(round(t, 3), top[int(fx.rand(f"gn{k}") * 4) % 4], 0.8,
+                               round(gain * (0.4 + 0.6 * fx.rand(f"gg{k}")) * (1 - k * 0.12 / dur), 3)))
+            return out
         if e == "charge":
             L = [*choir(0, charge, root, amp=[(0, 0), (1, 1)], attack=0.3),
                  sparkle(0, charge, [(0, 3), (1, 25)], (3000, 9000), (0.2, 0.6), 0.4)]
         elif e == "cast":
-            L = [*bells(fx, 0.0, [root * 4], 0.0, 0.9), *choir(0, 1.2, root * 2, (0, 4, 7), "a", 0.7, 0.03,
-                                                                  decay_curve(2)),
-                 *whoosh(fx, 0.0, 0.5, 3000, 1.2, gain=0.4)]
+            L = [*choir(0, 2.6, root * 2, (0, 4, 7, 12), "o", 0.7, 0.12, [(0, 0.7), (0.5, 1), (0.7, 0.8), (1, 0)],
+                        stagger=0.3, brightness=0.25),
+                 *glimmer(0.0, 1.4, 0.35), sparkle(0.0, 1.8, [(0, 60), (1, 0)], (3000, 10_000), (0.1, 0.5), 0.4),
+                 *whoosh(fx, 0.0, 0.5, 3000, 1.2, gain=0.25)]
+            extra = {"space": 2.0, "wet": 0.25}
         elif e == "travel":
             L = [*choir(0, trip + LOOP, root * 2, (0, 7, 12), "o", 0.6, 0.3),
                  sparkle(0, trip + LOOP, [(0, 10), (1, 10)], (3000, 9000), (0.2, 0.6), 0.4)]
-        else:
-            L = [*bells(fx, 0.0, [root * 2, root * 3], 0.03, 1.0), *choir(0, 2.0, root * 2, (0, 4, 7, 12), "a", 0.8,
-                                                                          0.02, decay_curve(1.5)),
-                 sparkle(0, 1.5, [(0, 120), (1, 0)], (3000, 10_000), (0.1, 0.5))]
+        else:   # the whole chord at once, then higher voices climbing on top of it
+            fade = [(0, 1), (0.6, 0.9), (1, 0)]
+            L = [*choir(0, 3.2, root * 2, (0, 4, 7), "o", 0.8, 0.03, fade, brightness=0.25),
+                 *choir(0.5, 2.7, root * 2, (12, 16, 19), "o", 0.7, 0.1, fade, stagger=0.4, brightness=0.25),
+                 *[bar(0.0, f, 1.2, 0.5) for f in top[:3]], *glimmer(0.1, 2.0, 0.35),
+                 sparkle(0, 2.0, [(0, 120), (1, 0)], (3000, 10_000), (0.1, 0.5)),
+                 burst(0.0, 0.08, 3000, 0.3)]
             extra = {"space": 2.5, "wet": 0.3}
 
-    elif el == "shadow":
+    elif el == "shadow":   # dark-magic sounds: most energy at 250-500 Hz (not sub-bass), a voice hopping between
+        # the notes of a diminished chord about ten times a second, smeared by the reverb into a beating cluster
         def drone(start, dur, gain, rise=1.0):
-            return [tone(start, dur, f, f * rise, gain / 2, "glottal", brightness=0.2, sub=0.6, rough=(0.4, 9.0),
-                         jitter=0.3, attack=0.3, release=0.3) for f in (48 * low, 48 * low * 1.06)]
+            return [tone(start, dur, f, f * rise, gain / 2, "glottal", brightness=0.2, sub=0.3, rough=(0.4, 9.0),
+                         jitter=0.3, attack=0.3, release=0.3) for f in (110 * low, 110 * low * 1.06)]
+        def hexing(start, dur, f, gain, key, rate=9.0):
+            n, eps = max(int(dur * rate), 2), min(0.012 / dur, 0.02)
+            pts = []
+            for k in range(n):
+                hz = round(f * 2 ** ((0, 3, 6, 9)[int(fx.rand(f"{key}{k}") * 4) % 4] / 12), 1)
+                pts += [(round(k / n, 4), hz), (round((k + 1) / n - eps, 4), hz)]
+            return Syllable(round(start, 3), round(dur, 3), pts, "glottal", brightness=0.45, jitter=0.1,
+                            rough=(0.2, 9.0), attack=0.01, release=0.2, amp=[(0, 1), (0.3, 0.8), (1, 0)],
+                            gain=gain)
         def whispers(start, dur, gain):
             return Syllable(round(start, 3), round(dur, 3), [(0, 100), (1, 100)], "noise",
                             formants=[(hz, 150, g) for hz, g in zip(VOWELS["o"][:3], (1.0, 0.7, 0.4), strict=True)],
@@ -224,36 +265,48 @@ def spell(fx: Fx):
             L = [*drone(0, charge, 0.9, 1.3), whispers(0, charge, 0.4),
                  swell(0, charge, 150, 600, gain=0.6, wobble=(5, 0.5), color="brown")]
         elif e == "cast":
-            L = [swell(0, 0.5, 300, 1500, q=0.7, gain=1.0, wobble=(8, 0.3), amp=[(0, 0), (0.95, 1), (1, 0)]),
-                 boom(0.45, 1.0, 90, 0.9), whispers(0.4, 0.8, 0.3)]
+            L = [swell(0, 0.25, 300, 1200, q=0.7, gain=0.6, wobble=(8, 0.3), amp=[(0, 0), (0.95, 1), (1, 0)]),
+                 hexing(0.2, 1.2, 420 * low, 1.0, "hc"), hexing(0.2, 1.2, 210 * low, 0.4, "hl"),
+                 whispers(0.2, 0.9, 0.5)]
+            extra = {"space": 1.5, "wet": 0.3}
         elif e == "travel":
             L = [*drone(0, trip + LOOP, 0.8), whispers(0, trip + LOOP, 0.4)]
         else:
-            L = [boom(0, 2.0 + s, 80 * low), burst(0.0, 0.08, 600, 0.8, "low"), *drone(0, 1.5, 0.6, 0.7),
-                 whispers(0.1, 1.5, 0.4)]
+            L = [hexing(0, 1.6, 420 * low, 1.0, "hi"), hexing(0, 1.6, 210 * low, 0.5, "hl"),
+                 *drone(0, 1.5, 0.6, 0.7), boom(0, 1.5, 160 * low, 0.5), burst(0.0, 0.08, 600, 0.6, "low"),
+                 whispers(0.1, 1.5, 0.6)]
             extra = {"space": 2.0, "wet": 0.3, "drive": 1.5}
 
-    elif el == "nature":
-        def bubbles(start, dur, rate, gain=0.7):
-            return Scatter(round(start, 3), round(dur, 3), rate, "drop", (250 * low, 1200 * low), (0.008, 0.03),
-                           (0.2, 1.0), gain)
-        def rustle(start, dur, rate, gain=0.5):
-            return Scatter(round(start, 3), round(dur, 3), rate, "pop", (2000, 9000), (0.0005, 0.002), (0.1, 1.0), gain)
-        if e == "charge":
-            L = [rustle(0, charge, [(0, 100), (1, 600)]), bubbles(0, charge, [(0, 5), (1, 40)]),
-                 tone(0, charge, 30, 60, 0.4, "pulse", pulse_width=0.1, brightness=0.3,
-                      formants=[(600, 250, 1.0), (1400, 400, 0.5)], jitter=1.0)]
-        elif e == "cast":
-            L = [*whoosh(fx, 0.0, 0.6, 1600, 1.0, gain=0.8), rustle(0, 0.6, [(0, 900), (1, 0)]),
-                 bed(0.05, 0.8, 6000, 1.0, 0.4, (20, 0.5), kind="high")]
+    elif el == "nature":   # from recordings of what it moves: foliage rustling (strongest 2-8 kHz, -9 to -14 dB
+        # at 125-500 Hz), trees creaking (stick-slip near 90 Hz through wood resonances at 0.8-1.8 kHz) and roots
+        # tearing out of the ground (a low, earthy 63-250 Hz rumble)
+        def foliage(start, dur, gain, amp=None, rate=(0, 120)):
+            t, d, amp = round(start, 3), round(dur, 3), amp or bell_curve(0.4, 1.2)
+            return [Noise(t, d, [(0, 3500), (1, 3000)], "band", 0.35, amp=amp, attack=0.05, release=0.1,
+                          wobble=(11.0, 0.8), gain=gain),
+                    Noise(t, d, [(0, 900), (1, 800)], "band", 0.6, amp=amp, attack=0.05, release=0.1,
+                          wobble=(7.0, 0.7), gain=gain * 0.6),
+                    Noise(t, d, [(0, 400), (1, 400)], "low", 0.7, "brown", amp, attack=0.05, release=0.1,
+                          wobble=(5.0, 0.7), gain=gain * 0.4),   # the branches themselves moving
+                    Scatter(round(start, 3), round(dur, 3), [(0, rate[0]), (0.4, rate[1]), (1, rate[0])], "pop",
+                            (2000, 9000), (0.0005, 0.002), (0.1, 1.0), gain * 0.5)]
+        def creak(start, dur, gain, name, rise=1.25):
+            f = 75 + 25 * fx.g.u("trunk")
+            return squeak(fx, round(start, 3), round(dur, 3), f, f * rise, gain, name, TRUNK)
+        if e == "charge":   # the undergrowth stirring, a trunk slowly bending
+            L = [*foliage(0, charge, 0.8, [(0, 0.1), (1, 1)], (10, 80 + 80 * p)),
+                 creak(charge * 0.3, charge * 0.7, 0.4, "cc")]
+        elif e == "cast":   # a gust through the leaves, branches whipping
+            L = [*foliage(0, 0.9, 1.0, rate=(20, 200)), creak(0.05, 0.5, 0.5, "c1", 1.4),
+                 *whoosh(fx, 0.0, 0.6, 1600, 1.0, gain=0.4)]
         elif e == "travel":
-            L = [bubbles(0, trip + LOOP, [(0, 30), (1, 30)]),
-                 bed(0, trip + LOOP, 5500, 1.2, 0.4, (3, 0.4), kind="high"),
-                 rustle(0, trip + LOOP, [(0, 150), (1, 150)], 0.3)]
-        else:
-            L = [bubbles(0, 1.2, [(0, 300), (1, 0)], 0.9), burst(0.0, 0.25, 1200, 0.8, "band", 0.7),
-                 Noise(0.0, 0.3, [(0, 1600), (1, 900)], "band", 1.5, amp=decay_curve(4), wobble=(35, 0.9), gain=0.6),
-                 bed(0.1, 1.5, 6000, 1.0, 0.4, (6, 0.5), kind="high")]
+            L = [*foliage(0, trip + LOOP, 0.7, [(0, 1), (1, 1)], (60, 60)), creak(0.3, 0.9, 0.25, "ct")]
+        else:   # roots and vines burst out of the ground: an earthy rumble, trunks groaning, leaves thrashing
+            L = [Noise(0.0, round(0.5 + 0.3 * s, 3), [(0, 300 * low), (1, 120 * low)], "low", 0.8, "brown",
+                       decay_curve(4), attack=0.005, release=0.05, wobble=(9.0, 0.6), gain=1.0),
+                 Scatter(0.0, 0.6, [(0, 40), (1, 0)], "pop", (300, 2000), (0.003, 0.01), (0.3, 1.0), 0.5),
+                 creak(0.05, 0.8, 0.6, "c1", 1.3), creak(0.35, 0.9, 0.5, "c2", 0.8),
+                 *foliage(0.0, 1.5 + 0.5 * s, 0.9, decay_curve(2), (30, 250))]
             extra = {"space": 1.0, "wet": 0.15}
 
     else:  # heal
