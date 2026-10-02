@@ -121,6 +121,7 @@ audio = rei.render("Salve o reino!")
 | `blade` (espadas, adagas, machados) | steel, iron, glass, wood | swing, clash, hit_flesh, hit_wood, hit_metal, hit_stone, draw, drop |
 | `blunt` (clavas, maças, martelos) | wood, iron, stone | swing, hit_flesh, hit_wood, hit_metal, hit_stone, drop |
 | `bow` | longbow, crossbow | draw, release, fly, hit_wood, hit_flesh, hit_stone |
+| `shield` (escudos) | wood, metal | block_blade, block_blunt, block_arrow, bash |
 | `footstep` | stone, wood, metal, gravel, dirt, grass, snow, water | walk, run, land, scuff |
 | `explosion` | fire, stone, magic | blast, distant, debris |
 | `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal | charge, cast, travel (loop), impact |

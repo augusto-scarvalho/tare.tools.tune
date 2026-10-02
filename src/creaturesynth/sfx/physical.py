@@ -11,7 +11,7 @@ from . import Fx, bell_curve, decay_curve, recipe
 TARGETS = {"hit_flesh": "flesh", "hit_wood": "wood", "hit_metal": "iron", "hit_stone": "stone"}
 
 
-# --- building blocks ------------------------------------------------------------------------------------------------
+# --- building blocks --------------------------------------------------------------------------------------------------
 
 def whoosh(fx: Fx, start: float, dur: float, peak_hz: float, q: float = 1.5, gain: float = 1.0,
            whistle: float = 0.0, prefix: str = "") -> list[Noise]:
@@ -94,7 +94,7 @@ def bounces(fx: Fx, count: int = 5, first: float = 0.22, e: float = 0.55, ends: 
     return hits
 
 
-# --- creaks ---------------------------------------------------------------------------------------------------------
+# --- creaks -----------------------------------------------------------------------------------------------------------
 #
 # Modelled on a recording of a bow being drawn, measured at millisecond scale: stick-slip events
 # ~70 per second in locally regular trains whose rate drifts, each one swelling over 1-2 ms and
@@ -180,7 +180,7 @@ def bow_release(fx: Fx, cross: bool = False) -> list:
     ]
 
 
-# --- arrows ---------------------------------------------------------------------------------------------------------
+# --- arrows -----------------------------------------------------------------------------------------------------------
 #
 # Modelled on recordings of arrows flying past and hitting a target: the fletching hisses in a broad
 # band near 3 kHz and flutters the air ~90 times a second. Passing a listener it swells ~40 dB (linear
@@ -279,7 +279,7 @@ def arrow_on_stone(fx: Fx, cross: bool = False) -> list:
         out.append(fx.strike("wood", size=0.1, hits=[(0.004, 0.8, 0.001)], gain=0.35, prefix="snap"))
     return out
 
-# --- blades ---------------------------------------------------------------------------------------------------------
+# --- blades -----------------------------------------------------------------------------------------------------------
 #
 # Modelled on recordings of sword clashes and swings. A clash is short and bright: a contact, the
 # blades grinding along each other for 30-80 ms, often a second touch ~30 or ~170 ms later, and a
@@ -561,7 +561,51 @@ def blunt_drop(fx: Fx, head: str, weight: float) -> list:
             *[Noise(t, 0.1, [(0, 260 * heavy), (1, 100 * heavy)], "low", 1.0, amp=decay_curve(5), attack=0.001,
                     release=0.015, gain=g * (0.8 + 0.6 * weight)) for t, g, _ in hits]]
 
-# --- weapons --------------------------------------------------------------------------------------------------------
+
+# --- shields ----------------------------------------------------------------------------------------------------------
+#
+# From recordings of swords, clubs and bashes on shields. A sword on a wooden shield is fast and mid-bright: no lows
+# to speak of (-20 dB below 500 Hz), the panel's modes near 0.85-0.95, 1.6-1.7, 2.2 and 3.3-3.8 kHz ringing
+# 0.13-0.4 s with the blade's own ring, 40 dB down in 130-200 ms. A club on a shield also moves the whole panel:
+# a low body near 120-400 Hz. A metal shield rings denser and longer (0.23-3.4 kHz, 40 dB in ~0.3 s).
+
+SHIELD_PANELS = {
+    "wood": [(420, 0.35, 0.5), (515, 0.45, 0.3), (843, 0.2, 0.9), (960, 0.25, 0.8), (1593, 0.27, 0.9),
+             (1700, 0.25, 1.0), (2200, 0.25, 0.6), (3300, 0.25, 0.5), (3700, 0.3, 0.45), (4400, 0.16, 0.25),
+             (5580, 0.17, 0.35), (6490, 0.2, 0.3), (8300, 0.15, 0.25)],
+    "metal": [(234, 0.43, 1.0), (585, 0.48, 0.67), (679, 0.3, 0.66), (796, 0.33, 0.9), (1007, 0.53, 0.6),
+              (1125, 0.17, 0.7), (1851, 0.32, 0.4), (2132, 0.5, 0.55), (2320, 0.28, 0.4), (3398, 0.29, 0.43),
+              (4150, 0.25, 0.3), (5200, 0.2, 0.3), (6400, 0.15, 0.3), (7500, 0.15, 0.25), (9000, 0.12, 0.2)],
+}
+
+
+def shield_hit(fx: Fx, style: str, by: str, weight: float, drama: float) -> list:
+    """A shield taking a blade, a blunt weapon or an arrow, or bashing into a body."""
+    big = 2 ** (-0.5 * weight)                          # bigger shields, lower panels
+    ring = (1 + 1.2 * drama) * {"bash": 0.4, "blunt": 1.3}.get(by, 1.0)
+    panel = _jittered(fx, SHIELD_PANELS[style], "sp", 0.08, big, ring)
+    if by == "blade":
+        panel = [(f, d, g * (0.25 if f < 600 else 1.0)) for f, d, g in panel]   # a sharp edge barely moves the panel
+    out = [Modal(0.0, 1.6, panel, [(0.0, 1.0, 0.0008 if by in ("blade", "arrow") else 0.003)],
+                 hardness=12000 if by in ("blade", "arrow") else 9000, click=0.15)]
+    if by == "blade":
+        out += [_crack(0.9, 3000.0), Modal(0.0, 1.2, blade_modes(fx, "a", 1.0, 0.6 + 0.6 * drama),
+                                           [(0.0, 1.0, 0.0006)], hardness=16000, click=0.0, gain=0.5)]
+    elif by == "arrow":
+        out += [_crack(0.6, 2500.0), *arrow_in_wood(fx)[3:]]   # the shaft left quivering
+    else:   # a blunt blow or a bash moves the whole shield: the panel's body and the mass behind it
+        body = 150 * (0.8 + 0.4 * fx.g.base("panel")) * big
+        out += [_crack(0.7 if by == "blunt" else 0.2, 4000.0),
+                Modal(0.0, 0.5, [(round(body, 1), 0.12, 1.0), (round(body * 2.3, 1), 0.08, 0.5)], [(0.0, 1.0, 0.004)],
+                      hardness=1500, click=0.0, gain=0.8 + 0.3 * weight),
+                Noise(0.0, round(0.06 + 0.05 * weight, 3), [(0, 280), (1, 110)], "low", 1.0, amp=decay_curve(5),
+                      attack=0.001, release=0.015, gain=0.6 + 0.5 * weight)]
+        if by == "bash":   # straps, rim and boss rattle against each other
+            out.append(Scatter(0.01, 0.12, [(0, 160), (1, 20)], "pop", (900, 5000), (0.001, 0.004), (0.2, 1.0),
+                               0.35))
+    return out
+
+# --- weapons ----------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
         ("steel", "iron", "glass", "wood"))
@@ -626,6 +670,15 @@ def blunt(fx: Fx):
     return fx.voice(fx.level(0.95), **splits(blunt_drop(fx, head, big)))
 
 
+@recipe("shield", ("block_blade", "block_blunt", "block_arrow", "bash"), ("wood", "metal"))
+def shield(fx: Fx):
+    """Shields, wooden or metal: blocking a blade, a blunt weapon or an arrow, and bashing."""
+    s, p = fx.size, fx.power
+    by = fx.event.removeprefix("block_")
+    layers = shield_hit(fx, fx.style, by, max(s - 0.5, 0) * 2, max(p - 0.5, 0) * 2)
+    return fx.voice(fx.level(0.95), **splits(layers))
+
+
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))
 def bow(fx: Fx):
     """Bows and crossbows: draw, release, the arrow's flight and where it lands."""
@@ -650,7 +703,7 @@ def bow(fx: Fx):
     return fx.voice(fx.level(0.95), **splits(hit(fx, cross)))
 
 
-# --- footsteps ------------------------------------------------------------------------------------------------------
+# --- footsteps --------------------------------------------------------------------------------------------------------
 
 STEPS = {  # surface: heel/toe thump Hz, thump length s, thump Q, sole click Hz, click gain, floor material,
     #          heel-toe gap s, toe level, roll (sole friction) Hz, roll gain,
@@ -701,7 +754,7 @@ def footstep(fx: Fx):
     return fx.voice(**splits(layers), gain=0.4 + 0.6 * force)
 
 
-# --- explosions -----------------------------------------------------------------------------------------------------
+# --- explosions -------------------------------------------------------------------------------------------------------
 
 @recipe("explosion", ("blast", "distant", "debris"), ("fire", "stone", "magic"))
 def explosion(fx: Fx):

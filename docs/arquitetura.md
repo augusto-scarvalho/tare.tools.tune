@@ -248,6 +248,13 @@ As partes:
 - **Cair no chão:** a cabeça bate pesada, o cabo cai 50–100 ms depois, e há um quique pequeno.
 - **Variantes:** como na espada, tamanho 1 é a arma mais pesada (mais grave, mais baque, osso na carne, mais fragmentos) e força 1 é a de cinema (mais anel no metal, estalo da pele mais forte).
 
+**Escudo (`shield`): medido em gravações** de espadas, porretes e empurrões em escudos.
+- **Espada em escudo de madeira:** rápido e de agudo médio. Quase não tem grave (−20 dB abaixo de 500 Hz). O painel soa perto de 0,85–0,95, 1,6–1,7, 2,2 e 3,3–3,8 kHz por 0,13–0,4 s, junto com o anel da lâmina; 40 dB em 130–200 ms.
+- **Porrete no escudo:** move o painel inteiro, com um corpo grave entre 120 e 400 Hz.
+- **Escudo de metal:** soa mais denso e mais longo (0,23–3,4 kHz, 40 dB em ~0,3 s).
+- **Flecha no escudo:** deixa a haste vibrando.
+- **Empurrão:** abafado pelo corpo do outro, com alças, borda e umbo chacoalhando.
+
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
 - **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.
