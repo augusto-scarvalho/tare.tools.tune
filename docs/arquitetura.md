@@ -224,9 +224,14 @@ As partes:
   - Cada lâmina tem ~60 modos densos entre 1,2 e 12,5 kHz, fixos pela espécie. Os níveis de cada modo (`BLADE_MODES`) foram ajustados renderizando e comparando até o anel bater com a média medida (±3 dB por faixa). O golpe re-pondera os modos a cada take. Três modos mais graves soam mais tempo.
 - **Golpe no ar (`blade_swing`):** ~0,25 s.
   - O que mais pesa é o empurrão de pressão da lâmina passando (abaixo de 300 Hz). Com ele vem um chiado centrado em ~1,4 kHz, que sobe ~30 dB em ~55 ms, cai em ~170 ms e escurece ao desacelerar.
+- **Golpes (`blade_hit`):** cada alvo medido em gravações de lâmina batendo nele.
+  - Madeira: um "toc" seco. A tábua soa em poucas notas graves (~470, ~1080, ~1550 Hz) e some em ~0,1 s (40 dB em 100–220 ms). A lâmina quase não ressoa, porque crava.
+  - Pedra: um estalo duro e claro. A lâmina ressoa só um instante (40 dB em ~100 ms), com alguns modos curtos da pedra (1–5 kHz) e fragmentos espirrando por ~60 ms.
+  - Armadura: um "clang". A chapa tem modos densos de 650 Hz a 6,5 kHz, mais fortes entre 2,5 e 5 kHz; os agudos morrem em ~0,2 s e alguns graves seguem ~0,6 s. A lâmina ressoa por baixo, com o baque abafado do corpo.
+  - Carne: o baque do corpo (~90 Hz, ~0,1 s) costuma ser o mais forte. Por cima vem um chiado úmido e trêmulo acima de 2 kHz (60–150 ms), um "squelch" mais fraco perto de 900 Hz e estalinhos molhados.
 - **Variantes escolhidas de ouvido**, ligadas aos traços:
-  - tamanho 1 = lâmina pesada: modos 25% mais graves, anel mais curto, pancada grave nos braços, golpe mais lento com um "vum" de ~120 Hz;
-  - força 1 = cinema: raspa até 150 ms, anel 2,2× mais longo, golpe rápido com assobio do sulco da lâmina.
+  - tamanho 1 = lâmina pesada: modos 25% mais graves, anel mais curto, pancada grave nos braços, golpe mais lento com um "vum" de ~120 Hz; nos golpes, mais baque, mais fragmentos na pedra, osso na carne;
+  - força 1 = cinema: raspa até 150 ms, anel 2,2× mais longo, golpe rápido com assobio do sulco da lâmina; nos golpes, a lâmina e a armadura soam mais, e a carne ganha um corte afiado.
 - **Níveis:** o golpe fica com metade do pico do choque, como na mistura ouvida. `Fx.level(x)` dá o pico de cada evento na força máxima, e assim a mistura entre os eventos de uma receita se mantém em qualquer força.
 
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.

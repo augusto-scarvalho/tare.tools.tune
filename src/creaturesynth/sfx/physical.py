@@ -325,6 +325,80 @@ def blade_swing(fx: Fx, rise: float, fall: float, centre: float, whistle: float,
     return out
 
 
+# Hits, from recordings of blades striking each target (weight: heavier blade, drama: cinematic):
+#   wood    a dry knock: the plank's few low modes (~470, ~1080, ~1550 Hz), gone in ~0.1 s; the blade bites in
+#   stone   a hard bright crack, the blade ringing only briefly, grit flying off for ~60 ms
+#   armour  a clang: the plate's dense modes (650 Hz-6.5 kHz, strongest 2.5-5 kHz), the body's thud beneath
+#   flesh   the body's thump (~90 Hz, often the loudest part), a wet jittering slice above 2 kHz, wet pops
+
+def _crack(gain: float = 1.0, hz: float = 2500.0, dur: float = 0.004) -> Noise:
+    return Noise(0.0, dur, [(0, hz), (1, hz)], "high", 0.7, amp=decay_curve(4), attack=0.0002, release=0.001,
+                 gain=gain)
+
+
+def _near(fx: Fx, name: str, spread: float = 0.12) -> float:
+    return 1 + spread * (2 * fx.g.base(name) - 1)
+
+
+def blade_hit(fx: Fx, target: str, shift: float, ring: float, weight: float, drama: float) -> list:
+    """A blade striking wood, stone, armour or flesh."""
+    if target == "wood":
+        k = 1 - 0.25 * weight
+        body = [(470 * _near(fx, "w0"), 0.15, 1.0), (1080 * _near(fx, "w1"), 0.2, 0.55),
+                (1550 * _near(fx, "w2"), 0.08, 0.5), (2100 * _near(fx, "w3"), 0.12, 0.3),
+                (720 * _near(fx, "w4"), 0.1, 0.4), (3900 * _near(fx, "w5"), 0.1, 0.25)]
+        body = [(round(f * k, 1), round(d * (1 + 0.5 * weight), 4), g) for f, d, g in body]
+        return [_crack(1.0 + 0.3 * drama),
+                Modal(0.0, 0.5, body, [(0.0, 1.0, 0.0008)], hardness=7000, click=0.25),
+                Noise(0.0, round(0.05 + 0.04 * weight, 3), [(0, 300), (1, 150)], "low", 1.0, amp=decay_curve(5),
+                      attack=0.001, release=0.01, gain=0.35 + 0.5 * weight),
+                Modal(0.0, 1.0, blade_modes(fx, "a", shift, (0.45 + 0.8 * drama) * ring), [(0.0, 1.0, 0.0006)],
+                      hardness=16000, click=0.0, gain=0.3 + 0.25 * drama)]
+    if target == "stone":
+        stone = [(round(f * _near(fx, f"s{i}", 0.2), 1), d, g) for i, (f, d, g) in
+                 enumerate(((1100, 0.2, 0.6), (2000, 0.07, 0.9), (3100, 0.16, 1.0), (4100, 0.03, 0.4),
+                            (5100, 0.17, 0.4)))]
+        return [_crack(1.0, 3000.0, 0.003),
+                Modal(0.0, 0.4, stone, [(0.0, 1.0, 0.0005)], hardness=14000, click=0.5, gain=0.7),
+                Modal(0.0, 1.2, blade_modes(fx, "a", shift, (0.3 + 0.9 * drama) * ring), [(0.0, 1.0, 0.0005)],
+                      hardness=16000, click=0.0, gain=0.25 + 0.4 * drama),
+                Scatter(0.002, round(0.07 + 0.06 * weight, 3), [(0, 900 + 600 * weight), (1, 0)], "pop",
+                        (1500, 7000), (0.0003, 0.0015), (0.2, 1.0), 0.25 + 0.3 * weight),
+                Noise(0.0, 0.04, [(0, 600), (1, 300)], "low", 1.0, amp=decay_curve(6), attack=0.001, release=0.01,
+                      gain=0.35 + 0.5 * weight)]
+    if target == "iron":   # plate armour
+        plate = []
+        for i in range(30):
+            f = 650 * (6500 / 650) ** ((i + fx.g.base(f"p{i}")) / 30)
+            lvl = np.interp(np.log(f), np.log([650, 1300, 2500, 5000, 6500]), [-10, -6, -2, 0, -6])
+            g = 10 ** (lvl / 20) * (0.4 + 1.2 * fx.rand(f"ps{i}"))
+            d = (0.15 + 0.35 * fx.g.base(f"pd{i}")) * (f / 2500) ** -0.4
+            plate.append((round(f * (1 - 0.2 * weight), 1), round(d * (1 + 1.5 * drama), 4), round(float(g), 4)))
+        return [_crack(0.8, 3000.0),
+                Modal(0.0, 1.6, plate, [(0.0, 1.0, 0.0006)], hardness=14000, click=0.1),
+                Modal(0.0, 1.2, blade_modes(fx, "a", shift, (0.6 + 0.8 * drama) * ring), [(0.0, 1.0, 0.0006)],
+                      hardness=16000, click=0.0, gain=0.45),
+                Noise(0.0, round(0.06 + 0.04 * weight, 3), [(0, 260), (1, 130)], "low", 1.0, amp=decay_curve(5),
+                      attack=0.001, release=0.01, gain=0.25 + 0.6 * weight)]
+    # flesh
+    sl = 0.06 + 0.09 * fx.rand("slice")
+    out = [Modal(0.0, 0.5, [(round(90 * _near(fx, "th"), 1), round(0.2 + 0.1 * weight, 4), 1.0),
+                            (round(175 * _near(fx, "th2"), 1), 0.07, 0.35)],
+                 [(0.0, 1.0, 0.012)], hardness=400, click=0.0, gain=0.6 + 0.4 * weight),
+           Noise(0.0, round(sl, 3), [(0, 5000), (1, 3500)], "high", 0.7, amp=[(0, 1), (0.3, 0.6), (1, 0.05)],
+                 attack=0.002, release=0.02, wobble=(70.0, 0.8), gain=0.75 + 0.25 * drama),
+           Noise(0.003, round(sl + 0.03, 3), [(0, 1100), (1, 750)], "band", 1.5, amp=decay_curve(3), attack=0.004,
+                 release=0.02, wobble=(35.0, 0.9), gain=0.3),
+           Scatter(0.0, round(sl, 3), [(0, 220), (1, 40)], "pop", (300, 1800), (0.001, 0.004), (0.3, 1.0), 0.3)]
+    if weight:   # bone
+        out.append(Scatter(0.005, 0.05, [(0, 500), (1, 100)], "pop", (150, 900), (0.002, 0.006), (0.4, 1.0),
+                           0.5 * weight))
+    if drama:    # the edge's bite
+        out.append(Noise(0.0, 0.02, [(0, 7000), (1, 5000)], "high", 0.7, amp=decay_curve(5), attack=0.0005,
+                         release=0.005, gain=0.5 * drama))
+    return out
+
+
 # --- weapons --------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -333,16 +407,20 @@ def blade(fx: Fx):
     """Swords, daggers, axes: swing, clash, hits on flesh/wood/armor/stone, draw, drop."""
     mat, s, p, e = fx.style, fx.size, fx.power, fx.event
     # chosen by ear: size 0.5 / power 0.5 is the measured sword, size 1 the heavy one, power 1 the cinematic one
+    # (swing, clash and hits; glass and wooden blades keep the generic clash and hits)
     big, small, hard = max(s - 0.5, 0) * 2, max(0.5 - s, 0) * 2, max(p - 0.5, 0) * 2
     if e == "swing":
         layers = blade_swing(fx, 0.055 + 0.025 * big - 0.015 * small, 0.17 + 0.08 * big - 0.05 * small,
                              1400 - 400 * big + 600 * small, 0.25 * hard, 0.5 * big)
         return fx.voice(fx.level(0.5), **splits(layers))   # half the clash, as in the mix chosen by ear
+    shift = 2 ** (-0.83 * (s - 0.5)) * (0.8 if mat == "iron" else 1.0)
     if e == "clash" and mat in ("steel", "iron"):
-        shift = 2 ** (-0.83 * (s - 0.5)) * (0.8 if mat == "iron" else 1.0)
         ring = (1 - 0.3 * big) * (1 + 1.2 * hard) * (0.5 if mat == "iron" else 1.0)
         slide = (0.03 - 0.01 * big + 0.05 * hard, 0.08 - 0.03 * big + 0.07 * hard)
         return fx.voice(fx.level(0.95), **splits(blade_clash(fx, shift, ring, slide, 1 + 0.3 * hard, 0.5 * big)))
+    if e in TARGETS and mat in ("steel", "iron"):
+        layers = blade_hit(fx, TARGETS[e], shift, 0.5 if mat == "iron" else 1.0, big, hard)
+        return fx.voice(fx.level(0.95), **splits(layers))
     if e == "clash":
         lag = 0.002 + 0.006 * fx.rand("lag")
         slide = (0.0, 0.04 + 0.16 * fx.rand("slide"), 0.5 + 0.5 * p, 60 + 80 * fx.rand("judder"))
