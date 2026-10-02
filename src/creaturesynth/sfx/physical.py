@@ -3,10 +3,8 @@
 Struck bodies are modal (Fx.strike): the material sets the modes, size their pitch and decay,
 power how hard the contact is. Air and debris are moving noise bands and scattered events.
 """
-from dataclasses import replace
-
 from ..spec import Modal, Noise, Scatter, Syllable
-from . import MATERIALS, Fx, Material, bell_curve, decay_curve, recipe
+from . import Fx, bell_curve, decay_curve, recipe
 
 TARGETS = {"hit_flesh": "flesh", "hit_wood": "wood", "hit_metal": "iron", "hit_stone": "stone"}
 
@@ -37,11 +35,48 @@ def burst(start: float, dur: float, hz: float, gain: float = 1.0, kind: str = "h
                  release=0.01, gain=gain)
 
 
+def flesh(fx: Fx, start: float, sharp: float, gain: float = 1.0) -> list:
+    """Body hit: thump + wet squish, a crunch when hard, a slice for edges."""
+    s = fx.size
+    out = [thud(start, 0.12 + 0.12 * s, 220 - 100 * s, gain),
+           Noise(start + 0.005, 0.14, [(0, 1800), (1, 1100)], "band", 1.8, amp=decay_curve(4), attack=0.003,
+                 wobble=(40.0, 0.9), gain=0.45 * gain)]
+    if fx.power > 0.5:
+        out.append(Scatter(start, 0.06 + 0.06 * fx.power, [(0, 700), (1, 100)], "pop", (300, 1600),
+                           (0.001, 0.004), (0.3, 1.0), 0.5 * gain * fx.power))
+    if sharp:
+        out.append(burst(start, 0.07, 3500, 0.5 * sharp * gain))
+    return out
+
+
 def splits(layers: list) -> dict:
     """Group spec elements by type into Voice keyword arguments."""
     out = {"modal": [], "noise": [], "scatter": [], "syllables": []}
     for e in layers:
         out[{Modal: "modal", Noise: "noise", Scatter: "scatter", Syllable: "syllables"}[type(e)]].append(e)
+    return out
+
+
+def impact(fx: Fx, weapon: str, target: str, edge: float, gain: float = 1.0) -> list:
+    """`weapon` material hits `target`; `edge` 0 (blunt) .. 1 (blade)."""
+    hard = 0.6 + 0.4 * fx.power
+    out = []
+    if target == "flesh":
+        out += flesh(fx, 0.0, edge, gain)
+        if weapon in ("steel", "iron", "bronze"):
+            out.append(fx.strike(weapon, gain=0.08 * gain, prefix="w", dur=0.6))
+        return out
+    t_size = {"wood": 0.55, "iron": 0.55, "stone": 0.5}[target] + 0.2 * (fx.rand("target") - 0.5)
+    out.append(fx.strike(target, size=t_size, hits=[(0.0, 1.0, 0.0015 / hard)], gain=gain, prefix="t"))
+    if weapon != target or weapon in ("steel", "iron", "bronze"):
+        out.append(fx.strike(weapon, hits=[(0.0, 1.0, 0.001 / hard)], gain=(0.6 if weapon != "wood" else 0.3) * gain,
+                             prefix="w"))
+    out.append(thud(0.0, 0.09 + 0.1 * fx.size, 300 - 120 * fx.size, 0.5 * gain * (1 - 0.5 * edge)))
+    if target == "stone":
+        out.append(Scatter(0.0, 0.15, [(0, 400), (1, 0)], "pop", (900, 6000), (0.0008, 0.003), (0.2, 1.0), 0.4 * gain))
+        if weapon in ("steel", "iron"):  # sparks
+            out.append(Scatter(0.0, 0.12, [(0, 120), (1, 0)], "ping", (6000, 11000), (0.004, 0.012),
+                               (0.2, 1.0), 0.25 * gain))
     return out
 
 
@@ -58,222 +93,96 @@ def bounces(fx: Fx, count: int = 5, first: float = 0.22, e: float = 0.55, ends: 
 
 
 # --- weapons --------------------------------------------------------------------------------------------------------
-#
-# The design constants below were fitted so that duration, decay, brightness, noisiness and band
-# energies fall inside the spread of real recordings of each event (Freesound/Pixabay previews,
-# used for analysis only): a real swing is a low whoosh, a clash is short, bright and noisy, an
-# impact is a broadband crack with a short body, an arrow quivers in clicks. See docs/arquitetura.md.
-
-SWING = {"dur": 0.5376, "peak": 0.2987, "sharp": 5.6918, "f0": 113.7, "f1": 216.0, "f2": 144.4, "q": 1.6217,
-         "body": 0.6922, "edge": 0.153, "edge_hz": 936.6, "edge_q": 3.9907}
-FLY = {"dur": 0.2826, "peak": 0.3719, "sharp": 4.8905, "f0": 150.0, "f1": 780.2, "f2": 215.3, "q": 0.7938,
-       "body": 1.083, "edge": 0.2237, "edge_hz": 1068.1, "edge_q": 5.3718}
-CLASH = {"low": 3458.2, "ring": 0.1685, "damp": 0.5469, "radiates": 947.0, "scrape": 0.4, "scrape_gain": 0.2854,
-         "judder": 34.2, "click": 1.113, "lag": 0.0219, "second": 0.2596, "shimmer": 0.6412, "shimmer_hz": 2478.9,
-         "shimmer_len": 0.4053, "thump": 0.1639, "thump_hz": 1200.0}
-HIT = {  # target: contact crack, the target's body, the weapon's own ring, the mass behind it
-    "wood": {"crack": 0.6855, "crack_hz": 2175.2, "crack_len": 0.0919, "body": 0.2778, "body_ring": 1.922,
-             "weapon": 0.782, "weapon_ring": 1.2, "thud": 1.4192, "thud_hz": 133.7, "thud_len": 0.0352},
-    "iron": {"crack": 0.5288, "crack_hz": 4829.6, "crack_len": 0.12, "body": 1.6039, "body_ring": 1.6,
-             "weapon": 0.1998, "weapon_ring": 1.108, "thud": 0.6384, "thud_hz": 1000.0, "thud_len": 0.1138},
-    "stone": {"crack": 1.0, "crack_hz": 2500.0, "crack_len": 0.02, "body": 0.6, "body_ring": 0.8, "weapon": 0.4,
-              "weapon_ring": 0.3, "thud": 0.4, "thud_hz": 300.0, "thud_len": 0.05},
-}
-FLESH = {"thud": 1.1725, "thud_hz": 179.2, "thud_len": 0.0943, "squelch": 0.5458, "squelch_hz": 921.7,
-         "squelch_q": 1.3316, "squelch_len": 0.1614, "crunch": 0.5633, "crunch_rate": 199.6, "slice": 0.4569,
-         "slice_hz": 2472.4, "slice_len": 0.1543}
-ARROW_HIT = {"crack": 3.1043, "crack_hz": 3082.0, "crack_len": 0.1598, "body": 0.2724, "body_ring": 0.6103,
-             "quiver": 0.2947, "quiver_rate": 28.6, "quiver_len": 0.5316, "quiver_size": 0.377, "thud": 0.6039,
-             "thud_hz": 821.0}
-RELEASE = {"swell": 0.2506, "swell_f0": 1406.0, "swell_f1": 6840.6, "swell_q": 0.4783, "swell_gain": 0.3879,
-           "crack": 0.75, "crack_hz": 1155.1, "crack_len": 0.047, "string": 0.4677, "string_ring": 0.5087,
-           "thump": 0.3629, "thump_hz": 275.6, "thump_len": 0.5096, "nock": 0.2786}
-BOW_DRAW = {"dur": 0.8267, "rate": 32.5, "rate_end": 27.7, "lo_hz": 196.5, "hi_hz": 6465.7, "decay": 0.0058,
-            "gain": 1.2438, "big": 8.8343, "big_gain": 0.247, "body": 0.2639, "fizz": 0.1105, "fizz_rate": 259.8}
-UNSHEATHE = {"dur": 0.2407, "scrape": 3.9605, "judder": 212.9, "ring": 1.2881, "end_hit": 0.506, "hiss": 1.3202,
-             "hiss_lo": 625.0, "hiss_hi": 3246.0, "hiss_q": 0.7627, "hiss_start": 0.8238}
-
-
-def noise_burst(start: float, length: float, hz: float, gain: float, kind: str = "high", q: float = 0.7,
-                fall: float = 5.0) -> Noise:
-    """A decaying noise burst: contact cracks, slices, shimmers."""
-    return Noise(round(start, 4), round(max(length, 0.004), 4), [(0.0, hz), (1.0, hz)], kind, q,
-                 amp=decay_curve(fall), attack=0.0005, release=0.005, gain=gain)
-
-
-def swing(fx: Fx, d: dict = SWING, heavy: float = 0.0, edge: bool = True) -> list:
-    """Air pushed by a weapon: a low whoosh (most energy under 500 Hz), an edge singing faintly."""
-    s, p = fx.size, fx.power
-    scale = 2 ** (-0.8 * (s - 0.5) - 0.6 * heavy) * (0.8 + 0.4 * p)
-    dur = d["dur"] * (0.8 + 0.6 * s + 0.3 * heavy) * (1.1 - 0.2 * p) * (0.9 + 0.2 * fx.rand("dur"))
-    peak = min(max(d["peak"] + 0.15 * (fx.rand("peak") - 0.5), 0.15), 0.85)
-    freq = [(0.0, d["f0"] * scale), (round(peak, 3), d["f1"] * scale), (1.0, d["f2"] * scale)]
-    amp = bell_curve(peak, d["sharp"])
-    out = [Noise(0.0, round(dur, 3), freq, "band", d["q"], amp=amp, attack=0.0, release=0.0, wobble=(20.0, 0.2)),
-           Noise(0.0, round(dur, 3), [(t, f * 0.8) for t, f in freq], "low", 0.7, amp=amp, attack=0.0, release=0.0,
-                 gain=d["body"])]
-    if edge and d["edge"] > 0.01:
-        out.append(Noise(0.0, round(dur, 3), [(t, d["edge_hz"] * f / d["f1"]) for t, f in freq], "band", d["edge_q"],
-                         amp=bell_curve(peak, d["sharp"] * 1.5), attack=0.0, release=0.0, gain=d["edge"]))
-    return out
-
-
-def blade_body(fx: Fx, material: str, d: dict = CLASH) -> "str | Material":
-    """A blade rings high and briefly (the grip damps it); wooden blades are just wood."""
-    if material == "wood":
-        return "wood"
-    m = MATERIALS[material]
-    k = {"steel": 1.0, "iron": 0.75, "glass": 1.3}.get(material, 1.0)
-    low = d["low"] * k
-    return replace(m, low=(low, low * 0.6), high=18_000, t60=(m.t60[0] * d["ring"], m.t60[1] * d["ring"]),
-                   damping=d["damp"], radiates=d["radiates"] * k, hardness=16_000)
-
-
-def clash(fx: Fx, material: str, d: dict = CLASH) -> list:
-    p = fx.power
-    body = blade_body(fx, material, d)
-    lag = d["lag"] * (0.5 + fx.rand("lag"))
-    slide = (0.0, d["scrape"] * (0.5 + fx.rand("slide")), d["scrape_gain"] * p, d["judder"])
-    a = fx.strike(body, hits=[(0.0, 1.0, 0.0008)], scrape=slide, click=d["click"], prefix="a")
-    b = fx.strike(body, start=round(lag, 4), size=min(max(fx.size + 0.3 * (fx.rand("foe") - 0.5), 0), 1),
-                  hits=[(0.0, 1.0, 0.0008)], scrape=slide, click=d["click"], gain=d["second"], prefix="b")
-    return [a, b, noise_burst(0.0, d["shimmer_len"], d["shimmer_hz"], d["shimmer"], fall=4.0),
-            noise_burst(0.0, 0.08, d["thump_hz"], d["thump"], "low", 1.0, 6.0)]
-
-
-def hit(fx: Fx, weapon: str, target: str, edge: float) -> list:
-    """`weapon` (a material) strikes `target`; `edge` 0 (blunt) .. 1 (blade)."""
-    p, s = fx.power, fx.size
-    if target == "flesh":
-        d = FLESH
-        out = [noise_burst(0.0, d["thud_len"] * (1 + s), d["thud_hz"] * (1.3 - 0.6 * s), d["thud"], "low", 1.0, 6.0),
-               Noise(0.003, round(d["squelch_len"], 3), [(0, d["squelch_hz"]), (1, d["squelch_hz"] * 0.7)], "band",
-                     d["squelch_q"], amp=decay_curve(4), attack=0.003, wobble=(40.0, 0.9), gain=d["squelch"]),
-               Scatter(0.0, round(0.05 + 0.1 * p, 3), [(0, d["crunch_rate"] * p), (1, 0)], "pop", (400, 4000),
-                       (0.0008, 0.003), (0.3, 1.0), d["crunch"] * p)]
-        if edge:
-            out.append(noise_burst(0.0, d["slice_len"], d["slice_hz"], d["slice"] * edge, fall=4.0))
-        return out
-    d = HIT[target]
-    hard = 0.6 + 0.4 * p
-    t_size = 0.55 + 0.2 * (fx.rand("target") - 0.5)
-    out = [noise_burst(0.0, d["crack_len"], d["crack_hz"], d["crack"] * hard, "band", 0.5, 6.0),
-           fx.strike(target, size=t_size, hits=[(0.0, 1.0, 0.0012 / hard)], ring=d["body_ring"], gain=d["body"],
-                     prefix="t"),
-           noise_burst(0.0, d["thud_len"] * (1 + s), d["thud_hz"] * (1.3 - 0.6 * s), d["thud"] * (1 - 0.4 * edge),
-                       "low", 1.0, 6.0)]
-    if weapon in ("steel", "iron", "bronze", "glass"):
-        out.append(fx.strike(blade_body(fx, weapon) if edge else weapon, hits=[(0.0, 1.0, 0.001)],
-                             ring=d["weapon_ring"], gain=d["weapon"], prefix="w"))
-    if target == "stone" and weapon in ("steel", "iron"):  # sparks
-        out.append(Scatter(0.0, 0.12, [(0, 120), (1, 0)], "ping", (6000, 11000), (0.004, 0.012), (0.2, 1.0), 0.2))
-    return out
-
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
         ("steel", "iron", "glass", "wood"))
 def blade(fx: Fx):
     """Swords, daggers, axes: swing, clash, hits on flesh/wood/armor/stone, draw, drop."""
-    mat, e = fx.style, fx.event
+    mat, s, p, e = fx.style, fx.size, fx.power, fx.event
     if e == "swing":
-        return fx.voice(noise=swing(fx))
+        dur = (0.22 + 0.35 * s) * (1.15 - 0.3 * p)
+        return fx.voice(noise=whoosh(fx, 0.0, dur, (900 + 2200 * p) * (1 - 0.45 * s), 1.6, whistle=0.35))
     if e == "clash":
-        return fx.voice(**splits(clash(fx, mat)), space=0.4, wet=0.08)
+        lag = 0.002 + 0.006 * fx.rand("lag")
+        slide = (0.0, 0.04 + 0.16 * fx.rand("slide"), 0.5 + 0.5 * p, 60 + 80 * fx.rand("judder"))
+        a = fx.strike(mat, hits=[(0.0, 1.0, 0.0008)], scrape=slide, prefix="a")
+        b = fx.strike(mat, start=lag, size=min(max(s + 0.3 * (fx.rand("foe") - 0.5), 0), 1),
+                      hits=[(0.0, 1.0, 0.0008)], scrape=slide, gain=0.8, prefix="b")
+        return fx.voice(modal=[a, b], noise=[burst(0.0, 0.04, 5000, 0.5)], space=0.6, wet=0.12)
     if e in TARGETS:
-        return fx.voice(**splits(hit(fx, mat, TARGETS[e], edge=1.0)), space=0.3, wet=0.06)
+        return fx.voice(**splits(impact(fx, mat, TARGETS[e], edge=1.0)), space=0.4, wet=0.1)
     if e == "draw":
-        d = UNSHEATHE
-        dur = d["dur"] * (0.7 + 0.6 * fx.size)
-        body = blade_body(fx, mat)
-        ring = fx.strike(body, hits=[(dur, d["end_hit"], 0.001)], scrape=(0.0, dur, d["scrape"], d["judder"]),
-                         prefix="a", ring=d["ring"] / CLASH["ring"] if mat != "wood" else 1.0,
-                         dur=dur + (0.6 if mat != "wood" else 0.1))
-        hiss = Noise(0.0, round(dur, 3), [(0, d["hiss_lo"]), (1, d["hiss_hi"])], "band", d["hiss_q"],
-                     amp=[(0, d["hiss_start"]), (0.85, 1), (1, 0)], attack=0.03, release=0.02, gain=d["hiss"])
+        dur = 0.35 + 0.3 * s
+        ring = fx.strike(mat, hits=[(dur, 0.25, 0.001)], scrape=(0.0, dur, 1.0, 180 + 120 * fx.rand("judder")),
+                         prefix="a", dur=dur + 0.8 if mat != "wood" else dur + 0.1)
+        hiss = Noise(0.0, round(dur, 3), [(0, 3000), (1, 7000)], "band", 2.0, amp=[(0, 0.4), (0.85, 1), (1, 0)],
+                     attack=0.03, release=0.02, gain=0.8)
         return fx.voice(modal=[ring], noise=[hiss])
     # drop: falls, bounces and clatters on stone, the floor muffling its ring
     hits = bounces(fx, 6, 0.2, 0.5, 3)
     ground = fx.strike("stone", size=0.75, hits=hits, gain=1.0, prefix="g")
-    return fx.voice(modal=[fx.strike(blade_body(fx, mat), hits=hits, prefix="a", dur=1.0, click=1.0), ground])
+    return fx.voice(modal=[fx.strike(mat, hits=hits, prefix="a", dur=1.5, ring=0.3, click=1.0), ground])
 
 
 @recipe("blunt", ("swing", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "drop"), ("wood", "iron", "stone"))
 def blunt(fx: Fx):
     """Clubs, maces, hammers, staves: heavy swings and hits."""
-    mat, e = fx.style, fx.event
+    mat, s, p, e = fx.style, fx.size, fx.power, fx.event
     if e == "swing":
-        return fx.voice(noise=swing(fx, heavy=0.5, edge=False))
+        dur = (0.3 + 0.4 * s) * (1.15 - 0.3 * p)
+        layers = whoosh(fx, 0.0, dur, (600 + 1200 * p) * (1 - 0.5 * s), 1.1)
+        layers[0].wobble = (12.0 + 10 * fx.rand("flutter"), 0.5)    # tumbling mass: a fluttering push
+        return fx.voice(noise=layers)
     if e in TARGETS:
-        return fx.voice(**splits(hit(fx, mat, TARGETS[e], edge=0.0)), space=0.3, wet=0.06)
+        layers = impact(fx, mat, TARGETS[e], edge=0.0)
+        layers.append(thud(0.0, 0.2 + 0.2 * s, 140 - 60 * s, 0.9))
+        return fx.voice(**splits(layers), space=0.5, wet=0.1)
     hits = bounces(fx, 4, 0.14, 0.5)
-    return fx.voice(modal=[fx.strike(mat, hits=hits, prefix="a", dur=1.0, ring=0.5),
-                           fx.strike("stone", size=0.6, hits=hits, gain=0.8, prefix="g")])
-
-
-def bow_draw(fx: Fx, d: dict = BOW_DRAW) -> list:
-    """Drawing a bow: wood and string creak in irregular clicks, a few of them loud and woody."""
-    dur = d["dur"] * (0.8 + 0.4 * fx.size)
-    n_big = max(int(d["big"] * dur), 1)
-    big = sorted((round(dur * (0.15 + 0.8 * fx.rand(f"big{k}")), 4), round(0.5 + 0.5 * fx.rand(f"bg{k}"), 3), 0.0008)
-                 for k in range(n_big))
-    return [Scatter(0.0, round(dur, 3), [(0, d["rate"]), (1, d["rate_end"])], "pop", (d["lo_hz"], d["hi_hz"]),
-                    (d["decay"] / 2, d["decay"] * 2), (0.1, 1.0), d["gain"]),
-            Scatter(0.0, round(dur, 3), [(0, d["fizz_rate"]), (1, d["fizz_rate"] * 0.6)], "pop", (1500, 12_000),
-                    (0.0003, 0.001), (0.05, 0.4), d["fizz"]),      # the string stretching: dense faint ticks
-            fx.strike("wood", size=0.35, hits=big, ring=0.6, gain=d["big_gain"], prefix="limb"),
-            *[noise_burst(t, 0.006, 2500, d["big_gain"] * g * d["body"], "high", 0.6, 6.0) for t, g, _ in big]]
-
-
-def bow_release(fx: Fx, d: dict = RELEASE, cross: bool = False) -> list:
-    """Letting go: a rising rush as the string drives the arrow, a sharp slap, the limbs' low thump."""
-    t = d["swell"] * (0.6 if cross else 1.0) * (0.85 + 0.3 * fx.rand("swell"))
-    return [noise_burst(0.0, 0.012, 3000, d["nock"], "high", 0.6, 6.0),     # the nock leaves the fingers
-            Noise(0.0, round(t + 0.01, 4), [(0, d["swell_f0"]), (1, d["swell_f1"])], "band", d["swell_q"],
-                  amp=[(0, 0.0), (0.7, 0.4), (1, 1.0)], attack=0.0, release=0.005, gain=d["swell_gain"]),
-            noise_burst(t, d["crack_len"], d["crack_hz"], d["crack"], "band", 0.5, 6.0),
-            fx.strike("string", start=round(t, 4), size=0.4 + 0.5 * fx.size, hits=[(0.0, 1.0, 0.002)],
-                      ring=d["string_ring"], gain=d["string"], prefix="s", dur=0.4),
-            noise_burst(t, d["thump_len"], d["thump_hz"], d["thump"], "low", 1.0, 5.0)]
-
-
-def arrow_hit(fx: Fx, target: str, d: dict = ARROW_HIT) -> list:
-    """An arrow strikes: a sharp crack, the target's body, then the shaft quivering in fast clicks."""
-    out = [noise_burst(0.0, d["crack_len"], d["crack_hz"], d["crack"], "band", 0.5, 6.0),
-           fx.strike(target, size=0.5, hits=[(0.0, 1.0, 0.0012)], ring=d["body_ring"], gain=d["body"], prefix="t"),
-           noise_burst(0.0, 0.06, d["thud_hz"], d["thud"], "low", 1.0, 6.0)]
-    if target == "wood":
-        rate = d["quiver_rate"] * (0.85 + 0.3 * fx.rand("quiver"))
-        n = max(int(d["quiver_len"] * rate), 2)
-        clicks = [(round((k + 1) / rate, 4), round(0.8 ** k, 3), 0.0006) for k in range(n)]
-        out.append(fx.strike("wood", size=d["quiver_size"], hits=clicks, ring=0.3, gain=d["quiver"], prefix="shaft",
-                             dur=d["quiver_len"] + 0.2))
-    else:  # it breaks
-        out.append(fx.strike("wood", size=0.1, hits=[(0.01, 0.8, 0.001)], gain=0.6, prefix="snap"))
-    return out
+    return fx.voice(modal=[fx.strike(mat, hits=hits, prefix="a", dur=1.5),
+                           fx.strike("stone", size=0.6, hits=hits, gain=0.6, prefix="g")])
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))
 def bow(fx: Fx):
     """Bows and crossbows: draw, release, the arrow's flight and where it lands."""
-    e, cross = fx.event, fx.style == "crossbow"
+    s, p, e, cross = fx.size, fx.power, fx.event, fx.style == "crossbow"
     if e == "draw":
+        dur = 0.5 + 0.5 * s
         if cross:  # a ratchet: regular clicks, then the latch
-            dur = 0.5 + 0.5 * fx.size
             clicks = [(round(i / 11 + 0.004 * fx.rand(f"c{i}"), 4), 0.8, 0.0006) for i in range(int(dur * 11))]
-            return fx.voice(modal=[fx.strike("iron", size=0.05, hits=clicks, prefix="pawl", dur=dur + 0.2, ring=0.4),
+            return fx.voice(modal=[fx.strike("iron", size=0.05, hits=clicks, prefix="pawl", dur=dur + 0.2),
                                    fx.strike("wood", size=0.3, hits=[(dur, 1.0, 0.002)], prefix="lock")])
-        return fx.voice(**splits(bow_draw(fx)), gain=0.7)
+        # wood under strain: a high, very irregular stick-slip squeal through the limb's resonances
+        # (structure from a CLAP-guided search; the held-out judge agreed)
+        f0 = 400 * (0.9 + 0.2 * fx.g.u("creak"))
+        creak = Syllable(0.0, round(dur * 1.4, 3), [(0, f0), (0.7, f0 * 2.3), (1, f0 * 2.7)], "pulse", 0.1, 0.0,
+                         jitter=3.0, rough=(0.3, 23.0), formants=[(2450, 980, 1.0), (5650, 1470, 0.6)],
+                         attack=0.08, release=0.05, amp=[(0, 0.3), (1, 1)], gain=0.8)
+        stretch = Noise(0.0, round(dur * 1.4, 3), [(0, 1500), (1, 3000)], "band", 4.0, amp=[(0, 0.2), (1, 1)],
+                        gain=0.2)
+        return fx.voice(syllables=[creak], noise=[stretch], gain=0.6)
     if e == "release":
-        layers = bow_release(fx, cross=cross)
+        string = fx.strike("string", size=0.4 + 0.5 * s, hits=[(0.0, 1.0, 0.002)], prefix="s", gain=0.7,
+                           dur=0.3 if cross else 0.45)
+        body = fx.strike("wood", size=0.4, hits=[(0.0, 0.8, 0.002)], gain=0.7, prefix="b")
+        layers = [string, body, thud(0.0, 0.12, 250, 0.8), burst(0.0, 0.03, 2000, 0.5),
+                  *whoosh(fx, 0.01, 0.25, 2800, 1.6, gain=0.7)]
         if cross:
-            layers.append(fx.strike("iron", size=0.1, hits=[(0.0, 1.0, 0.0006)], gain=0.6, prefix="click", ring=0.4))
+            layers.append(fx.strike("iron", size=0.1, hits=[(0.0, 1.0, 0.0006)], gain=0.6, prefix="click"))
         return fx.voice(**splits(layers))
     if e == "fly":
-        return fx.voice(noise=swing(fx, FLY, edge=True))
+        return fx.voice(noise=whoosh(fx, 0.0, 0.35 + 0.3 * (1 - p), 3200, 2.5, whistle=0.5))
     target = TARGETS[e]
     if target == "flesh":
-        return fx.voice(**splits(hit(fx, "wood", "flesh", edge=0.6)))
-    return fx.voice(**splits(arrow_hit(fx, target)), space=0.3, wet=0.08)
+        return fx.voice(**splits(flesh(fx, 0.0, 0.6, 0.8)))
+    layers = [fx.strike(target, size=0.5, hits=[(0.0, 1.0, 0.0012)], prefix="t"),
+              thud(0.0, 0.08, 400, 0.4)]
+    if target == "wood":  # the shaft quivers in the target
+        layers.append(Modal(0.0, 0.5, [(55 + 30 * fx.rand("shaft"), 0.25, 1.0), (150, 0.1, 0.3)],
+                            [(0.0, 1.0, 0.004)], hardness=600, gain=0.5))
+    else:  # it breaks
+        layers.append(fx.strike("wood", size=0.1, hits=[(0.01, 0.8, 0.001)], gain=0.6, prefix="snap"))
+    return fx.voice(**splits(layers), space=0.3, wet=0.1)
 
 
 # --- footsteps ------------------------------------------------------------------------------------------------------

@@ -201,47 +201,20 @@ Na voz inteira:
   - fogueira pede estalos densos.
 - **Passos:** uma busca guiada pelo CLAP sobre sequências de caminhada encontrou a estrutura de cada superfície (`physical.STEPS`).
 
-**Armas: ajuste contra gravações reais.** O CLAP é um juiz ruim para foley de armas, e ouvir os sons mostrou isso.
-- **A primeira versão** passava razoavelmente no juiz CLAP (29% em 1º, 45% no top 3). Mesmo assim, a espada soava como um sino de 2 s, o golpe no ar como chiado agudo e o arco puxando como um zumbido.
-- **Teste com gravações reais:** o CLAP erra também com elas. O som de arco do Pixabay que serviu de referência fica em 13º lugar ("obturador de câmera" e "zap elétrico"); choques de espada reais vão do 1º ao 62º lugar; flechas acertando madeira, do 1º ao 33º.
-- **Método:** as armas passaram a ser ajustadas contra gravações reais de cada evento (prévias do Freesound e o arco do Pixabay, só para análise).
-  - Os desenhos (`physical.SWING`, `FLY`, `CLASH`, `HIT`, `FLESH`, `ARROW_HIT`, `RELEASE`, `BOW_DRAW`, `UNSHEATHE`) expõem suas constantes.
-  - Uma estratégia evolutiva ajusta as constantes para que duração, decaimento, centroide espectral, planura (ruído × tom), energia em 7 bandas e o envelope em torno do pico caiam na faixa (mediana e intervalo interquartil) das gravações.
-
-| evento | brilho real (centroide) | antes | depois |
-|---|---|---|---|
-| choque de espadas | 5,2 kHz, ruidoso (planura 0,13) | 2,8 kHz, tonal (0,009) | 5,3 kHz (0,13) |
-| golpe no ar | 0,55 kHz | 2,8 kHz | 0,4 kHz |
-| espada na carne | 1,9 kHz (0,36) | 0,5 kHz (0,04) | 1,8 kHz (0,37) |
-| maça no escudo de madeira | 0,8 kHz | 0,09 kHz | 0,6 kHz |
-| flecha acertando madeira | 3,1 kHz (0,31) | 0,1 kHz (0,0006) | 3,2 kHz (0,32) |
-| flecha voando | 1,6 kHz | 3,7 kHz | perto de 1,6 kHz (desenho próprio) |
-
-O que as gravações ensinaram:
-- **Golpe no ar:** é grave, com a energia abaixo de 500 Hz.
-- **Choque de espadas:** é curto, brilhante e ruidoso; os modos da lâmina duram pouco porque a mão amortece.
-- **Impactos:** um estalo de banda larga com um corpo curto.
-- **Flecha na madeira:** a haste vibra em cliques periódicos (~15–30 Hz), não num tom.
-- **Puxar o arco:** estalos irregulares de madeira e corda sobre microestalos densos.
-- **Soltar o arco:** um sopro crescente de ~0,25 s, um estalo seco e um baque grave.
-
-**Conferência por semelhança de áudio no CLAP** (e não por texto): a distância do soltar o arco para a referência do Pixabay caiu nos dois modelos (similaridade 0,27 → 0,37 e 0,30 → 0,49). Uma segunda rodada maximizando essa semelhança só melhorou no modelo otimizador, e não foi adotada.
-
-**Magia, explosões, ambientes e passos no juiz CLAP** (2 identidades por estilo, 80 rótulos; o acaso ficaria em ~1% para o 1º lugar):
+**Resultado no juiz** (2 identidades por estilo, 80 rótulos; o acaso ficaria em ~1% para o 1º lugar):
 
 | família | 1º | top 3 | destaques | fracos |
 |---|---|---|---|---|
 | magia | 50% | 80% | carga, disparo e trajeto de quase todos os elementos; impacto de fogo, arcano, sombra | impacto do raio, trajeto arcano |
-| explosões | — | — | explosão distante em 1º | estouro de perto ouvido como "bola de fogo" |
+| armas, arco, explosões | 29% | 45% | golpes em carne e madeira, golpes no ar, flechas, explosão distante | choque de espadas ("espada acertando armadura"), sacar e derrubar a espada, maça em metal/pedra, disparo do arco |
 | ambientes | ~30% | ~40% | loops de chuva, caverna, noite, tempestade e mar em 1º | quase todos os eventos soltos |
 | passos | 0% | 0% | — | todos |
 
 Os loops têm 16 s, e o CLAP recorta aleatoriamente áudios com mais de 10 s, então os números dos ambientes variam um pouco entre execuções.
 
 **O que a busca guiada pelo CLAP ensinou:**
-- **Vento:** o juiz confirmou o ganho (do 9º–10º para o 3º–4º lugar), e o ajuste foi adotado.
-- **Rangido do arco:** a busca deu um zumbido agudo que o juiz aprovou (do 22º para o 6º–9º lugar), mas que soava artificial. Foi substituído pelo desenho ajustado contra gravações reais. Lição: o CLAP aprova sons irreais de foley.
-- **Choque e queda da espada:** quando o otimizador gosta e o juiz não, descartamos. A busca levou o otimizador ao 2º–5º lugar e o juiz ficou em 20º–40º.
+- **Quando o juiz confirma, adotamos:** rangido do arco (do 22º para 6º–9º lugar no juiz) e vento (do 9º–10º para 3º–4º).
+- **Quando o otimizador gosta e o juiz não, descartamos.** No choque de espadas e na queda da espada, a busca levou o otimizador ao 2º–5º lugar, mas o juiz ficou em 20º–40º. Os dois modelos discordam sobre impactos metálicos, que eles separam mal ("espadas se chocando" × "espada acertando armadura").
 - **Passos:** a busca sobre sequências de caminhada levou o cascalho ao 1º lugar no otimizador, mas o juiz ficou em 8º–10º; pedra, madeira e grama não chegaram ao top 10. A estrutura encontrada está em `physical.STEPS`. Nossos passos ainda soam como impactos ("bola quicando", "flecha na madeira").
 
 ## Calibração com CLAP

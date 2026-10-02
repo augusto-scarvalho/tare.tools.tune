@@ -162,27 +162,23 @@ bloco = floresta.read(1024)        # float32 para o stream de áudio da engine
 
 O demo do pygame tem espada (Q/W), bola de fogo (E), raio (R) e tempestade (A).
 
-**Como soam.** Dois juízes, cada um para o que faz bem:
-
-- **Armas (lâminas, maças, arco):** as constantes de desenho foram ajustadas contra gravações reais de cada evento. O critério é duração, decaimento, brilho, quanto o som é ruidoso ou tonal, energia por banda e o formato do envelope. As fontes são prévias do Freesound e um som de arco do Pixabay escolhido como referência, usadas só para análise.
-  - Golpe no ar, choque, golpes em carne, madeira e metal, flecha voando e acertando, sacar a espada e puxar e soltar o arco agora caem na faixa das gravações reais.
-  - Antes, a espada era um sino de 2 s, o golpe no ar um chiado agudo e o arco um zumbido.
-  - O CLAP não serve de juiz aqui: ele erra com gravações reais de armas. O arco de referência fica em 13º lugar, "zap elétrico", e choques reais vão do 1º ao 62º.
-- **Magia, explosões e ambientes:** o juiz CLAP (o modelo que não participou de nenhum ajuste), contra 80 descrições em inglês, com o acaso em ~1% para o 1º lugar.
+**Como soam, segundo o CLAP.** Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
 
 | família | descrição certa em 1º | entre as 3 primeiras |
 |---|---|---|
 | magia (8 elementos × 4 eventos) | 50% | 80% |
+| armas, arco e explosões | 29% | 45% |
 | ambientes (loop + evento) | ~30% | ~40% |
 | passos | 0% | 0% |
 
-- **Fortes:** a maioria das magias, explosões, e os loops de chuva, caverna, noite, tempestade e mar (todos em 1º).
+- **Fortes:** golpes em carne e em madeira, golpes no ar, flechas voando e acertando, explosão distante, a maioria das magias, e os loops de chuva, caverna, noite, tempestade e mar (todos em 1º).
 - **Fracos:**
+  - choque de espadas: o juiz ouve "espada acertando armadura", perto mas não igual;
+  - sacar e derrubar a espada, maça em metal ou pedra, disparo do arco;
   - quase todos os eventos soltos dos ambientes;
-  - derrubar a espada (ainda sem referência real);
-  - **passos**: gravações reais de passos são reconhecidas (6 de 8 em 1º), as nossas não.
+  - **passos**. Gravações reais de passos são reconhecidas (6 de 8 em 1º), as nossas não, mesmo depois de uma busca guiada pelo CLAP.
 
-O caminho para melhorar é o mesmo: comparar com gravações reais e ajustar a estrutura. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
+O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e ajustar a estrutura, sempre conferindo no juiz. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ## Calibração com CLAP
 
