@@ -79,6 +79,19 @@ class Speaker:
     def render(self, text: str, lang: str = "pt", sr: int = DEFAULT_SR, style: str = "speech") -> np.ndarray:
         return render(self.voice(text, lang, style=style), sr)
 
+    def emote(self, kind: str, style: str = "grunt", intensity: float = 0.7, take: int = 0,
+              sr: int = DEFAULT_SR) -> np.ndarray:
+        """A wordless bark in this voice: "attack", "hurt", "death", "jump", "laugh", "sigh", "hmm", "cheer"... (see
+        emote.EMOTES), in a style: "grunt", "anime", "tactics", "mmo". Each `take` is a little different."""
+        return render(self.emote_voice(kind, style, intensity, take), sr)
+
+    def emote_voice(self, kind: str, style: str = "grunt", intensity: float = 0.7, take: int = 0) -> Voice:
+        from .emote import emote
+        seed = rng.seed32("emote", kind, style, repr(self), take)
+        return Voice(speech=[emote(self, kind, style, intensity, take)], crush=self.crush, drive=self.drive,
+                     space=self.space, wet=0.18, seed=seed,
+                     meta={"speaker": self.name, "emote": kind, "style": style, "intensity": intensity})
+
     def but(self, **changes) -> "Speaker":
         return replace(self, **changes)
 

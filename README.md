@@ -86,6 +86,38 @@ No código, use `speaker_from("kokoro:pf_dora")`; no bestiário, `"voice": "koko
 
 **Inteligibilidade** medida com o Whisper (`tools/intelligibility.py`) em 16 frases de diálogo de jogo por idioma: no inglês, CER entre 0,04 e 0,06 conforme a voz (a maioria das frases sai perfeita); no português, entre 0,24 e 0,34 (cerca de 70 a 75% dos caracteres certos). O português ainda é o ponto a melhorar.
 
+### Interjeições (jogos sem dublagem completa)
+
+Muitos jogos não são dublados: o personagem só solta um "hyah!", um "ugh", um "hm?" ou uma risada, e o texto faz o resto. `Speaker.emote` gera essas interjeições sem palavras **na voz do próprio personagem**: mesma altura, mesmo trato vocal, mesmo sopro e mesma rouquidão.
+
+```python
+from creaturesynth.speech import Speaker
+
+heroi = Speaker(pitch=135, tract=1.06, breath=0.12)
+write_wav("golpe.wav", heroi.emote("attack", style="grunt", take=2), 48000)   # cada take é um pouco diferente
+garota = Speaker.random(42)
+write_wav("risada.wav", garota.emote("laugh", style="anime", intensity=0.9), 48000)
+```
+
+- **Combate:** `attack`, `attack_big`, `hurt`, `hurt_big`, `death`, `jump`, `tired`.
+- **Expressões:**
+  - risos: `laugh`, `giggle`, `chuckle`;
+  - respiração: `sigh`, `gasp`, `relief`;
+  - reações: `surprise`, `hmm`, `huh`;
+  - respostas: `yes`, `no`;
+  - humor: `cheer`, `angry`.
+- **Estilos**, inspirados nos jogos que usam esses sons (os sons em si são originais):
+
+  | estilo | jeito | inspirado em |
+  |---|---|---|
+  | `grunt` | sem palavras e cheio de ar, curto | o herói de *Zelda* |
+  | `anime` | brilhante e cheio de voz: "ya!", "kya!", "e?!", "fufu" | *Rune Factory* |
+  | `tactics` | contido e apertado: "hmph", "hah", "heh" | *Fire Emblem* |
+  | `mmo` | gritos cheios, mais longos e fortes | *Final Fantasy XIV* |
+- `intensity` (0 a 1) controla quanto esforço vai no som.
+
+Medido em gravações CC0 (pacotes do OpenGameArt de aventureiro, de vozes femininas de RPG e de gritos; risadas, suspiros, sustos e "hm" do Freesound). Um grito de ataque sobe muito acima da fala: homens 17 a 23 semitons (95 Hz → ~345 Hz), mulheres cerca de 10. Ele dura 0,15–0,35 s e é mais ar do que voz. Uma risada pulsa 4,5–6 vezes por segundo. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
+
 ### Quem fala com qual motor
 
 Cada motor tem seu ponto forte, e `speech.casting.cast` faz a escolha pelo papel do personagem:

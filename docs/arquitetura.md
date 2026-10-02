@@ -617,6 +617,45 @@ O bestiário e o `bake` usam o elenco. O manifesto registra `role`, `style` e `e
 - Mais idiomas: o front-end é plugável (`speech.LANGS`).
 - Envelope por contexto (difones aprendidos do professor) ou um vocoder neural pequeno, medidos com `tools/structure_analysis.py` (UTMOS + Whisper).
 
+### Interjeições (`speech/emote.py`)
+
+São frames do sintetizador de formantes montados direto de segmentos:
+- respiro (`h`, que sopra pelas formantes da vogal seguinte);
+- vogal;
+- zumbido nasal;
+- chiado (`s`, `f`);
+- explosão (`k`, `p`).
+
+Cada segmento tem curvas de tom (em semitons sobre a base), de voz e de ar. A voz do `Speaker` entra inteira: altura, trato, sopro, inclinação espectral, jitter, rouquidão e sub-harmônicos.
+
+**Medidas** (gravações CC0, só para análise: OpenGameArt "RPG Male Adventurer", "Female RPG Voice Starter Pack" (três vozes), "Male Grunt/Yelling sounds"; Freesound):
+
+| interjeição | duração | tom | voz × ar | outras medidas |
+|---|---|---|---|---|
+| ataque | 0,15–0,35 s | homens +17 a +23 st sobre a fala, mulheres ~+10; reto, caindo no fim | 10–60% voz | 50–190 ms de respiro até o pico |
+| dor | 0,2–0,4 s | sobe +1,5 a +3 st e desce | — | ataque rápido |
+| morte | 1–2 s | alto, caindo devagar | 80–95% voz | — |
+| pulo | 0,17–0,3 s | — | — | — |
+| risada | — | — | — | pulsos de 4,5–5/s (homens), 5–6/s (mulheres); risadinha 6–8/s |
+| suspiro | — | cai 2,5–3,5 st | quase só ar | — |
+| "hm" | 0,9–2,8 s | sobe ~4 st na dúvida | nasal | — |
+| "yay" | — | começa 2–3 st acima e cai | — | — |
+
+**Registro do grito.** O tom de um esforço vai da fala em direção a um registro que depende do trato: f0 = fala^(1−e) · R^e, com R = 420 Hz · trato^1,8 e e ≈ 0,85. Calibrado nas gravações:
+- um homem de 95 Hz grita a ~345 Hz;
+- mulheres que falam a 230, 280 e 550 Hz gritam a ~430, ~530 e ~600 Hz.
+
+Os nossos dão 314–341 Hz no homem e 549–656 Hz na voz fofa.
+
+**Brilho.** Vogais gritadas são abertas: o F1 sobe até 25% com o esforço, e as vogais do grito são "a", "é" e "æ". Vogais fechadas no sintetizador saem 20–40 dB mais escuras que os gritos gravados. Medido como energia acima de 1,5 kHz:
+
+| | nosso | gravado |
+|---|---|---|
+| esforços | −10 a −16 dB | −8 a −24 dB |
+| "hm" (zumbido levemente aberto: 400/1400/2600 Hz) | −34 a −37 dB | −17 a −33 dB |
+
+**Estilos.** `grunt` (mais ar, curto), `anime` (mais voz, brilhante, sílabas "ya", "kya", "e", "fu"), `tactics` (menos esforço, contido) e `mmo` (gritos cheios e 25% mais longos). Mudam o esforço, o ar, a duração, o brilho e as vogais.
+
 ## Motor da 1ª geração
 
 `chip.py` emula os canais do Game Boy como o motor de gritos de Pokémon Red/Blue os usa:
