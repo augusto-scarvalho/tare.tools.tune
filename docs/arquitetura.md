@@ -192,6 +192,22 @@ Na voz inteira:
 
 **`AmbiencePlayer`** (runtime): toca o loop do lugar sem parar e agenda eventos com intervalos exponenciais (processo de Poisson com `per_minute`). Cada evento tem alguns takes renderizados em segundo plano e é pulado se não estiver pronto; a saída passa por `tanh`, para um trovão sobre a chuva não estourar.
 
+**Arco: modelado a partir de uma gravação.** Otimizar números (CLAP ou estatísticas de gravações) nivelou o caráter das armas, e uma tentativa nesse sentido foi desfeita depois de ouvida. O arco segue outro método:
+- medir o mecanismo numa gravação de referência, na escala de milissegundos;
+- construir cada parte com esses números;
+- escolher de ouvido entre variantes.
+
+As partes:
+- **Puxar (`creak`):** ~60–70 escorregões de atrito por segundo, em trens quase regulares cujo ritmo deriva.
+  - Cada escorregão cresce em ~2 ms e ressoa ~10 ms numa nuvem densa de modos de madeira, dentro das faixas medidas (1,7, 2,9, 5,5 e 7,9 kHz), mais uma nota de flexão um pouco mais longa.
+  - A força cresce com a tensão, sobre um atrito de fundo baixo.
+  - `creak()` serve para qualquer madeira sob esforço.
+- **Soltar (`bow_release`):**
+  - um "fwip" curto;
+  - a corda raspando na flecha: um zumbido áspero (~170 Hz) cuja ressonância desce de ~800 para ~300 Hz enquanto cresce ~20 dB (como ruído liso, soava como uma vassoura);
+  - a pancada, que faz soar a mesma madeira do puxar (os dois precisam soar como o mesmo arco) e o batente grave;
+  - a vibração de corda e braços (~57 Hz e harmônicos), com um parcial de ~1,1 kHz que fica soando.
+
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
 - **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.

@@ -162,6 +162,8 @@ bloco = floresta.read(1024)        # float32 para o stream de áudio da engine
 
 O demo do pygame tem espada (Q/W), bola de fogo (E), raio (R) e tempestade (A).
 
+**O arco** (puxar e soltar) foi modelado a partir de uma gravação de referência. Primeiro mediu-se o mecanismo: os escorregões de atrito da madeira e a corda raspando na flecha antes da pancada. Depois escolheu-se de ouvido entre variantes. É o método que vamos seguir com as outras armas.
+
 **Como soam, segundo o CLAP.** Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
 
 | família | descrição certa em 1º | entre as 3 primeiras |

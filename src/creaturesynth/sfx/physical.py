@@ -150,6 +150,35 @@ def creak(fx: Fx, dur: float) -> list:
     return [body, friction]
 
 
+def bow_release(fx: Fx, cross: bool = False) -> list:
+    """Letting go, modelled on a measured recording (chosen by ear among three variants):
+    a short fwip as the fingers open; the string grinding past the arrow, a rough buzz (~170 Hz)
+    whose resonance glides down from ~800 to ~300 Hz while it swells ~20 dB; the slap, ringing the
+    bow's own wood (the same body as the draw) and its low stop; then the string and limbs thrum
+    (~57 Hz and harmonics) with a lingering ~1.1 kHz partial."""
+    k = 2 ** (-0.8 * (fx.size - 0.5))          # bigger bows are lower
+    rush = 0.18 * (0.8 + 0.4 * fx.size) * (0.85 + 0.3 * fx.rand("rush")) * (0.5 if cross else 1.0)
+    t = round(0.065 + rush, 4)
+    tune = k * (1 + 0.04 * (fx.rand("tune") - 0.5))
+    lo, hi = 780 * k, 320 * k
+    return [
+        Noise(0.0, 0.065, [(0, 6000), (1, 6000)], "band", 0.35, amp=[(0, 0.0), (0.45, 1.0), (1, 0.0)], attack=0.0,
+              release=0.0, gain=0.6),
+        Syllable(0.06, round(rush + 0.01, 4), [(0, 187 * k), (1, 153 * k)], "pulse", 0.3, 1.0, jitter=1.5,
+                 rough=(0.5, 37.0), breath=0.6,
+                 formants=[(lo, 200, 1.0), (lo * 1.35, 260, 0.7), (lo * 1.7, 300, 0.5), (5500, 3000, 1.2),
+                           (8100, 2500, 0.8)],
+                 mouth=[(0, 1.0), (1, hi / lo)], attack=0.005, release=0.004,
+                 amp=[(0, 0.08), (0.5, 0.25), (0.85, 0.6), (1, 1.0)], gain=1.3 * (0.7 + 0.6 * fx.power)),
+        Noise(t, 0.3, [(0, 3000), (1, 2500)], "high", 0.6, amp=decay_curve(7), attack=0.0005, release=0.03, gain=0.6),
+        Modal(t, 0.3, wood_modes(fx, 0.72 * k, 0.03), [(0.0, 1.0, 0.002)], hardness=5000, click=0.3, gain=0.8),
+        Modal(t, 0.25, [(196 * tune, 0.10, 1.0), (84 * tune, 0.15, 0.6), (345 * tune, 0.06, 0.35),
+                        (790 * tune, 0.04, 0.2)], [(0.0, 1.0, 0.003)], hardness=3000, click=0.0),
+        Modal(t, 0.8, [(57 * tune, 0.6, 1.0), (116 * tune, 0.5, 0.9), (148 * tune, 0.3, 0.35), (170 * tune, 0.3, 0.3),
+                       (1100 * tune, 0.4, 0.12)], [(0.0, 1.0, 0.004)], hardness=2500, gain=0.6 if not cross else 0.35),
+    ]
+
+
 # --- weapons --------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -212,11 +241,7 @@ def bow(fx: Fx):
                                    fx.strike("wood", size=0.3, hits=[(dur, 1.0, 0.002)], prefix="lock")])
         return fx.voice(**splits(creak(fx, 0.9 * (0.8 + 0.4 * s))), gain=0.7)
     if e == "release":
-        string = fx.strike("string", size=0.4 + 0.5 * s, hits=[(0.0, 1.0, 0.002)], prefix="s", gain=0.7,
-                           dur=0.3 if cross else 0.45)
-        body = fx.strike("wood", size=0.4, hits=[(0.0, 0.8, 0.002)], gain=0.7, prefix="b")
-        layers = [string, body, thud(0.0, 0.12, 250, 0.8), burst(0.0, 0.03, 2000, 0.5),
-                  *whoosh(fx, 0.01, 0.25, 2800, 1.6, gain=0.7)]
+        layers = bow_release(fx, cross)
         if cross:
             layers.append(fx.strike("iron", size=0.1, hits=[(0.0, 1.0, 0.0006)], gain=0.6, prefix="click"))
         return fx.voice(**splits(layers))
