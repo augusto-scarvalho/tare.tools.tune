@@ -155,7 +155,7 @@ def bow_release(fx: Fx, cross: bool = False) -> list:
     a short fwip as the fingers open; the string grinding past the arrow, a rough buzz (~170 Hz)
     whose resonance glides down from ~800 to ~300 Hz while it swells ~20 dB; the slap, ringing the
     bow's own wood (the same body as the draw) and its low stop; then the string and limbs thrum
-    (~57 Hz and harmonics) with a lingering ~1.1 kHz partial."""
+    (~57 Hz and harmonics) with a lingering ~1.1 kHz partial, while the arrow flies off (heard from the archer)."""
     k = 2 ** (-0.8 * (fx.size - 0.5))          # bigger bows are lower
     rush = 0.18 * (0.8 + 0.4 * fx.size) * (0.85 + 0.3 * fx.rand("rush")) * (0.5 if cross else 1.0)
     t = round(0.065 + rush, 4)
@@ -176,7 +176,68 @@ def bow_release(fx: Fx, cross: bool = False) -> list:
                         (790 * tune, 0.04, 0.2)], [(0.0, 1.0, 0.003)], hardness=3000, click=0.0),
         Modal(t, 0.8, [(57 * tune, 0.6, 1.0), (116 * tune, 0.5, 0.9), (148 * tune, 0.3, 0.35), (170 * tune, 0.3, 0.3),
                        (1100 * tune, 0.4, 0.12)], [(0.0, 1.0, 0.004)], hardness=2500, gain=0.6 if not cross else 0.35),
+        *fletching(t, *departure(90.0 if cross else 60.0), gain=DEPARTURE_GAIN),
     ]
+
+
+# --- arrows ---------------------------------------------------------------------------------------------------------
+#
+# Modelled on recordings of arrows flying past and hitting a target: the fletching hisses in a broad
+# band near 3 kHz and flutters the air ~90 times a second. Passing a listener it swells ~40 dB (linear
+# in dB), then drops ~30 dB in 0.15 s while its band falls (Doppler). Leaving the archer it fades as 1/r,
+# already lower (c / (c + v)) and darker with distance. Stuck in a target the shaft rings near 160 Hz
+# (with harmonics), pulsing ~26 times a second as it bends, for over a second.
+
+DEPARTURE_GAIN = 1.2    # the arrow leaving, under the release: picks up where the string's buzz ends
+
+
+def fletching(start: float, db: list, freq: list, gain: float = 1.0, flutter: tuple = (90.0, 0.45)) -> list[Noise]:
+    """An arrow's flight along (seconds, dB) and (seconds, Hz) breakpoints: a fluttering band and its low body."""
+    dur = db[-1][0]
+    amp = [(round(t / dur, 4), round(10 ** (d / 20), 5)) for t, d in db]
+    fq = [(round(t / dur, 4), round(f, 1)) for t, f in freq]
+    return [Noise(start, round(dur, 3), fq, "band", 0.45, amp=amp, attack=0.0, release=0.01, wobble=flutter,
+                  gain=gain),
+            Noise(start, round(dur, 3), [(t, round(f * 0.35, 1)) for t, f in fq], "low", 0.7, amp=amp, attack=0.0,
+                  release=0.01, gain=0.5 * gain)]
+
+
+def departure(speed: float, dur: float = 0.55, near: float = 2.0, centre: float = 2800.0) -> tuple[list, list]:
+    """Leaving the archer at `speed` m/s: level falls as 1/r (r = near + speed * t), pitch down and darkening."""
+    ts = np.linspace(0, dur, 12)
+    db = [(round(float(t), 4), round(float(-20 * np.log10(1 + speed * t / near)), 2)) for t in ts]
+    hz = centre * 343 / (343 + speed)
+    return db, [(0.0, hz), (dur, hz * 0.55)]
+
+
+def flyby(approach: float, leave: float = 0.15, centre: float = 2800.0) -> tuple[list, list]:
+    """Passing a listener: 40 dB swell to the pass, then 30 dB down in `leave` seconds as the band falls."""
+    db = [(0.0, -40.0), (approach, 0.0), (approach + leave, -30.0)]
+    freq = [(0.0, centre * 0.9), (approach, centre * 1.1), (approach + 0.3 * leave, centre * 0.45),
+            (approach + leave, centre * 0.12)]
+    return db, freq
+
+
+def arrow_in_wood(fx: Fx, cross: bool = False) -> list:
+    """An arrow striking a target: a crack, the target's dull body (~140-240 Hz) and the shaft left ringing."""
+    k = 2 ** (-0.6 * (fx.size - 0.5)) * (1.5 if cross else 1.0)     # longer shafts ring lower, bolts higher
+    tune = k * (1 + 0.06 * (fx.rand("tune") - 0.5))
+    ring_hz, t60 = 158 * tune, 2.0 * (0.6 if cross else 1.0) * (0.8 + 0.4 * fx.rand("hold"))
+    ring = [(ring_hz, t60, 1.0), (ring_hz * 1.17, t60 * 0.6, 0.3), (ring_hz * 1.335, t60 * 0.5, 0.4),
+            (ring_hz * 0.835, t60 * 0.7, 0.35), (ring_hz * 0.33, t60 * 0.6, 0.15),
+            (ring_hz + 26.0, t60, 0.8)]         # two close modes beat: the shaft's ~26 Hz quiver
+    ring += [(ring_hz * h, t60 / h ** 0.7, 0.5 / h) for h in (2, 3, 4, 5, 6, 8)]
+    body = [(f * (1 + 0.06 * (fx.rand("tune") - 0.5)), d, g) for f, d, g in
+            ((139, 0.08, 0.8), (154, 0.09, 1.0), (187, 0.07, 0.7), (206, 0.07, 0.8), (223, 0.06, 0.7),
+             (241, 0.05, 0.6), (500, 0.03, 0.3), (800, 0.02, 0.2))]
+    crack = 0.7 + 0.4 * fx.power
+    return [Noise(0.0, 0.03, [(0, 1500), (1, 1200)], "band", 0.4, amp=decay_curve(6), attack=0.0005, release=0.005,
+                  gain=0.9 * crack),
+            Noise(0.0, 0.012, [(0, 4000), (1, 4000)], "high", 0.6, amp=decay_curve(5), attack=0.0003, release=0.003,
+                  gain=0.6 * crack),
+            Modal(0.0, 0.25, [(round(f, 1), d, g) for f, d, g in body], [(0.0, 1.0, 0.002)], hardness=3500, click=0.3),
+            Modal(0.0, round(t60 * 1.3, 3), [(round(f, 1), round(d, 4), round(g, 4)) for f, d, g in ring],
+                  [(0.0, 1.0, 0.003)], hardness=4000, gain=1.1)]
 
 
 # --- weapons --------------------------------------------------------------------------------------------------------
@@ -233,6 +294,10 @@ def blunt(fx: Fx):
 def bow(fx: Fx):
     """Bows and crossbows: draw, release, the arrow's flight and where it lands."""
     s, p, e, cross = fx.size, fx.power, fx.event, fx.style == "crossbow"
+
+    def louder(x):  # a fly-by at the ear and a strike stand above the release, as in the mix chosen by ear
+        return min(1.0, x * 10 ** (-12 * (1 - p) / 20))
+
     if e == "draw":
         dur = 0.5 + 0.5 * s
         if cross:  # a ratchet: regular clicks, then the latch
@@ -245,18 +310,17 @@ def bow(fx: Fx):
         if cross:
             layers.append(fx.strike("iron", size=0.1, hits=[(0.0, 1.0, 0.0006)], gain=0.6, prefix="click"))
         return fx.voice(**splits(layers))
-    if e == "fly":
-        return fx.voice(noise=whoosh(fx, 0.0, 0.35 + 0.3 * (1 - p), 3200, 2.5, whistle=0.5))
+    if e == "fly":  # passing the listener (the release already carries it away from the archer)
+        approach = 0.45 * (0.8 + 0.4 * fx.rand("approach")) * (1.15 - 0.3 * p) * (0.7 if cross else 1.0)
+        return fx.voice(louder(1.6), noise=fletching(0.0, *flyby(approach, centre=3400.0 if cross else 2800.0)))
     target = TARGETS[e]
+    if target == "wood":
+        return fx.voice(louder(1.9), **splits(arrow_in_wood(fx, cross)))
     if target == "flesh":
         return fx.voice(**splits(flesh(fx, 0.0, 0.6, 0.8)))
     layers = [fx.strike(target, size=0.5, hits=[(0.0, 1.0, 0.0012)], prefix="t"),
-              thud(0.0, 0.08, 400, 0.4)]
-    if target == "wood":  # the shaft quivers in the target
-        layers.append(Modal(0.0, 0.5, [(55 + 30 * fx.rand("shaft"), 0.25, 1.0), (150, 0.1, 0.3)],
-                            [(0.0, 1.0, 0.004)], hardness=600, gain=0.5))
-    else:  # it breaks
-        layers.append(fx.strike("wood", size=0.1, hits=[(0.01, 0.8, 0.001)], gain=0.6, prefix="snap"))
+              thud(0.0, 0.08, 400, 0.4),
+              fx.strike("wood", size=0.1, hits=[(0.01, 0.8, 0.001)], gain=0.6, prefix="snap")]   # it breaks
     return fx.voice(**splits(layers), space=0.3, wet=0.1)
 
 

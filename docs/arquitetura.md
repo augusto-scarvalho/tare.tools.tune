@@ -206,7 +206,16 @@ As partes:
   - um "fwip" curto;
   - a corda raspando na flecha: um zumbido áspero (~170 Hz) cuja ressonância desce de ~800 para ~300 Hz enquanto cresce ~20 dB (como ruído liso, soava como uma vassoura);
   - a pancada, que faz soar a mesma madeira do puxar (os dois precisam soar como o mesmo arco) e o batente grave;
-  - a vibração de corda e braços (~57 Hz e harmônicos), com um parcial de ~1,1 kHz que fica soando.
+  - a vibração de corda e braços (~57 Hz e harmônicos), com um parcial de ~1,1 kHz que fica soando;
+  - a flecha indo embora, ouvida de quem atira: começa no volume em que o zumbido termina, cai como 1/r (r = 2 m + v·t, v ≈ 60 m/s, 90 m/s na besta), já mais grave (c/(c+v)) e escurecendo com a distância.
+- **Voo (`fletching`, `flyby`):** as penas sopram uma faixa larga perto de 3 kHz e fazem o ar vibrar ~90 vezes por segundo.
+  - Passando por quem ouve, sobe ~40 dB (linear em dB) até a passagem e cai ~30 dB em 0,15 s, com a faixa descendo (Doppler).
+  - Na primeira montagem havia uma pausa entre o soltar e o voo, e o voo recomeçava de longe: soava como "começa, para e volta". Por isso o soltar carrega a saída da flecha, e o `fly` é só a passagem perto do ouvinte.
+- **Flecha na madeira (`arrow_in_wood`):**
+  - um estalo (~15 ms, banda larga);
+  - o corpo do alvo (modos de ~140 a ~240 Hz, ~60 ms);
+  - a haste cravada zumbindo perto de 160 Hz, com harmônicos, por mais de um segundo. Ela pulsa ~26 vezes por segundo enquanto balança (dois modos próximos batendo).
+- **Níveis:** o voo e o impacto ficam ~4 e ~6 dB acima do soltar, como na mistura escolhida de ouvido.
 
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").

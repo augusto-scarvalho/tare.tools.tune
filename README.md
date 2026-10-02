@@ -162,7 +162,14 @@ bloco = floresta.read(1024)        # float32 para o stream de áudio da engine
 
 O demo do pygame tem espada (Q/W), bola de fogo (E), raio (R) e tempestade (A).
 
-**O arco** (puxar e soltar) foi modelado a partir de uma gravação de referência. Primeiro mediu-se o mecanismo: os escorregões de atrito da madeira e a corda raspando na flecha antes da pancada. Depois escolheu-se de ouvido entre variantes. É o método que vamos seguir com as outras armas.
+**O arco** (puxar, soltar, voo e flecha cravando na madeira) foi modelado a partir de gravações de referência. Primeiro mediu-se o mecanismo: os escorregões de atrito da madeira, a corda raspando na flecha antes da pancada, as penas vibrando no ar e a haste zumbindo no alvo. Depois escolheu-se de ouvido entre variantes, ouvindo o disparo inteiro. É o método que vamos seguir com as outras armas.
+
+Cada evento é um ponto de escuta:
+- `release` é o que ouve quem atira, e já traz a flecha se afastando;
+- `fly` é a flecha passando perto de quem ouve, com Doppler;
+- `hit_wood` é a flecha cravando no alvo.
+
+`hit_flesh` e `hit_stone` ainda usam os sons antigos.
 
 **Como soam, segundo o CLAP.** Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
 
