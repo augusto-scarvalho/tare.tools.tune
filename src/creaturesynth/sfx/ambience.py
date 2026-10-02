@@ -72,12 +72,15 @@ def ambience(fx: Fx):
     if st in ("rain", "storm"):
         heavy = p if st == "rain" else max(p, 0.7)
         if loop:
-            L = [band(3500, 0.5, 1.0, (0.25, 0.15)), band(400, 0.7, 0.35, (0.2, 0.2), "brown", "low"),
+            bed = 1.0 if st == "rain" else 0.45   # in a storm the thunder takes over
+            L = [band(3500, 0.5, bed, (0.25, 0.15)), band(900, 0.6, 1.2 * bed, (0.3, 0.2)),
+                 band(400, 0.7, bed, (0.2, 0.2), "brown", "low"),
                  drops(300 + 1200 * heavy, (1500, 6000), (0.003, 0.01), 0.7),
-                 drops(150 + 600 * heavy, (2000, 9000), (0.0005, 0.002), 0.5, event="pop")]
+                 drops(150 + 600 * heavy, (2000, 9000), (0.0005, 0.002), 0.5, event="pop"),
+                 drops(2 + 6 * heavy, (600, 2500), (0.004, 0.012), 0.6, event="pop", level=(0.5, 1.0))]   # big drops
             if st == "storm":
-                L += [band(500, 3.0, 0.45, (0.15, 0.6), amp=gusts(fx, 3)),
-                      band(90, 0.8, 0.5, (0.1, 0.6), "brown", "low")]
+                L += [band(500, 3.0, 0.35, (0.15, 0.6), amp=gusts(fx, 3)),
+                      band(150, 0.7, 3.0, (0.3, 0.7), "brown", "low", amp=gusts(fx, 6, 0.05))]   # thunder rolling
         elif st == "rain":   # drips off a roof into a puddle
             L = [drops([(0, 6), (1, 2)], (700, 2200), (0.015, 0.04), 1.0, 2.5, level=(0.4, 1.0))]
             extra = {"space": 0.8, "wet": 0.2}
@@ -89,19 +92,21 @@ def ambience(fx: Fx):
         if loop:
             # a narrow, whistling band sweeping up through each gust (CLAP-guided search, confirmed by the judge)
             hz = (700 + 600 * p) * (0.85 + 0.3 * fx.g.u("pitch"))
-            L = [band(hz, 6.0, 1.0, (1.5, 0.68), amp=gusts(fx, 2, 0.5), hz_end=hz * 1.67),
-                 band(hz * 2.5, 5.4, 0.08, (0.2, 0.7), amp=gusts(fx, 3, 0.2)),
-                 band(120, 0.8, 0.24, (0.1, 0.4), "brown", "low")]
+            L = [band(hz, 6.0, 0.25, (1.5, 0.68), amp=gusts(fx, 2, 0.6), hz_end=hz * 1.67),
+                 band(hz * 2.5, 5.4, 0.03, (0.2, 0.7), amp=gusts(fx, 3, 0.4)),
+                 band(250, 0.8, 1.0, (0.4, 0.4), "brown", amp=gusts(fx, 2, 0.6)),
+                 band(500, 0.9, 0.35, (0.6, 0.4), amp=gusts(fx, 3, 0.6))]
         else:
             L = [band(400, 2.0, 1.0, (0.3, 0.4), dur=3.5, amp=bell_curve(0.4, 1.5), hz_end=900),
                  band(1100, 8.0, 0.5, (0.4, 0.6), dur=3.5, amp=bell_curve(0.45, 2.5), hz_end=1600)]
 
     elif st == "fire":
         if loop:
-            L = [band(500, 0.5, 0.4, (8.0, 0.5)), band(150, 0.8, 0.3, (3.0, 0.4), "brown", "low"),
-                 drops(60 + 180 * p, (800, 6000), (0.0005, 0.003), 1.0, event="pop"),
-                 drops(3 + 6 * p, (300, 1500), (0.004, 0.015), 0.8, event="pop"),
-                 band(5000, 0.7, 0.1, (2.0, 0.5), kind="high")]
+            L = [band(500, 0.5, 0.08, (8.0, 0.5)), band(120, 0.8, 0.6, (3.0, 0.5), "brown", "low"),
+                 band(6000, 0.7, 0.1, (6.0, 0.6)),
+                 drops(8 + 14 * p, (800, 7000), (0.0005, 0.003), 2.0, event="pop", level=(0.05, 1.0)),
+                 drops(2 + 4 * p, (300, 1500), (0.004, 0.015), 0.5, event="pop"),
+                 band(5000, 0.7, 0.04, (2.0, 0.5), kind="high")]
         else:  # a log settles
             L = [fx.strike("wood", start=0.0, size=0.5, gain=0.6, prefix="log"),
                  fx.strike("wood", start=0.12, size=0.3, gain=0.4, prefix="log2"),
@@ -118,8 +123,9 @@ def ambience(fx: Fx):
 
     elif st == "cave":
         if loop:
-            L = [band(120, 0.8, 0.5, (0.1, 0.3), "brown", "low"), band(600, 4.0, 0.12, (0.1, 0.5)),
-                 drops([(0, 0.6), (1, 0.6)], (900, 2600), (0.02, 0.05), 1.0, level=(0.3, 1.0))]
+            L = [band(120, 0.8, 0.05, (0.1, 0.3), "brown", "low"), band(1200, 1.0, 0.04, (0.1, 0.5)),
+                 band(400, 0.8, 0.06, (0.1, 0.4)), band(8000, 0.7, 0.03, (0.1, 0.4)),
+                 drops([(0, 3.5), (1, 3.5)], (900, 2600), (0.02, 0.05), 1.0, level=(0.2, 1.0))]
             extra = {"space": 3.0, "wet": 0.4}
         else:
             L = [drops([(0, 3), (1, 3)], (900, 2600), (0.02, 0.05), 1.0, 1.0, level=(0.6, 1.0))]
@@ -128,7 +134,8 @@ def ambience(fx: Fx):
     elif st == "forest":
         birds = [Creature("bird", species=fx.sfx.species * 7 + k, size=0.15 + 0.3 * fx.g.u(f"bs{k}")) for k in range(3)]
         if loop:
-            L = [band(3500, 0.6, 0.5, (0.15, 0.6), amp=gusts(fx, 3)), band(200, 0.7, 0.3, (0.1, 0.4), "brown", "low"),
+            L = [band(3500, 0.6, 0.5, (0.15, 0.6), amp=gusts(fx, 3)), band(200, 0.7, 0.06, (0.1, 0.4), "brown", "low"),
+                 band(800, 0.7, 0.12, (0.15, 0.5), amp=gusts(fx, 3)),
                  drops([(0, 30), (1, 30)], (2500, 9000), (0.0005, 0.002), 0.25, event="pop")]
             for k in range(int(5 + 6 * p)):
                 b = birds[k % len(birds)]
@@ -141,7 +148,9 @@ def ambience(fx: Fx):
     elif st == "night":
         cricket = Creature("insect", species=fx.sfx.species * 7 + 1, size=0.15, genes={"kind": 0.1})
         if loop:
-            L = [band(250, 0.7, 0.2, (0.1, 0.4), "brown", "low"), band(3000, 0.5, 0.08, (0.1, 0.5))]
+            L = [band(250, 0.7, 0.05, (0.1, 0.4), "brown", "low"), band(3000, 0.5, 0.04, (0.1, 0.5)),
+                 band(9500, 3.0, 0.35, (22.0, 0.9)), band(12000, 4.0, 0.2, (35.0, 0.9)),   # far insects trilling
+                 band(800, 0.6, 0.05, (0.1, 0.4))]
             for k in range(int(10 + 10 * p)):    # a chorus of crickets, each one at its own place in time
                 c = cricket.member(k % 4)
                 L += place(c.voice("idle", take=k), LENGTH * k / (10 + 10 * p) + 0.3 * fx.g.u(f"c{k}"),

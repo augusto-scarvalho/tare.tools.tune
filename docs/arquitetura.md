@@ -303,6 +303,16 @@ As partes:
 - **Armadilha de espinhos:** sai com um "shing" metálico (modos de 5–8 kHz) sobre o mecanismo. Os dardos são voos curtos de flecha batendo na parede; a lâmina é um golpe pesado e lento.
 - **Placa de pressão:** a pedra afunda e uma trava solta.
 
+**Ambientes (`ambience`): comparados com gravações reais** (ESC-50, 8 clipes por lugar, só para análise). Comparamos o espectro por oitava, a variação lenta e rápida de volume, os eventos por segundo e o fator de crista. Os loops da primeira versão erravam assim:
+- **Chuva:** faltava o chiado grave-médio da água batendo nas superfícies (250–1000 Hz estava 8–16 dB abaixo).
+- **Vento:** estava agudo demais, centrado no assobio de 1 kHz. O vento gravado é sobretudo grave (mais forte em 250 Hz, −20 dB em 4 kHz).
+- **Fogo:** faltava o ronco grave (63–125 Hz). Os estalos eram muitos e fracos; agora são menos e mais fortes, e o fator de crista foi de 19,5 para 27 dB (real: 28).
+- **Caverna:** o ronco grave estava ~20 dB alto demais, e as gotas eram poucas (1,4 por segundo; real: 3,8).
+- **Noite:** faltavam os insetos agudos (8–12,5 kHz).
+- **Tempestade:** ganhou um trovão grave rolando sob a chuva. Os clipes reais são quase só trovão; o nosso loop continua sendo chuva com trovão.
+
+O mar e a floresta já estavam perto. O riacho e a masmorra não têm referência no ESC-50.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.

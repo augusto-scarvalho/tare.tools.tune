@@ -32,5 +32,5 @@ As gravações servem só para medir e não entram no repositório.
 | 14 | Interface: clique, abrir e fechar inventário, subir de nível, missão cumprida, erro | `ui` (fantasy, retro) | medido |
 | 15 | Mundo: alavanca, armadilhas (dardos, espinhos, lâmina), tocha, água (gota, respingo, mergulho) | `lever`, `trap`, `torch`, `water` | medido |
 | 16 | Magias: 8 elementos × carregar, lançar, viajar, impacto | `spell` | antigo |
-| 17 | Ambientes: 10 lugares em loop, com eventos soltos | `ambience` | antigo |
+| 17 | Ambientes: 10 lugares em loop, com eventos soltos | `ambience` | medido (8 dos 10 contra gravações) |
 | 18 | Explosões: perto, longe, destroços | `explosion` | antigo |
