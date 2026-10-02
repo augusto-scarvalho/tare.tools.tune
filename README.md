@@ -213,18 +213,20 @@ O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e 
 
 Três peças, uma sobre a outra:
 - **`Score`** (`creaturesynth.score`): uma linha do tempo em compassos e segundos. Põe notas e sons prontos (efeitos, criaturas, falas) em camadas, com volume, posição no estéreo e um eco (sala) compartilhado. Renderiza em estéreo, e `render(loop=...)` devolve um loop sem emenda.
-- **Instrumentos** (`creaturesynth.instruments`): 34 instrumentos medidos em notas gravadas, com os números de cada um no código:
+- **Instrumentos** (`creaturesynth.instruments`): 38 instrumentos medidos em notas gravadas, com os números de cada um no código:
   - cordas pinçadas: harpa, violão, alaúde, pizzicato;
   - teclados de percussão: glockenspiel, marimba, xilofone, celesta, caixinha de música;
   - sinos tubulares;
   - tambores: tímpanos, tambores de mão e de tronco, bumbo, caixa;
   - metais de percussão: triângulo, prato, gongo, pandeiro, chocalho;
   - sustentados: violinos, violoncelos, flauta, trompa, trompete, coro;
+  - banda: baixo elétrico, piano elétrico, chimbal fechado e aberto;
   - chiptune: pulsos, baixo e ruídos de console.
 - **`Cue`** (`creaturesynth.music`): músicas compostas a partir de uma semente.
   - Jingles: `victory`, `levelup`, `quest`, `gameover`.
   - Loops: `town`, `explore`, `tavern`, `dungeon`, `battle`.
-  - Estilos: `orchestral` e `chip` (8-bit).
+  - Loops de "harmonia de cor", no jeito das trilhas de RPG de 16 bits (como as de Yasunori Mitsuda): `reverie`, `pastoral`, `timeless`, `grove`, `heroic`, `showdown`. Acordes escolhidos pela cor, não pela função: 7ª e 9ª deslizando em paralelo, trocas por meio tom e por terças, a tônica como pedal, modos dórico, lídio e mixolídio, nunca V → I. A melodia apoia nas 9ª e 13ª e repete o motivo em sequência.
+  - Estilos: `orchestral`, `snes` (16-bit: o eco do console indo de um lado ao outro, agudos mais escuros) e `chip` (8-bit).
   - A semente escolhe tom, progressão, ritmos e motivo: a mesma semente é sempre a mesma música, e cada semente é outra.
 
 ```python
@@ -236,6 +238,7 @@ write_wav("vitoria.wav", Cue("victory", seed=3).render(), 48000)            # es
 taverna = Cue("tavern", seed=7)
 write_wav("taverna_loop.wav", taverna.render(), 48000)                      # exatamente taverna.length segundos
 write_wav("batalha_8bit.wav", Cue("battle", style="chip", seed=2).render(), 48000)
+write_wav("bosque_16bit.wav", Cue("grove", style="snes", seed=5).render(), 48000)
 
 cena = Score(bpm=96)
 cena.track("harpa", pan=-0.3, send=0.3).play("harp", [("A3", 0, 1), ("C4", 1, 1), ("E4", 2, 2)])

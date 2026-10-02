@@ -50,3 +50,31 @@ def test_voicing_moves_little():
     c = voicing(key, 0, None, 52, 72)
     f = voicing(key, 3, c, 52, 72)
     assert sorted(n % 12 for n in f) == [0, 5, 9] and sum(abs(a - b) for a, b in zip(c, f, strict=True)) <= 4
+
+
+def test_colour_cues_in_16bit_style():
+    from creaturesynth.music import COLOR_CUES
+    for kind in COLOR_CUES + ("town",):
+        c = Cue(kind, "snes", seed=2, sr=SR)
+        y = c.render()
+        assert y.shape[1] == 2 and len(y) == int(round(c.length * SR)) and np.isfinite(y).all()
+        assert c.score.echo and c.score.lowpass
+
+
+def test_colour_melody_uses_chord_and_colour_tones():
+    from creaturesynth.music import COLOR, PALETTES, color_melody
+    from creaturesynth.score import SCALES
+    tonic, chords = 62, PALETTES["lydian"][0] * 2
+    mel = color_melody(Rand(1, "m"), tonic, "lydian", chords, CALM)
+    for n, b, _ in mel:
+        step, q = chords[int(b // 4)]
+        allowed = {(tonic + i) % 12 for i in SCALES["lydian"]} | {(tonic + step + i) % 12 for i in COLOR[q]}
+        assert n % 12 in allowed or (n % 12) in {(tonic + step + 14) % 12, (tonic + step + 21) % 12}
+    assert len({n for n, _, _ in mel}) >= 6                  # it moves
+
+
+def test_planing_keeps_the_shape():
+    from creaturesynth.music import open_voicing, planed
+    v = open_voicing(60, (0, "maj9"))
+    w = planed(v, 60, 62)
+    assert np.diff(v).tolist() == np.diff(w).tolist() and {(n - 62) % 12 for n in w} <= {0, 2, 4, 7, 11}

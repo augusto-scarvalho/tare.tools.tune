@@ -37,7 +37,7 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `magic.py`, `ambience.py` |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
 | `score.py` | composição: `Score` (faixas, sons posicionados, pan, sala estéreo compartilhada, loops), nomes de notas, acordes e escalas |
-| `instruments.py` | 34 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
+| `instruments.py` | 38 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
 | `music.py` | músicas por semente: `Cue` (jingles e loops, orquestra ou chip) |
 
 ## Determinismo
@@ -456,6 +456,30 @@ Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um fil
 - Os acordes do acompanhamento mudam com o menor movimento possível de voz.
 - O arranjo é escrito em papéis (melodia, metais, cordas, harpa, baixo, tímpano, caixa…). O estilo transforma cada papel num instrumento medido ou num canal de console (pulsos com `crush`, baixo senoidal, ruído).
 - Os jingles deixam o último acorde soar 3 s e somem em 1,5 s; os loops têm comprimento exato em compassos.
+
+**Banda (medida em notas CC0 do Freesound).**
+- **Baixo elétrico:** os dois primeiros harmônicos iguais, o 3º fraco (−17 a −34 dB, o dedo perto do nó dele) e o 4º forte de novo. Soa longo (−20 dB em 1,6–3 s), e a mão o abafa quando a nota acaba: `Modal.damp` derruba 60 dB em 0,1 s.
+- **Piano elétrico:** o 1º e o 2º harmônicos próximos (−2 e 0 dB), o 3º 10–12 dB abaixo e o "sino" da lâmina perto do 8º. Tocado forte, os harmônicos de cima sobem.
+- **Chimbal:** fechado, cai 20 dB em 65–130 ms; aberto, em ~0,5 s; mais forte em 4–12 kHz.
+
+**Harmonia de cor (as músicas no jeito das trilhas de 16 bits).** O tema veio de uma análise de *Chrono Trigger* ("Nonfunctional Harmony in Chrono Trigger", 8-bit Music Theory): acordes escolhidos pela cor, não pela função.
+- As paletas tocam um acorde por compasso, nenhuma apoiada em V → I:
+  - I–II maj9 (o 4º grau sobe, lídio);
+  - mediantes cromáticas (I–♭VI–♭III);
+  - maj9 descendo meio tom até i m9;
+  - i–♭VII–♭VI–v (eólio, sem dominante);
+  - i m9–IV9 (dórico);
+  - I–♭VII–IV (mixolídio);
+  - I–♭VI–♭VII–I (heroico);
+  - i–♭II–i–♭VII (cromático, para batalha).
+- **Voicing aberto:** a fundamental no grave, 3ª e 7ª perto do dó central, 5ª e extensões em cima, tudo deslocado por oitavas para ficar perto do acorde anterior. Com `planed`, a mesma forma desliza em paralelo para a nova fundamental.
+- **Melodia:**
+  - cada frase de 8 compassos faz um arco (sobe até o meio, assenta no fim);
+  - nos tempos fortes vão notas do acorde ou de cor (9ª, 11ª, 13ª); nos fracos, passos na escala, nunca meio tom acima de uma nota do acorde;
+  - os compassos 2–3 repetem o motivo em sequência, movido com a harmonia, ou um tom acima quando o acorde não muda;
+  - o compasso 6 traz o motivo de volta, e o 7 repousa numa nota de cor.
+- **Som de 16 bits (`snes`):** sala pequena, agudos escurecidos acima de 9 kHz e o eco do console. As repetições vêm a cada ~210 ms, perdem 45% e ficam mais escuras a cada volta, indo de um ouvido ao outro (`Score(echo=...)`, envio por faixa).
+- As composições são originais: usam as técnicas, não as melodias do jogo.
 
 ## Calibração com CLAP
 

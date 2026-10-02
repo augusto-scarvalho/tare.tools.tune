@@ -57,6 +57,9 @@ def render_modal(m: Modal, sr: int, k: int) -> np.ndarray:
     for hz, t60, gain in m.modes:
         if 20 <= hz < 0.45 * sr:
             out = out + gain * resonator(exc, hz, t60, sr)
+    if 0 < m.damp < m.dur:                 # damped: -60 dB over the next 0.1 s
+        a = int(m.damp * sr)
+        out[a:] *= 10 ** (-3 * np.arange(n - a) / (0.1 * sr))
     return m.gain * out / (np.max(np.abs(out)) + 1e-12)
 
 

@@ -81,3 +81,21 @@ def test_instruments_are_seeded_per_note():
 def test_empty_score_refuses():
     with pytest.raises(ValueError):
         Score().render()
+
+
+def test_echo_bounces_between_the_ears():
+    s = Score(sr=SR, hall=0.0, echo=(0.2, 0.5, 3000.0))
+    s.track("t", pan=0.0, send=0.0, echo=1.0).play("xylophone", [("C6", 0, 0.25)])
+    y = s.render()
+    a, b = int(0.2 * SR), int(0.4 * SR)
+    left, right = np.abs(y[a + 50:a + 800, 0]).max(), np.abs(y[a + 50:a + 800, 1]).max()
+    assert len(y) > 0.8 * SR and abs(left - right) > 0.01            # the first repeat is on one side
+    assert np.abs(y[b + 50:b + 800]).max() > 1e-3                     # and a second one follows
+
+
+def test_damped_note_stops():
+    from creaturesynth.layers import render_modal
+    from creaturesynth.spec import Modal
+    m = Modal(0.0, 1.0, [(220.0, 4.0, 1.0)], [(0.0, 1.0, 0.0)], damp=0.3)
+    y = render_modal(m, SR, 1)
+    assert np.abs(y[int(0.45 * SR):]).max() < 1e-3 < np.abs(y[int(0.2 * SR):int(0.3 * SR)]).max()

@@ -1,4 +1,4 @@
-"""Music cues composed from a seed: short jingles and seamless loops, orchestral or chiptune.
+"""Music cues composed from a seed: short jingles and seamless loops, orchestral, 16-bit or chiptune.
 
     >>> from creaturesynth import write_wav
     >>> from creaturesynth.music import Cue
@@ -14,6 +14,13 @@ Each cue is a little music theory on a Score (score.py):
   (instruments.py, measured on recordings) or into a sound chip's pulse, wave and noise channels.
 
 The seed picks the key, the progression, the rhythms and the motif: the same seed is the same piece.
+
+The "colour" cues (reverie, pastoral, timeless, grove, heroic, showdown) follow the harmony of 16-bit RPG scores
+such as Yasunori Mitsuda's: chords picked for their colour rather than their function (major and minor 7ths and
+9ths sliding in parallel, half-step and mediant moves, the tonic held as a pedal under them, Dorian, Lydian and
+Mixolydian instead of plain major and minor, no V -> I), open voicings (the root low, 3rd and 7th in the middle,
+the extensions on top), melodies leaning on the 9ths and 13ths, short motifs repeated as sequences. The "snes"
+style plays them like the console did: sampled instruments, a darker top, an echo bouncing between the ears.
 """
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -51,7 +58,30 @@ CHIP = {
     "hand_drum": ("chip_kick", 0.3, -0.2, 0.0, {}), "shaker": ("chip_hat", 0.15, 0.2, 0.0, {}),
     "triangle": ("chip_hat", 0.15, 0.3, 0.0, {}), "gong": ("chip_snare", 0.3, 0.0, 0.0, {}),
 }
-STYLES = {"orchestral": ORCHESTRAL, "chip": CHIP}
+EXTRA = {   # roles the colour cues add (orchestral and chip get sensible stand-ins)
+    "orchestral": {"keys": ("e_piano", 0.4, -0.2, 0.25, {}), "mallet": ("marimba", 0.45, 0.25, 0.25, {}),
+                   "music_box": ("music_box", 0.35, 0.3, 0.4, {}), "hat": ("hihat", 0.18, 0.3, 0.05, {}),
+                   "open_hat": ("open_hat", 0.15, 0.3, 0.1, {}), "e_bass": ("bass", 0.6, 0.0, 0.05, {}),
+                   "guitar": ("guitar", 0.45, -0.3, 0.25, {})},
+    "chip": {"keys": ("square", 0.25, -0.2, 0.1, {"crush": 0.25}), "mallet": ("thin_pulse", 0.3, 0.2, 0.1,
+                                                                             {"crush": 0.25}),
+             "music_box": ("thin_pulse", 0.25, 0.3, 0.1, {"crush": 0.25}), "hat": ("chip_hat", 0.15, 0.2, 0.0, {}),
+             "open_hat": ("chip_hat", 0.15, 0.2, 0.0, {}), "e_bass": ("chip_bass", 0.5, 0.0, 0.0, {"crush": 0.25}),
+             "guitar": ("square", 0.3, -0.3, 0.1, {"crush": 0.25})},
+}
+ORCHESTRAL.update(EXTRA["orchestral"])
+CHIP.update(EXTRA["chip"])
+# 16-bit: the same sampled instruments, an echo send (6th field) on the melodic ones
+SNES = {role: (*v, 0.0) for role, v in ORCHESTRAL.items()}
+SNES.update({
+    "lead": ("flute", 0.55, 0.15, 0.15, {}, 0.3), "brass": ("trumpet", 0.8, 0.1, 0.15, {}, 0.2),
+    "arp": ("harp", 0.45, -0.35, 0.2, {}, 0.3), "music_box": ("music_box", 0.35, 0.3, 0.2, {}, 0.35),
+    "bells": ("glockenspiel", 0.3, 0.35, 0.2, {}, 0.35), "celesta": ("celesta", 0.35, 0.35, 0.2, {}, 0.35),
+    "keys": ("e_piano", 0.4, -0.2, 0.15, {}, 0.2), "mallet": ("marimba", 0.45, 0.25, 0.15, {}, 0.25),
+    "guitar": ("guitar", 0.45, -0.3, 0.15, {}, 0.2), "pad": ("strings", 0.36, 0.0, 0.25, {}, 0.1),
+    "choir": ("choir", 0.38, 0.0, 0.3, {}, 0.1), "e_bass": ("bass", 0.42, 0.0, 0.05, {}, 0.0),
+})
+STYLES = {"orchestral": ORCHESTRAL, "chip": CHIP, "snes": SNES}
 
 # Rhythms of one bar: (beat, length) in beats
 CALM = [[(0, 2), (2, 2)], [(0, 1), (1, 1), (2, 2)], [(0, 3), (3, 1)], [(0, 1.5), (1.5, 0.5), (2, 2)],
@@ -174,16 +204,21 @@ class Cue:
         CUES[self.kind](self)
 
     def new_score(self, bpm: float, meter: int = 4, hall: float = 2.2) -> Score:
-        self.score = Score(bpm=bpm, meter=meter, hall=hall if self.style != "chip" else 0.6, seed=self.seed,
-                           sr=self.sr)
+        if self.style == "snes":    # a small room, the echo unit (~210 ms, darker each repeat), a dull top
+            self.score = Score(bpm=bpm, meter=meter, hall=min(hall, 1.4), seed=self.seed, sr=self.sr,
+                               echo=(0.21, 0.45, 2500.0), lowpass=9000.0)
+        else:
+            self.score = Score(bpm=bpm, meter=meter, hall=hall if self.style != "chip" else 0.6, seed=self.seed,
+                               sr=self.sr)
         return self.score
 
     def key(self, mode: str) -> Key:
         return Key(55 + int(self.r.u() * 12), mode)        # G3..F#4
 
     def part(self, role: str, notes, velocity: float = 0.8, octave: int = 0):
-        inst, gain, pan, send, voice = self.roles[role]
-        self.score.track(role, gain, pan, send, **voice).play(inst, notes, velocity, transpose=12 * octave)
+        inst, gain, pan, send, voice, *echo = self.roles[role]
+        self.score.track(role, gain, pan, send, echo[0] if echo else 0.0, **voice).play(inst, notes, velocity,
+                                                                                         transpose=12 * octave)
 
     @property
     def length(self) -> float:
@@ -387,7 +422,300 @@ def _accompany(c: Cue, key: Key, prog: list, arp=False, pad=False, shaker=False)
             c.part("shaker", [(60, b + 0.5 * j, 0.25, 0.4 + 0.3 * (j % 2)) for j in range(8)])
 
 
+# -- colour harmony ---------------------------------------------------------------------------------------------------
+
+COLOR = {"maj7": (0, 4, 7, 11), "maj9": (0, 4, 7, 11, 14), "maj7#11": (0, 4, 7, 11, 18), "6/9": (0, 4, 7, 9, 14),
+         "m7": (0, 3, 7, 10), "m9": (0, 3, 7, 10, 14), "m11": (0, 3, 7, 10, 14, 17), "7": (0, 4, 7, 10),
+         "9": (0, 4, 7, 10, 14), "7sus4": (0, 5, 7, 10, 14), "sus2": (0, 2, 7, 14), "add9": (0, 4, 7, 14),
+         "madd9": (0, 3, 7, 14), "": (0, 4, 7), "m": (0, 3, 7)}
+
+# One chord per bar: (semitones above the tonic, quality). None of these leans on a V -> I.
+PALETTES = {
+    "lydian": [[(0, "maj9"), (2, "maj9"), (0, "maj9"), (2, "maj9")],          # I - II: the raised 4th shimmering
+               [(0, "maj9"), (2, "maj9"), (4, "m9"), (2, "maj9")]],
+    "mediant": [[(0, "maj9"), (8, "maj9"), (3, "maj9"), (5, "m9")],           # chromatic mediants
+                [(0, "maj7"), (4, "m7"), (8, "maj7"), (7, "7sus4")]],
+    "half_step": [[(1, "maj9"), (0, "m9"), (1, "maj9"), (0, "m9")],          # a maj9 sliding a half step onto i m9
+                  [(0, "m9"), (1, "maj7"), (10, "m9"), (8, "maj9")]],
+    "aeolian": [[(0, "m9"), (10, "maj7"), (8, "maj7"), (7, "m7")],            # i - bVII - bVI - v, no dominant
+                [(0, "m9"), (8, "maj9"), (5, "m9"), (10, "7sus4")]],
+    "dorian": [[(0, "m9"), (5, "9"), (0, "m9"), (5, "9")],                     # i - IV: the Dorian vamp
+               [(0, "m11"), (10, "add9"), (5, "9"), (0, "m11")]],
+    "mixolydian": [[(0, "add9"), (10, ""), (5, "add9"), (0, "add9")],         # I - bVII - IV - I
+                   [(0, ""), (10, "add9"), (8, ""), (10, "")]],
+    "heroic": [[(0, ""), (8, ""), (10, ""), (0, "")],                          # I - bVI - bVII - I
+               [(0, ""), (4, ""), (5, ""), (0, "")], [(0, "add9"), (10, ""), (5, "add9"), (7, "7sus4")]],
+    "chromatic": [[(0, "m7"), (1, "maj7"), (0, "m7"), (10, "7")],             # i - bII - i - bVII
+                  [(0, "m7"), (8, "maj7"), (1, "maj7"), (7, "7sus4")]],
+}
+SIX8 = [[(0, 3), (3, 3)], [(0, 2), (2, 1), (3, 2), (5, 1)], [(0, 1), (1, 1), (2, 1), (3, 3)],
+        [(0, 3), (3, 1), (4, 1), (5, 1)], [(0, 1.5), (1.5, 0.5), (2, 1), (3, 3)]]
+
+
+def tones(tonic: int, chord) -> list[int]:
+    step, quality = chord
+    return [tonic + step + i for i in COLOR[quality]]
+
+
+def open_voicing(tonic: int, chord, prev: list[int] | None = None, center: float = 64.0) -> list[int]:
+    """Upper voices of a chord, open: the 3rd and 7th around middle C, the 5th and extensions above; the whole
+    shape moved by octaves to stay near the last one."""
+    step, quality = chord
+    root = tonic + step
+    upper = []
+    for i in COLOR[quality][1:]:
+        target = 60 if i % 12 in (3, 4, 10, 11) else 67
+        pc = (root + i) % 12
+        upper.append(min((n for n in range(48, 84) if n % 12 == pc), key=lambda n: abs(n - target)))
+    upper = sorted(set(upper))
+    ref = np.mean(prev) if prev else center
+    shift = min((-12, 0, 12), key=lambda o: abs(np.mean(upper) + o - ref))
+    return [n + shift for n in upper]
+
+
+def planed(shape: list[int], frm: int, to: int) -> list[int]:
+    """The same voicing moved in parallel to another root (planing), kept near the middle."""
+    moved = [n + (to - frm) for n in shape]
+    shift = min((-12, 0, 12), key=lambda o: abs(np.mean(moved) + o - 64))
+    return [n + shift for n in moved]
+
+
+def bass_note(tonic: int, chord, low: int = 36) -> int:
+    return low + (tonic + chord[0] - low) % 12
+
+
+def _snap(n: int, ok: set) -> int:
+    """The nearest note (within a whole step) whose pitch class is allowed."""
+    return min((m for m in range(n - 2, n + 3) if m % 12 in ok), key=lambda m: abs(m - n), default=n)
+
+
+def color_melody(r: Rand, tonic: int, mode: str, chords: list, rhythms: list, beats: int = 4, low: int = 62,
+                 high: int = 84, color: float = 0.35, leap: float = 0.1) -> list:
+    """(midi, beat, length). Each 8-bar phrase arches (rises to a peak around its middle, settles at the end); strong
+    beats take chord tones or colour tones (9ths, 11ths, 13ths) near that line, weak beats step along the scale
+    towards the next one (never a half step above a chord tone); bars 2-3 replay bars 0-1 as a sequence, moved with
+    the harmony (or a step up when the chord stays), bar 6 brings the motif back, bar 7 rests on a colour tone."""
+    scale = {(tonic + i) % 12 for i in SCALES[mode]}
+    mid = (low + high) / 2
+    arch = [r.u() * 2 - 1 + a for a in (-3, -1, 1, 3, 5, 3, 0, -3)]
+    out, cur, motif = [], None, []
+    for bar, ch in enumerate(chords):
+        ct = {n % 12 for n in tones(tonic, ch)}
+        colors = {(tonic + ch[0] + i) % 12 for i in COLOR[ch[1]] if i >= 9}
+        colors |= {pc for pc in ((tonic + ch[0] + 14) % 12, (tonic + ch[0] + 21) % 12) if pc in scale}
+        ok = ct | colors | {pc for pc in scale if all((pc - t) % 12 != 1 for t in ct)}
+        phrase = bar % 8
+        target = mid + arch[phrase]
+        if cur is None:
+            cur = min((n for n in range(low, high) if n % 12 in ct), key=lambda n: abs(n - target))
+        if phrase in (2, 3, 6) and motif:                 # sequence: the motif again, moved with the harmony
+            src = phrase - 2 if phrase < 6 else phrase - 6
+            shift = (ch[0] - chords[bar - (phrase - src)][0] + 6) % 12 - 6
+            if phrase < 6 and shift == 0:
+                shift = 2                                  # the same chord: climb a step instead of repeating
+            for b, ln, n in motif:
+                if int(b // beats) == src:
+                    cur = _snap(n + shift, ok)
+                    out.append((cur, bar * beats + b % beats, ln))
+            continue
+        pattern = r.pick(rhythms)
+        closing = phrase == 7 or bar == len(chords) - 1
+        if closing:
+            pattern = [(0, 1), (1, beats - 1)] if r.u() < 0.6 else [(0, beats)]
+        for j, (b, ln) in enumerate(pattern):
+            last = j == len(pattern) - 1
+            strong = b % (3 if beats in (3, 6) else 2) == 0
+            if closing and last:
+                pool = [n for n in range(low, high + 1) if n % 12 in (colors | ct) - {(tonic + ch[0]) % 12}]
+                cur = min(pool, key=lambda n: abs(n - target) + 0.5 * abs(n - cur)) if pool else cur
+            elif strong:
+                want = colors if (colors and r.u() < color) else ct
+                pool = [n for n in range(low, high + 1) if n % 12 in want and n != cur]
+                pool.sort(key=lambda n: abs(n - target) + 0.6 * abs(n - cur))
+                cur = pool[0 if r.u() < 0.65 else min(1, len(pool) - 1)] if pool else cur
+            else:
+                up = 1 if target > cur + 1 else -1 if target < cur - 1 else r.pick([-1, 1])
+                if r.u() < leap:
+                    cur = _snap(cur + up * 5, ok)
+                else:
+                    nxt = [n for n in range(cur + up, cur + 5 * up, up) if n % 12 in ok]
+                    cur = nxt[0] if nxt else cur
+            if cur < low or cur > high:
+                cur += 12 if cur < low else -12
+            out.append((cur, bar * beats + b, ln))
+            if phrase in (0, 1):
+                motif.append((b + phrase * beats, ln, cur))
+    return out
+
+
+def _colour(c: Cue, mode: str, palettes: list[str], bars: int = 16) -> tuple[int, list]:
+    """A key and `bars` chords: two palettes (or one twice) from the list, each 4-bar pattern played twice."""
+    tonic = 55 + int(c.r.u() * 12)
+    chords = []
+    while len(chords) < bars:
+        pattern = c.r.pick(PALETTES[c.r.pick(palettes)])
+        chords += pattern * 2
+    return tonic, chords[:bars]
+
+
+def _pad(c: Cue, role: str, tonic: int, chords: list, beats: int, vel: float, parallel: bool = False,
+         hold: float | None = None) -> list:
+    shapes, prev = [], None
+    for bar, ch in enumerate(chords):
+        v = planed(shapes[0], tonic + chords[0][0], tonic + ch[0]) if parallel and shapes else \
+            open_voicing(tonic, ch, prev)
+        shapes.append(v)
+        prev = v
+        c.part(role, [(v, bar * beats, hold or beats)], vel)
+    return shapes
+
+
+def reverie(c: Cue):
+    """Slow and suspended: a music box turning over open maj9 chords that slide in parallel above a held tonic,
+    strings underneath, an electric piano, and in the second half a flute leaning on the 9ths."""
+    c.new_score(bpm=68 + 10 * c.r.u(), hall=2.6)
+    tonic, chords = _colour(c, "lydian", ["lydian", "mediant"])
+    mode = "lydian" if any(ch[0] == 2 for ch in chords) else "major"
+    shapes = _pad(c, "pad", tonic, chords, 4, 0.45, parallel=c.r.u() < 0.5)
+    for bar, (ch, v) in enumerate(zip(chords, shapes, strict=True)):
+        notes = sorted(v) + [v[0] + 12]
+        order = [0, 1, 2, 3, 4, 3, 2, 1] if len(notes) >= 5 else [0, 1, 2, 3, 2, 1, 2, 3]
+        c.part("music_box", [(notes[order[j] % len(notes)] + 12, 4 * bar + 0.5 * j, 0.5) for j in range(8)], 0.5)
+        c.part("keys", [(v, 4 * bar, 2, 0.45), (v, 4 * bar + 2.5, 1.5, 0.35)])
+        pedal = tonic - 12 if bar < 8 else bass_note(tonic, ch, 40)
+        c.part("low_strings", [(pedal, 4 * bar, 4)], 0.45)
+    mel = color_melody(c.r, tonic + 12, mode, chords[8:], CALM, low=67, high=88, color=0.45)
+    c.part("lead", [(n, b + 32, ln) for n, b, ln in mel], 0.6)
+    c.part("celesta", [(n + 12, b + 32.5, ln) for n, b, ln in mel[::3]], 0.35)
+    c.part("bells", [(tonic + 24 + 7, 0, 2), (tonic + 24 + 14, 32, 2)], 0.4)
+    _loop(c, len(chords))
+
+
+def pastoral(c: Cue):
+    """In six-eight, open air: a flute tune over harp arpeggios and a Mixolydian lilt (I - bVII - IV), the bass
+    holding the tonic as a drone for the first phrase."""
+    c.new_score(bpm=170 + 30 * c.r.u(), meter=6, hall=2.2)
+    tonic, chords = _colour(c, "mixolydian", ["mixolydian", "lydian"])
+    mode = "mixolydian" if any(ch[0] == 10 for ch in chords) else "lydian"
+    prev = None
+    for bar, ch in enumerate(chords):
+        v = open_voicing(tonic, ch, prev)
+        prev = v
+        b = 6 * bar
+        root = bass_note(tonic, ch, 43)
+        arp = [root, root + 7, root + 12] + sorted(v)[:3]
+        c.part("arp", [(arp[j % len(arp)], b + j, 1.5) for j in range(6)], 0.55)
+        c.part("pad", [(v, b, 6)], 0.35)
+        bass = tonic - 12 if bar < 4 else bass_note(tonic, ch, 36)
+        c.part("e_bass", [(bass, b, 2.5), (bass + 7, b + 3, 2.5)], 0.6)
+        c.part("tambourine", [(70, b + 3, 1, 0.35)])
+    c.part("lead", color_melody(c.r, tonic + 12, mode, chords, SIX8, beats=6, low=67, high=88, color=0.3), 0.7)
+    _loop(c, len(chords))
+
+
+def timeless(c: Cue):
+    """Mysterious and turning: a sixteenth-note ostinato (marimba, electric piano) through Lydian or Dorian colours,
+    hand drums, a choir, the bass holding the tonic and its fifth, a bell melody in long notes."""
+    c.new_score(bpm=92 + 14 * c.r.u(), hall=2.4)
+    tonic, chords = _colour(c, "lydian", ["lydian", "dorian", "half_step"])
+    mode = "dorian" if any(ch[1].startswith("m") for ch in chords[:1]) else "lydian"
+    prev = None
+    pattern = c.r.pick([[0, 2, 1, 3, 2, 1, 4, 3], [0, 1, 2, 4, 3, 2, 1, 2], [0, 2, 4, 2, 1, 3, 2, 3]])
+    for bar, ch in enumerate(chords):
+        v = open_voicing(tonic, ch, prev)
+        prev = v
+        notes = sorted(v) + [v[0] + 12, v[1] + 12]
+        c.part("mallet", [(notes[pattern[j % 8] % len(notes)], 4 * bar + 0.25 * j, 0.3, 0.55 + 0.2 * (j % 4 == 0))
+                          for j in range(16)], 0.6)
+        c.part("choir", [(v, 4 * bar, 4)], 0.4)
+        c.part("low_strings", [([tonic - 12, tonic - 5], 4 * bar, 4)], 0.45)
+        c.part("hand_drum", [(52, 4 * bar, 0.5, 0.8), (59, 4 * bar + 1.5, 0.5, 0.5), (52, 4 * bar + 2.5, 0.5, 0.6),
+                             (59, 4 * bar + 3, 0.5, 0.5), (64, 4 * bar + 3.5, 0.5, 0.4)])
+        c.part("shaker", [(60, 4 * bar + 0.25 * j, 0.2, 0.2 + 0.25 * (j % 2)) for j in range(16)])
+    mel = color_melody(c.r, tonic + 12, mode, chords, CALM[:3], low=67, high=86, color=0.5)
+    c.part("lead", mel, 0.6)
+    c.part("bells", [(n + 12, b, ln) for n, b, ln in mel], 0.45)
+    _loop(c, len(chords))
+
+
+def grove(c: Cue):
+    """A Dorian groove: syncopated electric bass, hi-hats, electric piano comping off the beat, a marimba tune and
+    then the flute, through an i - IV vamp and an Aeolian slide (i - bVII - bVI - v)."""
+    c.new_score(bpm=98 + 14 * c.r.u(), hall=1.8)
+    tonic = 55 + int(c.r.u() * 12)
+    chords = c.r.pick(PALETTES["dorian"]) * 2 + c.r.pick(PALETTES["aeolian"]) * 2
+    prev = None
+    for bar, ch in enumerate(chords):
+        v = open_voicing(tonic, ch, prev)
+        prev = v
+        b, root = 4 * bar, bass_note(tonic, ch, 36)
+        c.part("e_bass", [(root, b, 0.7), (root + 12, b + 0.75, 0.25), (root + 7, b + 1.5, 0.5), (root, b + 2, 0.5),
+                          (root + 10, b + 2.75, 0.5), (root + 12, b + 3.5, 0.5)], 0.75)
+        c.part("keys", [(v, b + 0.5, 0.4, 0.5), (v, b + 1.75, 0.5, 0.45), (v, b + 3, 0.6, 0.5)])
+        c.part("hat", [(70, b + 0.5 * j, 0.25, 0.35 + 0.25 * (j % 2 == 0)) for j in range(8) if j != 7])
+        c.part("open_hat", [(70, b + 3.5, 0.5, 0.4)])
+        c.part("kick", [(36, b, 0.5, 0.7), (36, b + 2.5, 0.5, 0.5)])
+        c.part("hand_drum", [(57, b + 1, 0.5, 0.6), (57, b + 3, 0.5, 0.7)])
+    c.part("mallet", color_melody(c.r, tonic + 12, "dorian", chords[:8], LIVELY, low=67, high=86), 0.75)
+    flute = color_melody(c.r, tonic + 12, "minor", chords[8:], CALM + LIVELY[:2], low=67, high=86)
+    c.part("lead", [(n, b + 32, ln) for n, b, ln in flute], 0.7)
+    _loop(c, len(chords))
+
+
+def heroic(c: Cue):
+    """A march for the hero: brass melody with wide leaps over I - bVI - bVII - I and I - bVII - IV, strings driving
+    in eighths, horns holding the harmony, snare, timpani and a cymbal at each phrase."""
+    c.new_score(bpm=138 + 14 * c.r.u(), hall=2.2)
+    tonic, chords = _colour(c, "major", ["heroic", "mixolydian"])
+    prev = None
+    for bar, ch in enumerate(chords):
+        v = open_voicing(tonic, ch, prev)
+        prev = v
+        b, root = 4 * bar, bass_note(tonic, ch, 40)
+        c.part("strings", [(root + (0, 7, 12, 7)[j % 4], b + 0.5 * j, 0.45) for j in range(8)], 0.6)
+        c.part("horns", [(v, b, 4)], 0.6)
+        c.part("low_strings", [(root, b, 4)], 0.6)
+        c.part("snare", [(60, b + x, 0.25, g) for x, g in ((0, 0.7), (1, 0.5), (1.75, 0.35), (2, 0.6), (3, 0.5),
+                                                            (3.5, 0.4), (3.75, 0.45))])
+        c.part("timpani", [(bass_note(tonic, ch, 40), b, 1, 0.8)])
+        c.part("kick", [(36, b, 0.5, 0.6), (36, b + 2, 0.5, 0.5)])
+        if bar % 4 == 0:
+            c.part("crash", [(60, b, 2, 0.6)])
+    c.part("brass", color_melody(c.r, tonic + 12, "mixolydian" if any(ch[0] == 10 for ch in chords) else "major",
+                                 chords, DRIVING + LIVELY[:2], low=62, high=84, color=0.15, leap=0.3), 0.85)
+    _loop(c, len(chords))
+
+
+def showdown(c: Cue):
+    """A 16-bit battle: minor with chromatic planing (i - bII - i - bVII), an octave-jumping bass, a full kit,
+    brass stabs off the beat, strings in sixteenths, a lead that leaps."""
+    c.new_score(bpm=158 + 14 * c.r.u(), hall=1.6)
+    tonic, chords = _colour(c, "minor", ["chromatic", "half_step", "aeolian"])
+    prev = None
+    for bar, ch in enumerate(chords):
+        v = open_voicing(tonic, ch, prev)
+        prev = v
+        b, root = 4 * bar, bass_note(tonic, ch, 36)
+        c.part("e_bass", [(root + (0, 12)[j % 2], b + 0.5 * j, 0.4, 0.8 - 0.2 * (j % 2)) for j in range(8)], 0.8)
+        notes = sorted(v)
+        c.part("strings", [(notes[(j * 2 + j // 4) % len(notes)] + 12, b + 0.25 * j, 0.22, 0.5) for j in range(16)],
+               0.55)
+        c.part("horns", [(v, b, 0.4, 0.85), (v, b + 1.5, 0.4, 0.75), (v, b + 3, 0.4, 0.8)])
+        c.part("kick", [(36, b, 0.5, 0.9), (36, b + 1.5, 0.5, 0.6), (36, b + 2.5, 0.5, 0.8)])
+        c.part("snare", [(60, b + 1, 0.5, 0.8), (60, b + 3, 0.5, 0.85)])
+        c.part("hat", [(70, b + 0.5 * j, 0.25, 0.4 + 0.2 * (j % 2 == 0)) for j in range(8)])
+        if bar % 4 == 0:
+            c.part("crash", [(60, b, 2, 0.7)])
+    c.part("brass", color_melody(c.r, tonic + 12, "harmonic", chords, DRIVING, low=62, high=84, color=0.2,
+                                 leap=0.3), 0.9)
+    _loop(c, len(chords))
+
+
+COLOR_CUES = ("reverie", "pastoral", "timeless", "grove", "heroic", "showdown")
+
 CUES: dict[str, Callable[[Cue], None]] = {
     "victory": victory, "levelup": levelup, "quest": quest, "gameover": gameover,
     "town": town, "explore": explore, "tavern": tavern, "dungeon": dungeon, "battle": battle,
+    "reverie": reverie, "pastoral": pastoral, "timeless": timeless, "grove": grove, "heroic": heroic,
+    "showdown": showdown,
 }

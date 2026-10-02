@@ -30,11 +30,16 @@ def _modes(n: Note, partials, cap: float = 8.0, spread: float = 0.002):
 
 
 def _ring(n: Note, partials, hardness: float, click: float, contact: float, cap: float = 8.0, gain: float = 1.0,
-          dur: float | None = None, spread: float = 0.002) -> Modal:
+          dur: float | None = None, spread: float = 0.002, damp: float = 0.0) -> Modal:
+    """`damp`: stop the ring this long after the note is released (a hand on the string, the damper falling)."""
     modes = _modes(n, partials, cap, spread)
-    ring = dur or min(max(t for _, t, _ in modes), cap)
-    return Modal(round(n.start, 4), round(ring + 0.05, 3), modes, [(0.0, 1.0, contact)],
-                 hardness=round(hardness * (0.35 + 0.8 * n.vel), 1), click=click, gain=round(gain * n.vel, 4))
+    ring = min(max(t for _, t, _ in modes), cap)
+    stop = round(n.dur + damp, 4) if damp else 0.0
+    if stop and stop + 0.12 < ring:
+        ring = stop + 0.12
+    return Modal(round(n.start, 4), round((dur or ring) + 0.05, 3), modes, [(0.0, 1.0, contact)],
+                 hardness=round(hardness * (0.35 + 0.8 * n.vel), 1), click=click, gain=round(gain * n.vel, 4),
+                 damp=stop if stop and stop < ring else 0.0)
 
 
 def _soft(f: float, cut: float, order: float = 4) -> float:
@@ -135,6 +140,29 @@ def lute(n: Note) -> list:
     return [_ring(n, parts, 16_000, 0.08, 0.0, cap=3.0, spread=0.0005)]
 
 
+def bass(n: Note) -> list:
+    """A fingered electric bass, from CC0 notes: the first two harmonics equally strong, the third weak (-17 to -34
+    dB, the finger near its node), the fourth strong again; rings long (-20 dB after 1.6-3 s)."""
+    shape = [0, -1, -22, -9, -15, -27, -32, -36]
+    parts = []
+    for h, db in enumerate(shape, start=1):
+        t = 9.0 * h ** -0.5
+        parts += [(h, db + _soft(n.f * h, 2500, 2), 0.6 * t), (h * 1.0003, db - 8, t)]
+    return [_ring(n, parts, 6000, 0.03, 0.0, cap=8.0, spread=0.0005, damp=0.06)]
+
+
+def e_piano(n: Note) -> list:
+    """An electric piano (a struck tine, an FM one too, measured): the first two harmonics close (-2 / 0 dB), the
+    third 10-12 dB down, and the tine's bell partial near the 8th; harder notes bark (more upper harmonics)."""
+    bark = 6 * (n.vel - 0.5)
+    t1 = min(5.0 * (264 / n.f) ** 0.5, 8.0)
+    parts = []
+    for h, db, tr in ((1, -2, 1.0), (2, 0, 1.3), (3, -11 + bark, 0.6), (4, -25 + bark, 0.5), (5, -38 + bark, 0.4)):
+        parts += [(h, db, 0.3 * t1 * tr), (h * 1.0004, db - 10, t1 * tr)]
+    parts.append((7.9, -14 + bark, 0.8))
+    return [_ring(n, parts, 9000, 0.02, 0.0, cap=6.0, spread=0.001, damp=0.15)]
+
+
 # -- drums ------------------------------------------------------------------------------------------------------------
 
 def timpani(n: Note) -> list:
@@ -232,6 +260,25 @@ def tambourine(n: Note) -> list:
     skin = Noise(round(n.start, 4), 0.04, [(0, 400), (1, 300)], "band", 0.8, amp=[(0, 1), (1, 0)], attack=0.001,
                  release=0.01, gain=round(0.08 * n.vel, 4))
     return [jingles, skin]
+
+
+def _hat(n: Note, length: float, wash: float) -> list:
+    modes = [(round(3000 * 4.5 ** n.rand(f"h{i}"), 1), round(length * (0.5 + n.rand(f"ht{i}")), 3),
+              round(0.3 + 0.7 * n.rand(f"hg{i}"), 3)) for i in range(24)]
+    return [Modal(round(n.start, 4), round(length * 2 + 0.05, 3), modes, [(0.0, 1.0, 0.0)], hardness=16_000,
+                  click=0.3, gain=round(0.8 * n.vel, 4)),
+            Noise(round(n.start, 4), round(length * 1.5, 3), [(0, 7000), (1, 6000)], "high", 0.7,
+                  amp=[(0, 1), (0.2, 0.3), (1, 0)], attack=0.0005, release=0.01, gain=round(wash * n.vel, 4))]
+
+
+def hihat(n: Note) -> list:
+    """Closed hi-hat: two cymbals pressed together, strongest 4-12 kHz, -20 dB within 65-130 ms."""
+    return _hat(n, 0.08, 0.7)
+
+
+def open_hat(n: Note) -> list:
+    """Open hi-hat: the cymbals free to ring, -20 dB after ~0.5 s."""
+    return _hat(n, 0.6, 0.5)
 
 
 def shaker(n: Note) -> list:
@@ -361,7 +408,8 @@ INSTRUMENTS = {
     "music_box": music_box, "tubular_bell": tubular_bell, "harp": harp, "pizzicato": pizzicato, "guitar": guitar,
     "lute": lute, "timpani": timpani, "hand_drum": hand_drum, "log_drum": log_drum, "bass_drum": bass_drum,
     "snare": snare, "triangle": triangle,
-    "gong": gong, "crash": crash, "tambourine": tambourine, "shaker": shaker,
+    "gong": gong, "crash": crash, "tambourine": tambourine, "shaker": shaker, "hihat": hihat, "open_hat": open_hat,
+    "bass": bass, "e_piano": e_piano,
     "violins": violins, "cellos": cellos, "strings": strings, "flute": flute, "horn": horn, "trumpet": trumpet,
     "choir": choir,
     "square": _pulse(0.5), "pulse": _pulse(0.25), "thin_pulse": _pulse(0.125), "chip_bass": chip_bass,

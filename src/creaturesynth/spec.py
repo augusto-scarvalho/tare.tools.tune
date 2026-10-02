@@ -91,6 +91,7 @@ class Modal:
     hardness: float = 8000.0          # excitation low-pass, Hz: soft (mallet, flesh) .. hard (steel on steel)
     click: float = 0.0                # the contact noise itself, mixed in
     gain: float = 1.0
+    damp: float = 0.0                 # s after start when a hand or a damper stops it (-60 dB in 0.1 s); 0 = free
 
 
 @dataclass

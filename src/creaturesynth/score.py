@@ -10,8 +10,9 @@
 
 A track is one Voice: its notes share the track's processing (drive, crush, lowpass, room) and are rendered
 together, dry; the score then pans every track and every placed sound, and sends a share of each to a stereo
-hall (two decorrelated tails, one per ear). ``render(loop=...)`` wraps whatever rings past the loop point back
-onto the start, so a music loop repeats without a seam.
+hall (two decorrelated tails, one per ear) and, if the score has one, to an echo (repeats bouncing between the
+ears, darker each time, like a 16-bit console's echo unit). ``render(loop=...)`` wraps whatever rings past the
+loop point back onto the start, so a music loop repeats without a seam.
 """
 import re
 from collections.abc import Callable, Iterable
@@ -95,6 +96,7 @@ class Track:
     pan: float = 0.0                  # -1 left .. 1 right
     send: float = 0.2                 # share sent to the score's hall
     voice: dict = field(default_factory=dict)   # Voice processing: drive, crush, lowpass, room, air
+    echo: float = 0.0                 # share sent to the score's echo
     layers: list = field(default_factory=list)
 
     def add(self, *layers) -> "Track":
@@ -132,6 +134,8 @@ class Score:
     bpm: float = 100.0
     meter: int = 4                    # beats per bar
     hall: float = 2.2                 # reverb tail of the shared hall, seconds
+    echo: tuple | None = None         # (delay s, feedback, tone Hz): repeats alternating left/right
+    lowpass: float = 0.0              # Hz, 0 = off: the whole mix darkened (an old console's sample playback)
     seed: int = 0
     sr: int = DEFAULT_SR
     tracks: dict = field(default_factory=dict)
@@ -145,18 +149,19 @@ class Score:
         """The start of bar `n` (from 0), plus `beat` beats, in seconds."""
         return self.beats(n * self.meter + beat)
 
-    def track(self, name: str, gain: float = 1.0, pan: float = 0.0, send: float = 0.2, **voice) -> Track:
+    def track(self, name: str, gain: float = 1.0, pan: float = 0.0, send: float = 0.2, echo: float = 0.0,
+              **voice) -> Track:
         """A new track, or the existing one of that name."""
         if name not in self.tracks:
-            self.tracks[name] = Track(self, name, gain, pan, send, voice)
+            self.tracks[name] = Track(self, name, gain, pan, send, voice, echo=echo)
         return self.tracks[name]
 
     def add(self, sound: np.ndarray | Voice, at: float = 0.0, gain: float = 1.0, pan: float = 0.0,
-            send: float = 0.0) -> "Score":
+            send: float = 0.0, echo: float = 0.0) -> "Score":
         """A finished sound (mono or stereo samples at the score's rate, or a Voice) at `at` seconds. It keeps its
         own level: an Sfx rendered gently stays quieter than one rendered at full power."""
         y = render(sound, self.sr) if isinstance(sound, Voice) else np.asarray(sound, dtype=np.float64)
-        self.sounds.append((at, y, gain, pan, send))
+        self.sounds.append((at, y, gain, pan, send, echo))
         return self
 
     def render(self, loop: float | None = None, gain: float = 1.0) -> np.ndarray:
@@ -164,19 +169,28 @@ class Score:
         ``score.bar(8)``) the result is exactly that long and loops seamlessly: what rings past the end, the hall's
         tail included, wraps onto the start."""
         sr = self.sr
-        parts = [(0.0, t.render(sr) * t.gain, t.pan, t.send) for t in self.tracks.values() if t.layers]
-        parts += [(at, y * g, pan, send) for at, y, g, pan, send in self.sounds]
+        parts = [(0.0, t.render(sr) * t.gain, t.pan, t.send, t.echo) for t in self.tracks.values() if t.layers]
+        parts += [(at, y * g, pan, send, echo) for at, y, g, pan, send, echo in self.sounds]
         if not parts:
             raise ValueError("the score is empty")
-        tail = int(self.hall * sr)
-        n = max(int(at * sr) + len(y) for at, y, _, _ in parts) + tail
-        dry, bus = np.zeros((n, 2)), np.zeros(n)
-        for at, y, pan, send in parts:
+        tail = self.hall
+        if self.echo:
+            delay, fb, _ = self.echo
+            tail = max(tail, delay * (1 + np.log(1e-3) / np.log(max(min(fb, 0.95), 0.01))))
+        n = max(int(at * sr) + len(y) for at, y, *_ in parts) + int(tail * sr)
+        dry, bus, ebus = np.zeros((n, 2)), np.zeros(n), np.zeros(n)
+        for at, y, pan, send, echo in parts:
             k = int(at * sr)
             stereo = y if y.ndim == 2 else y[:, None] * _pan(pan)
+            mono = y if y.ndim == 1 else y.mean(axis=1)
             dry[k:k + len(y)] += stereo
-            bus[k:k + len(y)] += send * (y if y.ndim == 1 else y.mean(axis=1))
+            bus[k:k + len(y)] += send * mono
+            ebus[k:k + len(y)] += echo * mono
         out = dry + self._hall(bus) if self.hall and bus.any() else dry
+        if self.echo and ebus.any():
+            out = out + self._echo(ebus)
+        if self.lowpass:
+            out = sosfilt(butter(2, min(self.lowpass, 0.45 * sr) / (sr / 2), output="sos"), out, axis=0)
         if loop:
             length = int(round(loop * sr))
             folded = np.zeros((length, 2))
@@ -200,6 +214,20 @@ class Score:
             ir[: int(0.012 * self.sr)] = 0.0                      # a short gap before the first reflections
             wet.append(fftconvolve(x, ir / np.sqrt(np.sum(ir ** 2)))[: len(x)])
         return np.stack(wet, axis=1)
+
+
+    def _echo(self, x: np.ndarray) -> np.ndarray:
+        """Repeats every `delay` seconds, `feedback` times quieter and once more low-passed each time, bouncing
+        between left and right."""
+        delay, fb, tone = self.echo
+        d = max(int(delay * self.sr), 1)
+        sos = butter(1, min(tone, 0.45 * self.sr) / (self.sr / 2), output="sos")
+        out, y, k, g = np.zeros((len(x), 2)), x, 1, 1.0
+        while k * d < len(x) and g > 1e-3:
+            y = sosfilt(sos, y)
+            out[k * d:, (k - 1) % 2] += g * y[: len(x) - k * d]
+            k, g = k + 1, g * fb
+        return out
 
 
 def _pan(pan: float) -> np.ndarray:
