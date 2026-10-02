@@ -287,6 +287,15 @@ As partes:
 - **Vidro:** agudo e longo (forte até 16 kHz, 40 dB em 0,3–0,9 s): um estouro e muitos cacos tilintando ao cair.
 - **`hit`:** a pancada sem quebrar.
 
+**Interface (`ui`, em `sfx/ui.py`): medida em sons de interface de jogos.**
+- **Clique:** dura de 8 a 170 ms, um tique ou um baque suave.
+- **Abrir a bolsa:** um farfalhar de 0,4 a 1 s.
+- **Subir de nível:** um arpejo maior subindo, com as notas a 60–150 ms umas das outras, que termina numa nota longa e brilhante com brilhos por cima; 1,6–3,4 s no total.
+- **Missão cumprida:** sobe o acorde mais devagar (~0,2 s por nota) e repousa na nota de cima.
+- **Erro:** curto (0,14–0,6 s) e grave (por volta de Ré#3–Lá3), um zumbido ou dois tons descendo.
+- **Estilos:** `fantasy`, com sinos de barra (modos 1 : 2,76 : 5,40 : 8,93), pano e madeira; `retro`, com notas de onda quadrada como num console de 8 bits.
+- **Tom:** cada espécie (cada jogo) fica num tom perto de Dó5.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.

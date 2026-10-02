@@ -206,7 +206,7 @@ def decay_curve(rate: float = 5.0, points: int = 9):
     return [(round(float(t), 3), round(float(np.exp(-rate * t)), 5)) for t in np.linspace(0, 1, points)]
 
 
-from . import ambience, magic, physical  # noqa: E402,F401  (registers the recipes)
+from . import ambience, magic, physical, ui  # noqa: E402,F401  (registers the recipes)
 
 __all__ = ["MATERIALS", "RECIPES", "Fx", "Material", "Modal", "Noise", "Recipe", "Scatter", "Sfx", "Syllable",
            "bell_curve", "decay_curve", "recipe"]
