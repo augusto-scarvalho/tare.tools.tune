@@ -208,16 +208,22 @@ Os dados dos gritos (`data/gen1/cries.json`) são dados de jogo de terceiros. Fi
 ## Desenvolvimento
 
 ```bash
-pytest -q          # ~270 testes, incluindo os 151 gritos contra a referência
+pytest -q          # ~290 testes, incluindo os 151 gritos contra a referência
 ruff check .
 
 pip install -e ".[asr]"
 python tools/intelligibility.py -v    # a fala, transcrita pelo Whisper (taxa de erro por caractere)
 
-pip install -e ".[neural]"
+pip install -e ".[neural]" pyworld
 python tools/teacher_calibration.py render    # fala natural do Kokoro como "professor" do português
 python tools/teacher_calibration.py measure   # formantes, durações e fricativas medidos por fonema
+python tools/structure_analysis.py compare    # espectros quadro a quadro contra o professor, por classe de fonema
+python tools/structure_analysis.py mos        # naturalidade prevista (UTMOS): professor 3,5, nosso motor 2,2
+python tools/structure_analysis.py transplant # qual parte da nossa fala custa naturalidade
+python tools/structure_analysis.py compare --set klatt.FRIC_GAIN=2 --speaker tilt=4000   # testar uma mudança
 ```
+
+O que essas ferramentas mostraram está em [`docs/arquitetura.md`](docs/arquitetura.md): a distância para a voz natural está no envelope espectral quadro a quadro, e nenhum ajuste de parâmetros do motor de formantes a fecha. Por isso a divisão de trabalho: voz natural nas falas importantes, formantes no resto.
 
 O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som leva de 20 a 250 ms para gerar, e `bake` produz cerca de 40 sons por segundo.
 

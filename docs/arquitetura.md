@@ -227,6 +227,49 @@ O que se aprendeu, sempre conferindo com o Whisper em A/B:
 
 `phonetics.LANG_PHONES` guarda ajustes por idioma sobre a tabela comum. Está vazio para o português, porque nenhum ajuste acústico passou no A/B.
 
+**Estrutura: comparação quadro a quadro com o Kokoro** (`tools/structure_analysis.py`). O alvo era a naturalidade. A mesma frase é dita pelo nosso motor e pelo professor (vozes `pm_alex` e `pf_dora`, com pitch e trato equivalentes). Os quadros de 10 ms são alinhados por DTW sobre mel-cepstro, e então se compara o espectro de cada classe de fonema. São dois juízes independentes:
+- **Whisper:** inteligibilidade, nas 16 frases de `tools/intelligibility.py`;
+- **UTMOS:** preditor de MOS do VoiceMOS 2022, licença MIT, que dá uma nota de naturalidade de 1 a 5.
+
+As frases se dividem em treino e validação (uma em cada três fica fora). No UTMOS, o professor tira 3,5 e o nosso motor 2,2.
+
+*Diagnóstico.* A cascata de 5 formantes vem do desenho original de Klatt, pensado para 10 kHz. Acima do F5 cada ressonador derruba 12 dB/oitava, então nossas vogais ficam de 25 a 75 dB abaixo do professor acima de 3,5 kHz. Fora isso:
+- nasais ficam ~10 dB fracas nos médios;
+- fricativas sonoras, ~10 dB fortes;
+- explosões, ~6 dB fortes;
+- os formantes mudam em degraus, enquanto os do professor se movem o tempo todo.
+
+*Ajuste estrutural pelo espectro.* Uma estratégia evolutiva ajustou 13 constantes estruturais para minimizar a distância espectral: formantes fixos acima do F5 até 11,5 kHz, larguras de banda, coarticulação, níveis de fricção e explosão, sopro e tilt. A distância espectral fora do treino caiu de 54,5 para 29,4. Mesmo assim, os dois juízes pioraram:
+
+| | distância espectral | UTMOS | CER pt (Whisper) |
+|---|---|---|---|
+| atual | 54,5 | 2,20 | 0,27 |
+| ajuste espectral | 29,4 | 1,51 | 0,35 |
+
+Na ablação, a queda do UTMOS vem dos formantes superiores (−0,24), das bandas largas (−0,16) e da coarticulação mais rápida (−0,13). Ficar parecido com o espectro do professor deixa o som mais claro e móvel, e isso expõe os defeitos que sobram.
+
+*Alvos de formantes por análise por síntese.* Em cada rodada, medimos F1-F3 com o mesmo rastreador LPC no que renderizamos e nos quadros do professor alinhados a eles, e movemos os alvos da tabela. Assim o viés do rastreador se cancela e o undershoot da nossa coarticulação entra na conta. Em 4 rodadas, a diferença fora do treino caiu de 0,088 para 0,039 (log). O UTMOS não mudou (2,18) e o Whisper piorou (0,27 → 0,30). Foi a mesma conclusão de copiar medidas: a geometria de formantes do professor não serve ao nosso motor.
+
+*Otimizando direto para o UTMOS* (14 constantes globais, incluindo prosódia e velocidade): o treino foi de 2,32 para 2,33, e a validação caiu de 2,18 para 2,14. Nenhum ajuste global move a naturalidade; é um platô.
+
+*Onde está a distância* (`structure_analysis.py transplant`). O professor é vocodado com WORLD, e uma peça nossa de cada vez entra no lugar da dele, alinhada por DTW:
+
+| condição | UTMOS |
+|---|---|
+| professor / vocodado | 3,51 / 3,28 |
+| + nossa curva de tom | 2,97 |
+| + nossa aperiodicidade | 3,20 |
+| **+ nosso envelope espectral** | **1,72** |
+| nosso envelope só nas vogais e soantes / só nas obstruintes | 1,78 / 2,15 |
+| só a forma média de longo prazo do nosso envelope | 3,06 |
+| nosso motor (vocodado / original) | 2,11 / 2,19 |
+
+A distância está no envelope espectral quadro a quadro, nas vogais e nas consoantes. Não está na forma média, nem na fonte, nem na entonação, que custa ~0,3.
+
+*Teste de viabilidade.* Trocamos a cascata por envelopes aprendidos do professor: um molde por fonema e terço de segmento, interpolado no nosso ritmo e na nossa entonação, sintetizado com WORLD. O UTMOS deu 1,25-1,28, com a segmentação por DTW e também com a segmentação do próprio Kokoro. Moldes médios por fonema saem borrados. Esse caminho exigiria modelos por contexto (difones) ou um modelo neural pequeno, ou seja, outro motor.
+
+*Conclusão.* Dentro da síntese de formantes por regras, nenhum ajuste de parâmetros fecha a distância para a voz natural. O nosso motor continua com o papel em que é bom (procedural, leve, determinístico, balbucio), e as falas importantes ficam com a voz natural (`casting.py`). As ferramentas ficam no repositório para medir qualquer mudança futura nos dois juízes.
+
 **Balbucio** (`speech/babble.py`). Depois do g2p, as sílabas podem ser trocadas antes da prosódia, e por isso o ritmo, as tônicas e o tipo de frase continuam os do texto:
 - `gibberish`: cada sílaba vira ataque + vogal sorteados do inventário do idioma, às vezes com coda no fim da palavra; a semente é a fala + o nome do personagem.
 - `mumble`: toda sílaba vira "m" + schwa.
@@ -242,7 +285,7 @@ O bestiário e o `bake` usam o elenco. O manifesto registra `role`, `style` e `e
 **Próximos passos da fala:**
 - Melhorar o português (nasais, "v", encontros consonantais).
 - Mais idiomas: o front-end é plugável (`speech.LANGS`).
-- Usar o professor de outro jeito: ajustar os parâmetros por análise-por-síntese, comparando espectros quadro a quadro com o Kokoro na mesma sequência de fonemas, em vez de copiar medidas.
+- Envelope por contexto (difones aprendidos do professor) ou um vocoder neural pequeno, medidos com `tools/structure_analysis.py` (UTMOS + Whisper).
 
 ## Motor da 1ª geração
 
