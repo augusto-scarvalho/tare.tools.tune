@@ -25,8 +25,8 @@ As gravações servem só para medir e não entram no repositório.
 | 7 | Passos: 8 chãos × andar, correr, aterrissar, arrastar | `footstep` | medido |
 | 8 | Equipamento em movimento: cota de malha, placas, couro | `gear` move, run, equip | medido |
 | 9 | Corpo caindo no chão (pedra, madeira, terra) | `body` fall, drop | medido |
-| 10 | Baú: abrir, fechar, trancado | `chest` | falta |
-| 11 | Porta: abrir rangendo, fechar, trancada, destrancar | `door` | falta |
+| 10 | Baú: abrir, fechar, trancado, destrancar | `chest` open, close, locked, unlock | medido |
+| 11 | Porta e portão: abrir rangendo, fechar, trancada, destrancar, bater | `door` open, close, locked, unlock, knock | medido |
 | 12 | Itens: moedas, beber poção, pegar e equipar | `item` | falta |
 | 13 | Quebrar: caixa ou barril de madeira, vaso de cerâmica, vidro | `breakable` | falta |
 | 14 | Interface: clique, abrir inventário, subir de nível, missão cumprida, erro | `ui` | falta |

@@ -673,6 +673,100 @@ def body_fall(fx: Fx, floor: str, weight: float, dead: bool = False) -> list:
                            0.15))
     return out
 
+
+# --- doors and chests -------------------------------------------------------------------------------------------------
+#
+# From recordings of doors, chests, locks and knocks. A hinge squeaks: stick-slip at a steady rate (a harmonic tone,
+# 600-1500 Hz) gliding as the swing speeds up and slows. A door slamming is low (strongest at 250 Hz; panel modes
+# 250-870 Hz ringing 0.25-0.4 s; -40 dB in 0.1-0.5 s). A locked door rattles 2-5 times, 60-130 ms apart, bright
+# (strongest 1.6-4 kHz). A key turns the tumblers with clicks 50-130 ms apart and the bolt last, loudest.
+# Knuckles on a door are dull (strongest 250-1000 Hz, modes 140-1050 Hz, -20 dB in 25-80 ms), 0.15-0.25 s apart.
+
+PANELS = {   # (Hz, T60 s, gain): a door, an iron gate, a chest's box and lid
+    "door": [(118, 0.25, 0.8), (257, 0.27, 1.0), (421, 0.38, 1.0), (632, 0.36, 0.6), (867, 0.26, 0.5),
+             (2100, 0.3, 0.12)],
+    "gate": [(180, 0.6, 0.6), (420, 0.9, 1.0), (760, 0.8, 0.8), (1250, 0.7, 0.6), (2100, 0.5, 0.4), (3400, 0.4, 0.3)],
+    "chest": [(240, 0.15, 0.7), (398, 0.25, 1.0), (585, 0.12, 0.8), (750, 0.11, 0.7), (1007, 0.08, 0.5),
+              (1523, 0.08, 0.3)],
+}
+
+
+def squeak(fx: Fx, start: float, dur: float, lo: float, hi: float, gain: float = 1.0, name: str = "sq") -> Syllable:
+    """A hinge: stick-slip at a steady rate, its pitch rising as the swing speeds up and sinking as it slows."""
+    peak = 0.3 + 0.4 * fx.rand(name + "p")
+    # stick-slip is not steady: the squeak catches and lets go, its loudness stuttering
+    amp = [(0, 0.2)] + [(round(i / 8, 3), round(0.25 + 0.75 * fx.rand(f"{name}a{i}") * (1 - abs(i / 8 - peak)), 3))
+                        for i in range(1, 8)] + [(1, 0.2)]
+    return Syllable(round(start, 4), round(dur, 4), [(0, lo), (round(peak, 3), hi), (1, lo * 0.9)], "pulse", 0.15,
+                    0.8, jitter=1.2, rough=(0.55, 11.0), breath=0.25, shimmer=0.4,
+                    formants=[(1500, 700, 1.0), (3000, 1000, 0.6), (5200, 1600, 0.35)], attack=0.03, release=0.04,
+                    amp=amp, gain=gain)
+
+
+def latch(fx: Fx, start: float, gain: float = 0.6, name: str = "latch") -> Modal:
+    """A latch or handle: a small metal click and its release a moment later."""
+    return fx.strike("iron", size=0.05, start=round(start, 4), gain=gain, prefix=name, dur=0.25,
+                     hits=[(0.0, 1.0, 0.0006), (round(0.02 + 0.02 * fx.rand(name), 4), 0.5, 0.0006)])
+
+
+def panel(fx: Fx, kind: str, hits: list, gain: float = 1.0, ring: float = 1.0) -> Modal:
+    modes = _jittered(fx, PANELS[kind], kind, 0.1, ring=ring)
+    return Modal(0.0, round(hits[-1][0] + 1.2 * ring + 0.1, 3), modes, hits,
+                 hardness=2500 if kind != "gate" else 6000, click=0.1, gain=gain)
+
+
+def closure(fx: Fx, kind: str, event: str, iron: bool, size: float) -> list:
+    """Doors, gates and chests: open, close, locked, unlock, knock."""
+    body = "gate" if iron and kind == "door" else kind
+    k = 2 ** (-0.6 * (size - 0.5))
+    if event == "open":
+        swing = (0.7 if kind == "door" else 0.45) * (0.8 + 0.4 * fx.rand("swing")) * (1 + 0.3 * size)
+        lo, hi = 650 * k * (0.8 + 0.4 * fx.g.base("hinge")), 1300 * k * (0.8 + 0.4 * fx.g.base("hinge"))
+        out = [latch(fx, 0.0), squeak(fx, 0.08, swing, lo, hi, 0.6)]
+        if kind == "chest":   # the lid comes to rest against its stop
+            out.append(panel(fx, body, [(round(0.08 + swing, 4), 0.5, 0.004)], 0.6))
+        return out
+    if event == "close":
+        swing = (0.35 if kind == "door" else 0.2) * (0.8 + 0.4 * fx.rand("swing"))
+        lo = 700 * k * (0.8 + 0.4 * fx.g.base("hinge"))
+        slam = round(swing + 0.03, 4)
+        return [squeak(fx, 0.0, swing, lo, lo * 1.4, 0.3),
+                panel(fx, body, [(slam, 1.0, 0.004), (round(slam + 0.012, 4), 0.4, 0.002)]),
+                Noise(slam, 0.12, [(0, 220 * k), (1, 90 * k)], "low", 0.9, amp=decay_curve(5), attack=0.002,
+                      release=0.02, gain=0.9),
+                latch(fx, slam + 0.005, 0.5)]
+    if event == "locked":   # the handle tried, the bolt holding
+        n = 2 + int(3.99 * fx.rand("tries"))
+        t, out = 0.0, []
+        for j in range(n):
+            g = 1.0 if j == int(fx.rand("hard") * n) else 0.35 + 0.4 * fx.rand(f"tg{j}")
+            out.append(latch(fx, t, 0.7 * g, f"try{j}"))
+            out.append(panel(fx, body, [(round(t, 4), 0.5 * g, 0.003)], 0.4 * g, 0.4))
+            t += 0.06 + 0.07 * fx.rand(f"tt{j}")
+        return out
+    if event == "unlock":   # the key goes in, the tumblers click, the bolt slides
+        out = [Modal(0.0, 0.3, [(2600, 0.04, 1.0), (4100, 0.03, 0.7), (6900, 0.02, 0.5)], [(0.0, 0.2, 0.0005)],
+                     (0.0, 0.18, 0.4, 0.0), 9000, 0.3, 0.4)]
+        t = 0.25
+        for j in range(2 + int(2.99 * fx.rand("pins"))):
+            out.append(latch(fx, t, 0.25 + 0.15 * fx.rand(f"pg{j}"), f"pin{j}"))
+            t += 0.05 + 0.08 * fx.rand(f"pt{j}")
+        out += [fx.strike("iron", size=0.3, start=round(t + 0.05, 4), hits=[(0.0, 1.0, 0.002)], gain=0.9, prefix="bolt",
+                          dur=0.4, ring=0.4),
+                panel(fx, body, [(round(t + 0.05, 4), 0.35, 0.003)], 0.5, 0.5)]
+        return out
+    # knock: two or three knuckle raps, dull: knuckles wake the panel's middle (~400-1200 Hz), not its lowest modes
+    n = 2 + int(1.99 * fx.rand("raps"))
+    hits, t = [], 0.0
+    for j in range(n):
+        hits.append((round(t, 4), round(0.75 + 0.25 * fx.rand(f"rg{j}"), 3), 0.004))
+        t += 0.16 + 0.08 * fx.rand(f"r{j}")
+    knock = PANELS["gate"] if body == "gate" else [(140, 0.3, 0.3), (398, 0.25, 1.0), (562, 0.12, 0.7),
+                                                   (750, 0.1, 0.8), (1007, 0.08, 0.6), (1218, 0.05, 0.3)]
+    return [Modal(0.0, round(t + 0.4, 3), _jittered(fx, knock, "kn", 0.1), hits, hardness=3500, click=0.05)] + [
+        Noise(h[0], 0.03, [(0, 900), (1, 600)], "band", 0.8, amp=decay_curve(5), attack=0.001, release=0.01,
+              gain=0.35 * h[1]) for h in hits]
+
 # --- weapons ----------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -765,6 +859,20 @@ def body(fx: Fx):
     """A body falling to the floor: collapsing (fall) or dropped as dead weight (drop)."""
     weight = max(fx.size - 0.5, 0) * 2
     return fx.voice(fx.level(0.9), **splits(body_fall(fx, fx.style, weight, dead=fx.event == "drop")))
+
+
+@recipe("door", ("open", "close", "locked", "unlock", "knock"), ("wood", "iron"))
+def door(fx: Fx):
+    """Doors and gates, wooden or iron: open (squeaking), close (slam), locked (rattle), unlock, knock."""
+    layers = closure(fx, "door", fx.event, fx.style == "iron", fx.size)
+    return fx.voice(fx.level(0.9), **splits(layers))
+
+
+@recipe("chest", ("open", "close", "locked", "unlock"), ("wood", "iron"))
+def chest(fx: Fx):
+    """Chests: open (latch and creaking lid), close, locked (rattle), unlock."""
+    layers = closure(fx, "chest", fx.event, fx.style == "iron", fx.size)
+    return fx.voice(fx.level(0.8), **splits(layers))
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))
