@@ -417,17 +417,25 @@ def blade_draw(fx: Fx, shift: float, ring: float, dur: float) -> list:
 
 def blade_drop(fx: Fx, shift: float, ring: float) -> list:
     """Dropped on stone, from recordings: the hilt lands, 30-45 ms later the blade slaps down (the loudest),
-    one smaller bounce ~0.27 s on; the blade rings, damped by the floor, over the floor's own knock."""
+    then rattles against the floor for ~0.15 s as it rings, and bounces once more ~0.27 s on, smaller; under it
+    the floor's own knock and a heavy thud."""
     slap = round(0.03 + 0.015 * fx.rand("slap"), 4)
     bounce = round(slap + 0.24 + 0.06 * fx.rand("bounce"), 4)
-    hits = [(0.0, 0.5, 0.001), (slap, 1.0, 0.0008), (bounce, 0.22, 0.0008)]
-    if fx.rand("again") < 0.5:
-        hits.append((round(bounce + 0.09 + 0.05 * fx.rand("again2"), 4), 0.08, 0.0008))
-    out = [Modal(0.0, round(bounce + 1.2 * ring, 3), blade_modes(fx, "a", shift, 0.6 * ring), hits, hardness=12000,
-                 click=0.3),
-           fx.strike("stone", size=0.75, hits=[(t, g, 0.002) for t, g, _ in hits], gain=0.6, prefix="g")]
-    out += [Noise(t, 0.05, [(0, 400), (1, 200)], "low", 1.0, amp=decay_curve(6), attack=0.001, release=0.01,
-                  gain=0.5 * g) for t, g, _ in hits[:3]]
+
+    def rattle(t0: float, n: int, gain: float, name: str) -> list:   # the ringing blade chattering on the floor
+        out, t = [], t0
+        for k in range(n):
+            t += 0.009 * 1.18 ** k * (0.7 + 0.6 * fx.rand(f"{name}{k}"))
+            out.append((round(t, 4), round(gain * 0.8 ** k * (0.6 + 0.8 * fx.rand(f"{name}g{k}")), 4), 0.0008))
+        return out
+
+    main = [(0.0, 0.55, 0.001), (slap, 1.0, 0.0008), (bounce, 0.45, 0.0008)]
+    hits = main + rattle(slap, 12, 0.8, "r") + rattle(bounce, 5, 0.35, "b")
+    out = [Modal(0.0, round(bounce + 2.0 * ring, 3), blade_modes(fx, "a", shift, 1.3 * ring), sorted(hits),
+                 hardness=9000, click=0.1),
+           fx.strike("stone", size=0.75, hits=[(t, g, 0.002) for t, g, _ in main], gain=0.5, prefix="g", click=0.2)]
+    out += [Noise(t, 0.09, [(0, 320), (1, 120)], "low", 1.0, amp=decay_curve(5), attack=0.001, release=0.015,
+                  gain=1.0 * g) for t, g, _ in main]
     return out
 
 
@@ -458,7 +466,7 @@ def blade(fx: Fx):
         ring = (1 + 1.2 * hard) * (0.5 if mat == "iron" else 1.0)
         return fx.voice(fx.level(0.6), **splits(blade_draw(fx, shift, ring, dur)))
     if e == "drop" and mat in ("steel", "iron"):
-        return fx.voice(fx.level(0.8), **splits(blade_drop(fx, shift, 0.5 if mat == "iron" else 1.0)))
+        return fx.voice(fx.level(0.95), **splits(blade_drop(fx, shift, 0.5 if mat == "iron" else 1.0)))
     if e == "clash":
         lag = 0.002 + 0.006 * fx.rand("lag")
         slide = (0.0, 0.04 + 0.16 * fx.rand("slide"), 0.5 + 0.5 * p, 60 + 80 * fx.rand("judder"))
