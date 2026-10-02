@@ -1160,14 +1160,20 @@ def footstep(fx: Fx):
 def explosion(fx: Fx):
     """Explosions: the blast up close, a distant rumble, falling debris."""
     s, p, e = fx.size, fx.power, fx.event
-    length = 1.5 + 2.5 * s
+    # Measured on recordings: up close strongest at 63-250 Hz (-9 dB at 1 kHz, -14 at 4 kHz), building over ~0.1 s,
+    # -20 dB after ~0.8 s; far away almost only the lowest rumble (strongest at 31 Hz, -34 dB at 2 kHz)
+    length = 1.2 + 2.0 * s
     boom = Noise(0.0, round(length, 3), [(0, 140 - 60 * s), (1, 45)], "low", 0.9, "brown", decay_curve(4),
-                 attack=0.004, release=0.2, wobble=(4.0, 0.3), gain=1.0)
-    roar = Noise(0.0, round(length * 0.7, 3), [(0, 900), (0.3, 400), (1, 150)], "band", 0.7, amp=decay_curve(3),
-                 attack=0.01, release=0.2, wobble=(9.0, 0.6), gain=0.5 + 0.3 * p)
+                 attack=0.05, release=0.2, wobble=(4.0, 0.3), gain=1.0)
+    body = Noise(0.0, round(length * 0.6, 3), [(0, 260 - 80 * s), (1, 120)], "band", 0.8, "brown", decay_curve(4),
+                 attack=0.06, release=0.2, wobble=(6.0, 0.4), gain=0.8)
+    roar = Noise(0.0, round(length * 0.6, 3), [(0, 600), (0.3, 350), (1, 150)], "band", 0.7, amp=decay_curve(3.5),
+                 attack=0.08, release=0.2, wobble=(9.0, 0.6), gain=0.3 + 0.2 * p)
     if e == "distant":
-        boom.start = roar.start = 0.05
-        return fx.voice(noise=[boom, roar], lowpass=700, space=2.5, wet=0.35, gain=0.6)
+        boom.start = body.start = roar.start = 0.05
+        boom.amp = body.amp = decay_curve(6)
+        body.gain, roar.gain = 0.3, 0.15   # distance leaves mostly the lowest rumble
+        return fx.voice(noise=[boom, body, roar], lowpass=450, space=2.5, wet=0.35, gain=0.6)
     debris = Scatter(0.05, round(length, 3), [(0, 80 + 120 * p), (0.3, 40), (1, 0)], "pop", (400, 5000),
                      (0.001, 0.006), (0.1, 1.0), 0.35)
     if e == "debris":
@@ -1175,8 +1181,8 @@ def explosion(fx: Fx):
                            gain=0.3 + 0.6 * fx.rand(f"rg{k}"), prefix=f"r{k}") for k in range(8)]
         debris.start, debris.rate = 0.0, [(0, 120), (0.5, 60), (1, 0)]
         return fx.voice(modal=rocks, scatter=[debris], space=1.0, wet=0.15, gain=0.6)
-    crack = burst(0.0, 0.05, 1500, 0.8 + 0.2 * p, "high", 0.5)
-    layers = [boom, roar, crack, debris]
+    crack = burst(0.0, 0.05, 1500, 0.6 + 0.2 * p, "high", 0.5)
+    layers = [boom, body, roar, crack, debris]
     if fx.style == "fire":
         layers.append(Noise(0.1, round(length, 3), [(0, 1200), (1, 600)], "band", 0.8, amp=decay_curve(2),
                             wobble=(14.0, 0.8), gain=0.3))
