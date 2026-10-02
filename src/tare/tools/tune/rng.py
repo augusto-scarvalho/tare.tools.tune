@@ -1,6 +1,6 @@
 """Portable, deterministic randomness.
 
-Everything random in creaturesynth (genes, noise, jitter, reverb) comes from SplitMix64,
+Everything random in tare.tools.tune (genes, noise, jitter, reverb) comes from SplitMix64,
 so an engine-side port (C#, GDScript, C++, JS) can reproduce it exactly. The rules:
 
 - ``key(*parts)`` folds ints/strings into one 64-bit key. Strings are hashed with FNV-1a 64.

@@ -1,9 +1,9 @@
-"""Build the voice banks of the natural voices (src/creaturesynth/speech/data/bank_<lang>_<voice>.npz).
+"""Build the voice banks of the natural voices (src/tare/tools/tune/speech/data/bank_<lang>_<voice>.npz).
 
 A teacher voice reads a corpus once, here, offline: Kokoro-82M (Apache-2.0), a neural text-to-speech model. Each
 recording is analysed with the WORLD vocoder into 5 ms frames (pitch, a 32-band spectral envelope, aperiodicity)
 and labelled phone by phone from the teacher's own alignment, mapped to our phone symbols. Only these numbers ship.
-In a game nothing neural runs: creaturesynth.speech.concat picks pieces of the bank for a new sentence, stretches
+In a game nothing neural runs: tare.tools.tune.speech.concat picks pieces of the bank for a new sentence, stretches
 them to our timing, lays our intonation on them and our vocoder rebuilds the sound, deterministically.
 
     pip install kokoro soundfile pyworld          # development only
@@ -23,11 +23,11 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "tools"))
 from teacher_calibration import CORPUS  # noqa: E402
 
-from creaturesynth.speech.concat import FRAME, fit_durations  # noqa: E402
-from creaturesynth.speech.vocoder import ENV_FLOOR, band_freqs, encode  # noqa: E402
+from tare.tools.tune.speech.concat import FRAME, fit_durations  # noqa: E402
+from tare.tools.tune.speech.vocoder import ENV_FLOOR, band_freqs, encode  # noqa: E402
 
 CACHE = ROOT / "teacher"
-OUT = ROOT / "src/creaturesynth/speech/data"
+OUT = ROOT / "src/tare/tools/tune/speech/data"
 KOKORO_SR, HOP = 24_000, 600                     # Kokoro: 24 kHz audio, phone durations in 25 ms steps
 LANG_CODES = {"pt": "p", "en": "a"}
 # bank name -> (Kokoro voice, the vocal tract we give it)
@@ -138,7 +138,7 @@ def _fix_espeak_data_path():
     except ImportError:
         return
     real = espeakng_loader.get_data_path()
-    shim = os.path.join(tempfile.gettempdir(), "creaturesynth-espeak-ng-data")
+    shim = os.path.join(tempfile.gettempdir(), "tare-tools-tune-espeak-ng-data")
     os.makedirs(shim, exist_ok=True)
     for name in os.listdir(real):
         if not os.path.lexists(os.path.join(shim, name)):

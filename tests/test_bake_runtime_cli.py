@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from creaturesynth import Creature, read_wav
-from creaturesynth.bake import bake, load_bestiary
-from creaturesynth.cli import main
-from creaturesynth.runtime import VoiceBank
+from tare.tools.tune import Creature, read_wav
+from tare.tools.tune.bake import bake, load_bestiary
+from tare.tools.tune.cli import main
+from tare.tools.tune.runtime import VoiceBank
 
 EXAMPLE = Path(__file__).parents[1] / "examples" / "bestiary.json"
 SR = 22_050

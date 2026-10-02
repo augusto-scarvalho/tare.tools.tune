@@ -1,6 +1,6 @@
 """Procedural sound effects: weapons, impacts, footsteps, magic, explosions, ambience.
 
-    >>> from creaturesynth.sfx import Sfx
+    >>> from tare.tools.tune.sfx import Sfx
     >>> sword = Sfx("blade", "steel", species=7, size=0.5)
     >>> audio = sword.render("clash", take=2)          # every take is a little different
     >>> fireball = Sfx("spell", "fire", power=0.8)

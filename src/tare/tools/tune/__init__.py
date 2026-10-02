@@ -1,6 +1,6 @@
-"""creaturesynth: procedural creature voices, speech and sound effects for games.
+"""tare.tools.tune: procedural creature voices, speech and sound effects for games.
 
-    >>> from creaturesynth import Creature, Sfx, write_wav
+    >>> from tare.tools.tune import Creature, Sfx, write_wav
     >>> wolf = Creature("mammal", species=7, size=0.45, aggression=0.5)
     >>> write_wav("wolf_attack.wav", wolf.render("attack"), 48000)
     >>> dire_wolf = wolf.evolve(size=0.4, aggression=0.3)

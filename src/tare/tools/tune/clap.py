@@ -1,4 +1,4 @@
-"""CLAP as an ear for creatures (optional: pip install "creaturesynth[clap]").
+"""CLAP as an ear for creatures (optional: pip install "tare.tools.tune[clap]").
 
 CLAP embeds audio and text in one space, so it can say how much a sound "is" a description.
 We use it to check that archetypes sound like what they claim (zero-shot labels) and to
@@ -31,7 +31,7 @@ class Clap:
             import torch
             from transformers import ClapModel, ClapProcessor
         except ImportError:
-            raise ImportError('CLAP needs transformers + torch: pip install "creaturesynth[clap]"') from None
+            raise ImportError('CLAP needs transformers + torch: pip install "tare.tools.tune[clap]"') from None
         self.torch = torch
         self.model = ClapModel.from_pretrained(model_id).eval()
         self.processor = ClapProcessor.from_pretrained(model_id)

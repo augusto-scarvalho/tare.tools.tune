@@ -17,7 +17,7 @@ import numpy as np
 from scipy.signal import resample_poly
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from creaturesynth.speech import Speaker  # noqa: E402
+from tare.tools.tune.speech import Speaker  # noqa: E402
 
 SENTENCES = {
     "pt": [
@@ -60,7 +60,7 @@ SENTENCES = {
 
 
 def norm(text: str, lang: str = "en") -> str:
-    from creaturesynth.speech import g2p_en, g2p_pt
+    from tare.tools.tune.speech import g2p_en, g2p_pt
     words = (g2p_pt if lang == "pt" else g2p_en).number_to_words
     text = re.sub(r"\d+", lambda m: f" {words(int(m.group()))} ", text)
     text = unicodedata.normalize("NFKD", text.lower())

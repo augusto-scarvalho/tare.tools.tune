@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
 
-from creaturesynth import Creature
-from creaturesynth.bake import bake, load_bestiary
-from creaturesynth.cli import main
-from creaturesynth.speech import Speaker, g2p_pt
-from creaturesynth.speech.babble import gibberish, melody, mumble
-from creaturesynth.speech.casting import ROLES, cast
+from tare.tools.tune import Creature
+from tare.tools.tune.bake import bake, load_bestiary
+from tare.tools.tune.cli import main
+from tare.tools.tune.speech import Speaker, g2p_pt
+from tare.tools.tune.speech.babble import gibberish, melody, mumble
+from tare.tools.tune.speech.casting import ROLES, cast
 
 SR = 16_000
 

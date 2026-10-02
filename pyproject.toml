@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "creaturesynth"
+name = "tare.tools.tune"
 version = "0.1.0"
 description = "Procedural game audio: creature voices, human speech (pt-BR, English), sound effects and music, deterministic and portable, with a Game Boy cry engine."
 readme = "README.md"
@@ -20,13 +20,14 @@ clap = ["transformers>=4.40", "torch", "soundfile"]   # design/match/judge creat
 dev = ["pytest>=8", "ruff>=0.6", "matplotlib>=3.7"]
 
 [project.scripts]
-creaturesynth = "creaturesynth.cli:main"
+"tare.tools.tune" = "tare.tools.tune.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/creaturesynth"]
+packages = ["src/tare"]   # namespace packages: tare, tare.tools
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 120

@@ -1,11 +1,11 @@
-# creaturesynth
+# tare.tools.tune
 
 Áudio procedural para jogos: **criaturas**, **fala humana** (português e inglês) e **efeitos sonoros** (armas, passos, explosões, magia, ambientes). Para criaturas, você descreve **quem** chama (espécie, tamanho, agressividade) e **por quê** (idle, alerta, ataque, dor, morte). Para pessoas, você escolhe uma voz e escreve o texto. Para efeitos, você escolhe o objeto (uma espada de aço, uma bola de fogo, uma tempestade) e o evento (golpe, choque, impacto, loop). A mesma entrada sempre gera o mesmo som, e cada indivíduo e cada repetição varia um pouco.
 
-Nasceu de um fork do [sintetizador de gritos da 1ª geração de Pokémon](https://github.com/ardean/pokemon-gen1-cry-synthesizer). A ideia do jogo, que tira 151 gritos de 38 moldes mais tom e duração, virou o modelo geral aqui: **espécie = genes estáveis; indivíduo = pequenas variações; traços = evolução**. O motor original continua disponível como arquétipo `chip` e como reprodução fiel dos 151 gritos.
+Nasceu como `creaturesynth`, um fork do [sintetizador de gritos da 1ª geração de Pokémon](https://github.com/ardean/pokemon-gen1-cry-synthesizer). A ideia do jogo, que tira 151 gritos de 38 moldes mais tom e duração, virou o modelo geral aqui: **espécie = genes estáveis; indivíduo = pequenas variações; traços = evolução**. O motor original continua disponível como arquétipo `chip` e como reprodução fiel dos 151 gritos.
 
 ```python
-from creaturesynth import Creature, write_wav
+from tare.tools.tune import Creature, write_wav
 
 lobo = Creature("mammal", species="lobo", size=0.45, aggression=0.5)
 write_wav("lobo_ataque.wav", lobo.render("attack"), 48000)
@@ -13,14 +13,14 @@ write_wav("lobo_ataque.wav", lobo.render("attack"), 48000)
 lobo_terrivel = lobo.evolve(size=0.45, aggression=0.35)   # mesma espécie, maior e mais feroz
 write_wav("lobo_terrivel_morte.wav", lobo_terrivel.render("death", take=2), 48000)
 
-from creaturesynth.speech import Speaker
+from tare.tools.tune.speech import Speaker
 
 ferreiro = Speaker.preset("deep")
 write_wav("ferreiro.wav", ferreiro.render("Bem-vindo à forja, viajante!", lang="pt"), 48000)
 npc = Speaker.random(42)                                   # uma voz única e repetível por NPC
 write_wav("npc.wav", npc.render("Did you see the dragon?", lang="en"), 48000)
 
-from creaturesynth import Sfx
+from tare.tools.tune import Sfx
 
 excalibur = Sfx("blade", "steel", species="excalibur")
 write_wav("choque.wav", excalibur.render("clash", take=3), 48000)   # cada take é um choque diferente
@@ -34,7 +34,7 @@ pip install -e .            # numpy + scipy
 pip install -e ".[dev]"     # + pytest, ruff, matplotlib (espectrogramas)
 ```
 
-Requer Python 3.10 ou mais novo.
+Requer Python 3.10 ou mais novo. No código, `import tare.tools.tune` (os pacotes `tare` e `tare.tools` são namespaces); na linha de comando, `tare.tools.tune`; onde o nome não aceita pontos, `tare-tools-tune` (é como o pip normaliza o nome do pacote).
 
 ## Arquétipos
 
@@ -74,7 +74,7 @@ Texto em **português brasileiro** ou **inglês** vira fala. A frente é a mesma
 **Nada de IA em tempo de execução.** Os dois motores são determinísticos e procedurais: tabela, programação dinâmica e aritmética. O professor dos bancos é o [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), usado uma vez, offline, por `tools/build_speech.py`; o pacote não depende dele nem do PyTorch. Os dois motores dão um spec portável (`SpeechProgram` ou `Spoken`).
 
 ```python
-from creaturesynth.speech import Speaker
+from tare.tools.tune.speech import Speaker
 
 guarda = Speaker.preset("deep")                                   # formantes
 rei = Speaker(pitch=105, tract=0.97, engine="natural")            # banco de voz, levado para esta voz
@@ -103,7 +103,7 @@ Muitos jogos não são dublados: o personagem só solta um "hyah!", um "ugh", um
 Elas partem de performances reais: gravações CC0 de atores, analisadas uma vez em números (tom, envelope espectral e ar a cada 5 ms; 183 moldes, 951 kB). No jogo, um vocoder nosso, em numpy, refaz o som e o leva para a altura, o trato vocal, o brilho e o sopro do personagem. Não roda nenhum modelo nem IA, e o resultado é determinístico: o mesmo personagem, tipo, estilo e take dão sempre as mesmas amostras.
 
 ```python
-from creaturesynth.speech import Speaker
+from tare.tools.tune.speech import Speaker
 
 heroi = Speaker(pitch=135, tract=1.06, breath=0.12)
 write_wav("golpe.wav", heroi.emote("attack", style="grunt", take=2), 48000)   # cada take é um pouco diferente
@@ -149,7 +149,7 @@ A voz natural soa humana e leva um banco de alguns MB por idioma. A de formantes
 - `mumble`: tudo em "mm".
 
 ```python
-from creaturesynth.speech.casting import cast
+from tare.tools.tune.speech.casting import cast
 
 rei = cast("main", "rei", gender="m")              # voz natural
 povo = cast("crowd", "povo")                       # balbucio
@@ -191,10 +191,10 @@ Cada família usa a técnica certa para o tipo de som:
 - **Ambientes** de floresta e noite usam os pássaros e grilos dos arquétipos de criaturas.
 
 ```bash
-creaturesynth sounds                                         # tipos, estilos e eventos
-creaturesynth sfx blade steel --event clash --species excalibur -o choque.wav
-creaturesynth sfx spell lightning --event impact --power 0.9 -o raio.wav
-creaturesynth sfx ambience rain --event loop -o chuva_loop.wav
+tare.tools.tune sounds                                         # tipos, estilos e eventos
+tare.tools.tune sfx blade steel --event clash --species excalibur -o choque.wav
+tare.tools.tune sfx spell lightning --event impact --power 0.9 -o raio.wav
+tare.tools.tune sfx ambience rain --event loop -o chuva_loop.wav
 ```
 
 No bestiário, os efeitos entram numa seção `sounds` (o `bake` gera os takes, e os loops saem com um take só e `"loop": true` no manifesto):
@@ -210,7 +210,7 @@ No bestiário, os efeitos entram numa seção `sounds` (o `bake` gera os takes, 
 Dentro do jogo, o `VoiceBank` aceita efeitos como aceita criaturas (`bank.get(espada, "clash")` nunca repete o mesmo take duas vezes seguidas). O `AmbiencePlayer` toca um lugar sem fim: o loop, mais os eventos soltos (trovões, pássaros, gotas) em momentos sorteados, e qualquer outro som que você acrescentar:
 
 ```python
-from creaturesynth.runtime import AmbiencePlayer
+from tare.tools.tune.runtime import AmbiencePlayer
 
 floresta = AmbiencePlayer(Sfx("ambience", "forest"), accents_per_minute=6)
 floresta.add(Creature("bird", species=4), "alert", per_minute=2)
@@ -257,8 +257,8 @@ O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e 
 ## Música e composição
 
 Três peças, uma sobre a outra:
-- **`Score`** (`creaturesynth.score`): uma linha do tempo em compassos e segundos. Põe notas e sons prontos (efeitos, criaturas, falas) em camadas, com volume, posição no estéreo e um eco (sala) compartilhado. Renderiza em estéreo, e `render(loop=...)` devolve um loop sem emenda.
-- **Instrumentos** (`creaturesynth.instruments`): 38 instrumentos medidos em notas gravadas, com os números de cada um no código:
+- **`Score`** (`tare.tools.tune.score`): uma linha do tempo em compassos e segundos. Põe notas e sons prontos (efeitos, criaturas, falas) em camadas, com volume, posição no estéreo e um eco (sala) compartilhado. Renderiza em estéreo, e `render(loop=...)` devolve um loop sem emenda.
+- **Instrumentos** (`tare.tools.tune.instruments`): 38 instrumentos medidos em notas gravadas, com os números de cada um no código:
   - cordas pinçadas: harpa, violão, alaúde, pizzicato;
   - teclados de percussão: glockenspiel, marimba, xilofone, celesta, caixinha de música;
   - sinos tubulares;
@@ -267,7 +267,7 @@ Três peças, uma sobre a outra:
   - sustentados: violinos, violoncelos, flauta, trompa, trompete, coro;
   - banda: baixo elétrico, piano elétrico, chimbal fechado e aberto;
   - chiptune: pulsos, baixo e ruídos de console.
-- **`Cue`** (`creaturesynth.music`): músicas compostas a partir de uma semente.
+- **`Cue`** (`tare.tools.tune.music`): músicas compostas a partir de uma semente.
   - Jingles: `victory`, `levelup`, `quest`, `gameover`.
   - Loops: `town`, `explore`, `tavern`, `dungeon`, `battle`.
   - Loops de "harmonia de cor", no jeito das trilhas de RPG de 16 bits (como as de Yasunori Mitsuda): `reverie`, `pastoral`, `timeless`, `grove`, `heroic`, `showdown`. Acordes escolhidos pela cor, não pela função: 7ª e 9ª deslizando em paralelo, trocas por meio tom e por terças, a tônica como pedal, modos dórico, lídio e mixolídio, nunca V → I. A melodia apoia nas 9ª e 13ª e repete o motivo em sequência.
@@ -275,9 +275,9 @@ Três peças, uma sobre a outra:
   - A semente escolhe tom, progressão, ritmos e motivo: a mesma semente é sempre a mesma música, e cada semente é outra.
 
 ```python
-from creaturesynth import Sfx, write_wav
-from creaturesynth.music import Cue
-from creaturesynth.score import Score, chord
+from tare.tools.tune import Sfx, write_wav
+from tare.tools.tune.music import Cue
+from tare.tools.tune.score import Score, chord
 
 write_wav("vitoria.wav", Cue("victory", seed=3).render(), 48000)            # estéreo
 taverna = Cue("tavern", seed=7)
@@ -300,21 +300,21 @@ As medidas vêm de notas soltas da orquestra [VSCO-2 Community Edition](https://
 
 ## Calibração com CLAP
 
-O [CLAP](https://huggingface.co/laion/clap-htsat-unfused) é um modelo que põe som e texto no mesmo espaço: dá para perguntar "isto soa como um gato miando?". O creaturesynth usa dois modelos: um para otimizar (`laion/clap-htsat-unfused`) e outro, que nunca é usado na otimização, como juiz (`laion/larger_clap_general`). Assim o ajuste não "decora" o gosto de um modelo só.
+O [CLAP](https://huggingface.co/laion/clap-htsat-unfused) é um modelo que põe som e texto no mesmo espaço: dá para perguntar "isto soa como um gato miando?". O tare.tools.tune usa dois modelos: um para otimizar (`laion/clap-htsat-unfused`) e outro, que nunca é usado na otimização, como juiz (`laion/larger_clap_general`). Assim o ajuste não "decora" o gosto de um modelo só.
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -e ".[clap]"
-creaturesynth design "a small cat meowing" -o gato.json --wav gato.wav   # criatura a partir de um texto
-creaturesynth match miado.wav --archetype mammal -o gato.json            # criatura parecida com uma gravação
-creaturesynth judge                                                      # o que o juiz ouve em cada arquétipo
+tare.tools.tune design "a small cat meowing" -o gato.json --wav gato.wav   # criatura a partir de um texto
+tare.tools.tune match miado.wav --archetype mammal -o gato.json            # criatura parecida com uma gravação
+tare.tools.tune judge                                                      # o que o juiz ouve em cada arquétipo
 ```
 
 - `design` testa todos os arquétipos (ou só os de `--archetype`), refina os 2 melhores com uma estratégia evolutiva e devolve a entrada pronta para o bestiário (`-o`). Leva cerca de 1 minuto em CPU.
 - `match` combina o CLAP com medidas da gravação (curva de tom, envelope, espectro, duração, número de sílabas).
 - O resultado é sempre uma criatura procedural comum: as variações por indivíduo e por take continuam valendo.
 
-**O que o juiz disse.** Ele acerta o arquétipo em 32% dos casos, contra 10% do acaso, e chama 56% dos sons não-chip de "som 8-bit de videogame". Para atacar isso, há uma camada de realismo opcional: ruído de fundo, reflexões curtas de sala, perda de agudos, oscilação de volume e sopro. O ajuste com o otimizador baixou o "8-bit" para 46% no juiz, mas não melhorou o acerto de arquétipo. Por isso a camada fica desligada por padrão. Para ligar: `creaturesynth.archetypes.REALISM.update(REALISM_CLAP)`.
+**O que o juiz disse.** Ele acerta o arquétipo em 32% dos casos, contra 10% do acaso, e chama 56% dos sons não-chip de "som 8-bit de videogame". Para atacar isso, há uma camada de realismo opcional: ruído de fundo, reflexões curtas de sala, perda de agudos, oscilação de volume e sopro. O ajuste com o otimizador baixou o "8-bit" para 46% no juiz, mas não melhorou o acerto de arquétipo. Por isso a camada fica desligada por padrão. Para ligar: `tare.tools.tune.archetypes.REALISM.update(REALISM_CLAP)`.
 
 ## Duas formas de usar
 
@@ -323,7 +323,7 @@ creaturesynth judge                                                      # o que
 Um arquivo de bestiário vira pacotes de WAV, mais um `manifest.json` e o spec JSON de cada som:
 
 ```bash
-creaturesynth bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamados x 3 takes
+tare.tools.tune bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamados x 3 takes
 ```
 
 ```json
@@ -359,7 +359,7 @@ Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por ch
 - **Jogos em Python** (pygame, pyglet, Arcade, Panda3D, Ren'Py): `VoiceBank` renderiza em threads, mantém cache e nunca repete o mesmo take duas vezes seguidas. Veja [`examples/pygame_demo.py`](examples/pygame_demo.py).
 
   ```python
-  from creaturesynth.runtime import VoiceBank
+  from tare.tools.tune.runtime import VoiceBank
 
   bank = VoiceBank(sample_rate=44100, takes=4)
   bank.warm(lobo)                                     # durante o loading
@@ -372,33 +372,33 @@ Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por ch
 ## Linha de comando
 
 ```bash
-creaturesynth list                                                    # arquétipos e chamados
-creaturesynth render monster --species ogro --size .9 --aggression .8 --call attack -o ogro.wav --png
-creaturesynth spec chip --species 3 --call hurt -o pixel_hurt.json    # spec JSON para engines
-creaturesynth from-spec pixel_hurt.json -o pixel_hurt.wav
-creaturesynth zoo -n 30 -o zoo                                        # 30 criaturas inéditas
-creaturesynth gen1 pikachu                                            # reprodução da 1ª geração
-creaturesynth gen1 all -o gen1/
-creaturesynth say "Olá, viajante!" --voice child -o ola.wav --phonemes  # fala
-creaturesynth say "Hello there!" --lang en --voice npc:7 --pitch 140
-creaturesynth say "Que dia bonito!" --role crowd --name povo            # balbucio de multidão
-creaturesynth say "Oi, tudo bem?" --voice cute --style animalese
-creaturesynth sounds                                                  # efeitos: tipos, estilos, eventos
-creaturesynth sfx blade steel --event clash --species excalibur -o choque.wav
-creaturesynth sfx ambience storm --event loop -o tempestade.wav       # loop sem emenda
-creaturesynth voices                                                  # vozes prontas
+tare.tools.tune list                                                    # arquétipos e chamados
+tare.tools.tune render monster --species ogro --size .9 --aggression .8 --call attack -o ogro.wav --png
+tare.tools.tune spec chip --species 3 --call hurt -o pixel_hurt.json    # spec JSON para engines
+tare.tools.tune from-spec pixel_hurt.json -o pixel_hurt.wav
+tare.tools.tune zoo -n 30 -o zoo                                        # 30 criaturas inéditas
+tare.tools.tune gen1 pikachu                                            # reprodução da 1ª geração
+tare.tools.tune gen1 all -o gen1/
+tare.tools.tune say "Olá, viajante!" --voice child -o ola.wav --phonemes  # fala
+tare.tools.tune say "Hello there!" --lang en --voice npc:7 --pitch 140
+tare.tools.tune say "Que dia bonito!" --role crowd --name povo            # balbucio de multidão
+tare.tools.tune say "Oi, tudo bem?" --voice cute --style animalese
+tare.tools.tune sounds                                                  # efeitos: tipos, estilos, eventos
+tare.tools.tune sfx blade steel --event clash --species excalibur -o choque.wav
+tare.tools.tune sfx ambience storm --event loop -o tempestade.wav       # loop sem emenda
+tare.tools.tune voices                                                  # vozes prontas
 ```
 
 ## Reprodução da 1ª geração
 
-`creaturesynth.chip` reimplementa o motor de gritos de Pokémon Red/Blue: 2 canais de pulso e 1 de ruído, a 1.048.576 Hz, com filtro anti-aliasing na decimação. Ele foi verificado contra o motor TypeScript original do fork, congelado em `tests/fixtures/gen1`, nos 151 gritos:
+`tare.tools.tune.chip` reimplementa o motor de gritos de Pokémon Red/Blue: 2 canais de pulso e 1 de ruído, a 1.048.576 Hz, com filtro anti-aliasing na decimação. Ele foi verificado contra o motor TypeScript original do fork, congelado em `tests/fixtures/gen1`, nos 151 gritos:
 - durações idênticas;
 - ruído bit a bit;
 - pulsos iguais, exceto bordas isoladas deslocadas em 1 amostra (~1 µs), que vêm do arredondamento de ponto flutuante do código antigo.
 
 Por padrão, o ruído de 7 bits segue o hardware real, o que corrige um bug do app antigo. `--legacy-noise` reproduz o comportamento antigo.
 
-Os dados dos gritos (`data/gen1/cries.json`) são dados de jogo de terceiros. Ficam no repositório só como referência e para testes, e **não fazem parte do pacote**. Para usar a partir de um pacote instalado, aponte `CREATURESYNTH_GEN1_DATA` para o arquivo.
+Os dados dos gritos (`data/gen1/cries.json`) são dados de jogo de terceiros. Ficam no repositório só como referência e para testes, e **não fazem parte do pacote**. Para usar a partir de um pacote instalado, aponte `TARE_TOOLS_TUNE_GEN1_DATA` para o arquivo.
 
 ## Desenvolvimento
 
@@ -411,7 +411,7 @@ python tools/intelligibility.py -v    # a fala, transcrita pelo Whisper (taxa de
 
 pip install -e ".[teacher]"                    # Kokoro, soundfile e pyworld: só para as ferramentas
 python tools/build_speech.py render pt        # o professor lê o corpus (cache em teacher/)
-python tools/build_speech.py build pt         # análise -> bancos de voz em src/creaturesynth/speech/data
+python tools/build_speech.py build pt         # análise -> bancos de voz em src/tare/tools/tune/speech/data
 python tools/teacher_calibration.py render    # fala natural do Kokoro como "professor" do português
 python tools/teacher_calibration.py measure   # formantes, durações e fricativas medidos por fonema
 python tools/structure_analysis.py compare    # espectros quadro a quadro contra o professor, por classe de fonema
@@ -428,7 +428,7 @@ O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som 
 
 ## Créditos
 
-A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/creaturesynth/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
+A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/tare/tools/tune/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
 
 Os bancos de voz natural vêm de leituras do [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), feitas offline; o pacote leva só os números medidos nelas.
 

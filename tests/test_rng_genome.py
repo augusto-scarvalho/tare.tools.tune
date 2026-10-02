@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from creaturesynth import Genome, rng
+from tare.tools.tune import Genome, rng
 
 
 def test_splitmix64_known_answers():

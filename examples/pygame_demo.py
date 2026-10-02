@@ -8,9 +8,9 @@ Q: sword swing   W: sword clash   E: fireball   R: lightning   A: storm ambience
 """
 import pygame
 
-from creaturesynth import CALLS, Creature, Sfx, to_pcm16
-from creaturesynth.runtime import AmbiencePlayer, VoiceBank
-from creaturesynth.speech.casting import cast
+from tare.tools.tune import CALLS, Creature, Sfx, to_pcm16
+from tare.tools.tune.runtime import AmbiencePlayer, VoiceBank
+from tare.tools.tune.speech.casting import cast
 
 SR = 44_100
 CREATURES = [

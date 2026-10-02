@@ -2,10 +2,10 @@ import json
 
 import numpy as np
 
-from creaturesynth import Creature
-from creaturesynth.analysis import clean_f0, distance, features, segments, yin
-from creaturesynth.clap import LABELS
-from creaturesynth.designer import design, gene_names, match
+from tare.tools.tune import Creature
+from tare.tools.tune.analysis import clean_f0, distance, features, segments, yin
+from tare.tools.tune.clap import LABELS
+from tare.tools.tune.designer import design, gene_names, match
 
 SR = 16_000
 
@@ -72,5 +72,5 @@ def test_pinned_genes_still_vary_per_individual():
 
 def test_every_archetype_has_a_label():
     covered = set().union(*LABELS.values())
-    from creaturesynth import ARCHETYPES
+    from tare.tools.tune import ARCHETYPES
     assert covered == set(ARCHETYPES)

@@ -12,10 +12,10 @@ from pathlib import Path
 
 import numpy as np
 
-from creaturesynth import Creature, Sfx, write_wav
-from creaturesynth.music import Cue
-from creaturesynth.score import Score
-from creaturesynth.speech import Speaker
+from tare.tools.tune import Creature, Sfx, write_wav
+from tare.tools.tune.music import Cue
+from tare.tools.tune.score import Score
+from tare.tools.tune.speech import Speaker
 
 SR = 48_000
 

@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from creaturesynth import Sfx
-from creaturesynth.audio_io import write_wav
-from creaturesynth.instruments import INSTRUMENTS
-from creaturesynth.score import Note, Score, chord, hz, midi, scale
+from tare.tools.tune import Sfx
+from tare.tools.tune.audio_io import write_wav
+from tare.tools.tune.instruments import INSTRUMENTS
+from tare.tools.tune.score import Note, Score, chord, hz, midi, scale
 
 SR = 16_000
 
@@ -94,8 +94,8 @@ def test_echo_bounces_between_the_ears():
 
 
 def test_damped_note_stops():
-    from creaturesynth.layers import render_modal
-    from creaturesynth.spec import Modal
+    from tare.tools.tune.layers import render_modal
+    from tare.tools.tune.spec import Modal
     m = Modal(0.0, 1.0, [(220.0, 4.0, 1.0)], [(0.0, 1.0, 0.0)], damp=0.3)
     y = render_modal(m, SR, 1)
     assert np.abs(y[int(0.45 * SR):]).max() < 1e-3 < np.abs(y[int(0.2 * SR):int(0.3 * SR)]).max()

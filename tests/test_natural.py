@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from creaturesynth.render import render
-from creaturesynth.spec import Spoken, Voice
-from creaturesynth.speech import Speaker, natural, speaker_from
-from creaturesynth.speech.concat import accent_pt, bank, banks, closest, fit_durations, select
+from tare.tools.tune.render import render
+from tare.tools.tune.spec import Spoken, Voice
+from tare.tools.tune.speech import Speaker, natural, speaker_from
+from tare.tools.tune.speech.concat import accent_pt, bank, banks, closest, fit_durations, select
 
 SR = 16_000
 
@@ -21,7 +21,7 @@ def test_banks_ship_numbers_only():
 def test_bank_labels_sit_on_the_sounds():
     """The teacher's sound runs ~60 ms ahead of its duration grid; the builder realigns. A labelled [s] must hiss
     and a labelled vowel must outshine a stop closure."""
-    from creaturesynth.speech.vocoder import band_freqs
+    from tare.tools.tune.speech.vocoder import band_freqs
     bf = band_freqs()
     for name in ("pt/alex", "pt/dora"):
         b = bank(name)

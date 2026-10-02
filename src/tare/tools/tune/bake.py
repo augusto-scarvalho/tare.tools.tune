@@ -30,7 +30,7 @@ bank), everyone else a formant voice; ``crowd`` and ``creature`` babble.
 ``style`` (speech, gibberish, animalese, mumble), ``gender`` (f, m) and ``voice`` override.
 A top-level ``"natural_voices": false`` keeps every line on the formant engine.
 
-Sound effects go in an optional ``sounds`` section (see creaturesynth.sfx; ``events``
+Sound effects go in an optional ``sounds`` section (see tare.tools.tune.sfx; ``events``
 defaults to all of the kind's events, loops get one take)::
 
       "sounds": {
@@ -208,7 +208,7 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
         line_results = [_bake_line(j) for j in line_jobs]
         sound_results = [_bake_sound(j) for j in sound_jobs]
 
-    manifest = {"format": "creaturesynth.bake", "version": 1, "generator": f"creaturesynth {__version__}",
+    manifest = {"format": "tare.tools.tune.bake", "version": 1, "generator": f"tare.tools.tune {__version__}",
                 "sample_rate": sr, "takes": takes, "calls": calls,
                 "creatures": {name: {"creature": c.to_dict(), "calls": {call: [None] * takes for call in calls}}
                               for name, c in creatures.items()}}

@@ -1,7 +1,7 @@
 """Music cues composed from a seed: short jingles and seamless loops, orchestral, 16-bit or chiptune.
 
-    >>> from creaturesynth import write_wav
-    >>> from creaturesynth.music import Cue
+    >>> from tare.tools.tune import write_wav
+    >>> from tare.tools.tune.music import Cue
     >>> write_wav("victory.wav", Cue("victory", seed=3).render(), 48000)
     >>> town = Cue("town", seed=7)                 # a loop: exactly `town.length` seconds, repeats without a seam
     >>> write_wav("battle_8bit.wav", Cue("battle", style="chip", seed=2).render(), 48000)

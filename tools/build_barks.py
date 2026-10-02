@@ -1,8 +1,8 @@
-"""Build the bark templates (src/creaturesynth/speech/data/barks.npz) from CC0 recordings of real voices.
+"""Build the bark templates (src/tare/tools/tune/speech/data/barks.npz) from CC0 recordings of real voices.
 
 Each recording is analysed once with the WORLD vocoder (pip install pyworld; development only, it never runs in a
 game): pitch every 5 ms, the spectral envelope (kept as 32 mel-spaced bands, dB) and the aperiodicity (5 bands).
-Only these numbers are stored, not the audio. At run time creaturesynth.speech.vocoder rebuilds the sound with its
+Only these numbers are stored, not the audio. At run time tare.tools.tune.speech.vocoder rebuilds the sound with its
 own deterministic synthesis, moved to each character's pitch and vocal tract.
 
 Sources (all CC0; the recordings are not in the repository):
@@ -23,7 +23,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
-from creaturesynth.speech.vocoder import AP_BANDS, BANDS, ENV_FLOOR, FRAME, encode  # noqa: E402
+from tare.tools.tune.speech.vocoder import AP_BANDS, BANDS, ENV_FLOOR, FRAME, encode  # noqa: E402
 
 SR = 48_000
 MAX_SECONDS = 3.0
@@ -106,7 +106,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--freesound", type=Path, required=True)
     ap.add_argument("--oga", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=ROOT / "src/creaturesynth/speech/data/barks.npz")
+    ap.add_argument("--out", type=Path, default=ROOT / "src/tare/tools/tune/speech/data/barks.npz")
     args = ap.parse_args()
     fs_files = {p.stem: p for p in args.freesound.rglob("*.mp3")}
     oga_files = {str(p.relative_to(args.oga)).split("/", 1)[-1]: p for p in args.oga.rglob("*.wav")}

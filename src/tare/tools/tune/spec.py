@@ -6,7 +6,8 @@ JSON, it is also the hand-off format for engine-side runtimes (see docs/arquitet
 import json
 from dataclasses import MISSING, asdict, dataclass, field, fields
 
-FORMAT = "creaturesynth.voice"
+FORMAT = "tare.tools.tune.voice"
+OLD_FORMATS = {"creaturesynth.voice"}   # the project's earlier name
 VERSION = 5   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
               # 5: vocoded clips and natural speech
 
@@ -220,7 +221,7 @@ class Voice:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Voice":
-        if data.get("format", FORMAT) != FORMAT:
+        if data.get("format", FORMAT) not in {FORMAT, *OLD_FORMATS}:
             raise ValueError(f"not a {FORMAT} document")
         if data.get("version", VERSION) > VERSION:
             raise ValueError(f"spec version {data['version']} is newer than supported ({VERSION})")

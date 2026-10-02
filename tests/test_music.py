@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from creaturesynth.music import CALM, CUES, Cue, Key, Rand, melody, voicing
+from tare.tools.tune.music import CALM, CUES, Cue, Key, Rand, melody, voicing
 
 SR = 16_000
 
@@ -53,7 +53,7 @@ def test_voicing_moves_little():
 
 
 def test_colour_cues_in_16bit_style():
-    from creaturesynth.music import COLOR_CUES
+    from tare.tools.tune.music import COLOR_CUES
     for kind in COLOR_CUES + ("town",):
         c = Cue(kind, "snes", seed=2, sr=SR)
         y = c.render()
@@ -62,8 +62,8 @@ def test_colour_cues_in_16bit_style():
 
 
 def test_colour_melody_uses_chord_and_colour_tones():
-    from creaturesynth.music import COLOR, PALETTES, color_melody
-    from creaturesynth.score import SCALES
+    from tare.tools.tune.music import COLOR, PALETTES, color_melody
+    from tare.tools.tune.score import SCALES
     tonic, chords = 62, PALETTES["lydian"][0] * 2
     mel = color_melody(Rand(1, "m"), tonic, "lydian", chords, CALM)
     for n, b, _ in mel:
@@ -74,7 +74,7 @@ def test_colour_melody_uses_chord_and_colour_tones():
 
 
 def test_planing_keeps_the_shape():
-    from creaturesynth.music import open_voicing, planed
+    from tare.tools.tune.music import open_voicing, planed
     v = open_voicing(60, (0, "maj9"))
     w = planed(v, 60, 62)
     assert np.diff(v).tolist() == np.diff(w).tolist() and {(n - 62) % 12 for n in w} <= {0, 2, 4, 7, 11}

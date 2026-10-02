@@ -1,11 +1,11 @@
 import numpy as np
 import pytest
 
-from creaturesynth.render import render
-from creaturesynth.spec import Vocoded, Voice
-from creaturesynth.speech import Speaker
-from creaturesynth.speech.emote import EMOTES, STYLES, emote, shout_pitch
-from creaturesynth.speech.vocoder import FRAME, Template, band_freqs, synthesize, template, templates
+from tare.tools.tune.render import render
+from tare.tools.tune.spec import Vocoded, Voice
+from tare.tools.tune.speech import Speaker
+from tare.tools.tune.speech.emote import EMOTES, STYLES, emote, shout_pitch
+from tare.tools.tune.speech.vocoder import FRAME, Template, band_freqs, synthesize, template, templates
 
 SR = 16_000
 

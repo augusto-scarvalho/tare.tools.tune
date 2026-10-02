@@ -1,4 +1,4 @@
-"""Command line: creaturesynth <command> (see creaturesynth --help)."""
+"""Command line: tare.tools.tune <command> (see tare.tools.tune --help)."""
 import argparse
 import json
 import sys
@@ -45,7 +45,7 @@ def _write(audio, path, sr, png=False):
     write_wav(path, audio, sr)
     print(f"{path}  ({len(audio) / sr:.2f}s)")
     if png:
-        from .plot import spectrogram  # optional dependency: pip install creaturesynth[plot]
+        from .plot import spectrogram  # optional dependency: pip install tare.tools.tune[plot]
         spectrogram(audio, sr, Path(path).with_suffix(".png"))
 
 
@@ -209,7 +209,7 @@ def cmd_gen1(a):
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="creaturesynth", description="Procedural creature voices for games.")
+    parser = argparse.ArgumentParser(prog="tare.tools.tune", description="Procedural creature voices for games.")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("list", help="archetypes and calls").set_defaults(fn=cmd_list)
@@ -274,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for name, fn, what, helptext in (("design", cmd_design, "prompt", "creature from a text prompt (CLAP)"),
                                      ("match", cmd_match, "sample", "creature closest to a recording (CLAP)")):
-        p = sub.add_parser(name, help=helptext + ' - needs pip install "creaturesynth[clap]"')
+        p = sub.add_parser(name, help=helptext + ' - needs pip install "tare.tools.tune[clap]"')
         p.add_argument(what)
         p.add_argument("--archetype", action="append", choices=sorted(ARCHETYPES), help="limit the search (repeatable)")
         p.add_argument("--call", choices=list(CALLS), default="idle")

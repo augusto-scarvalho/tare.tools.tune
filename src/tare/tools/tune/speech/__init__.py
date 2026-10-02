@@ -1,6 +1,6 @@
 """Human speech: Brazilian Portuguese ("pt") and English ("en"), with two engines.
 
-    >>> from creaturesynth.speech import Speaker
+    >>> from tare.tools.tune.speech import Speaker
     >>> guard = Speaker.preset("deep")
     >>> audio = guard.render("Alto lá! Quem vem?", lang="pt")
     >>> npc = Speaker.random(42)                 # a unique, repeatable voice per NPC

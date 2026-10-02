@@ -13,7 +13,7 @@ accents (thunder, birds, drips) at random moments.
     chunk = storm.read(1024)              # feed it to your audio stream, forever
 
 Engines that cannot run Python use the same specs through an engine-side renderer, or the
-baked packs from ``creaturesynth.bake`` (see docs/arquitetura.md).
+baked packs from ``tare.tools.tune.bake`` (see docs/arquitetura.md).
 """
 import random
 import threading
@@ -35,7 +35,7 @@ class VoiceBank:
         self.sample_rate = sample_rate
         self.takes = takes
         self.max_items = max_items
-        self._pool = ThreadPoolExecutor(workers, thread_name_prefix="creaturesynth")
+        self._pool = ThreadPoolExecutor(workers, thread_name_prefix="tare.tools.tune")
         self._cache: OrderedDict[tuple, Future] = OrderedDict()
         self._last: dict[tuple, int] = {}
         self._lock = threading.Lock()
@@ -123,7 +123,7 @@ class AmbiencePlayer:
     def __init__(self, scene: Sfx, sample_rate: int = DEFAULT_SR, accents_per_minute: float = 4.0, takes: int = 4,
                  gain: float = 1.0, seed: int | None = None, workers: int = 2):
         self.scene, self.sample_rate, self.takes, self.gain = scene, sample_rate, takes, gain
-        self._pool = ThreadPoolExecutor(workers, thread_name_prefix="creaturesynth-ambience")
+        self._pool = ThreadPoolExecutor(workers, thread_name_prefix="tare.tools.tune-ambience")
         self._random = random.Random(seed)
         self._bed = self._pool.submit(lambda: render(scene.voice("loop"), sample_rate))
         self._pos = 0

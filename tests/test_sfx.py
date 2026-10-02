@@ -4,12 +4,12 @@ import time
 import numpy as np
 import pytest
 
-from creaturesynth import RECIPES, Creature, Sfx, Voice, render
-from creaturesynth.bake import bake, load_bestiary
-from creaturesynth.cli import main
-from creaturesynth.layers import event_times, render_modal, render_noise, render_scatter
-from creaturesynth.runtime import AmbiencePlayer, VoiceBank
-from creaturesynth.spec import Modal, Noise, Scatter
+from tare.tools.tune import RECIPES, Creature, Sfx, Voice, render
+from tare.tools.tune.bake import bake, load_bestiary
+from tare.tools.tune.cli import main
+from tare.tools.tune.layers import event_times, render_modal, render_noise, render_scatter
+from tare.tools.tune.runtime import AmbiencePlayer, VoiceBank
+from tare.tools.tune.spec import Modal, Noise, Scatter
 
 SR = 22_050
 

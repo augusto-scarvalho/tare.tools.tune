@@ -1,4 +1,4 @@
-"""Spectrograms for sound design (optional: pip install creaturesynth[plot])."""
+"""Spectrograms for sound design (optional: pip install tare.tools.tune[plot])."""
 from pathlib import Path
 
 import numpy as np

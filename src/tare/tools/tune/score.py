@@ -1,7 +1,7 @@
 """Scores: notes and finished sounds placed in time, panned and mixed to stereo through one shared hall.
 
-    >>> from creaturesynth import Sfx, write_wav
-    >>> from creaturesynth.score import Score
+    >>> from tare.tools.tune import Sfx, write_wav
+    >>> from tare.tools.tune.score import Score
     >>> score = Score(bpm=96)
     >>> harp = score.track("harp", pan=-0.3, send=0.3)
     >>> harp.play("harp", [("A4", 0, 1), ("C5", 1, 1), ("E5", 2, 2)])   # (note, beat, beats[, velocity])

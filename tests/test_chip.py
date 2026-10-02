@@ -13,8 +13,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from creaturesynth import render
-from creaturesynth.chip import FRAME, channels, gen1_program, gen1_voice, load_gen1, program_duration
+from tare.tools.tune import render
+from tare.tools.tune.chip import FRAME, channels, gen1_program, gen1_voice, load_gen1, program_duration
 
 FIXTURES = Path(__file__).parent / "fixtures" / "gen1"
 REFERENCE = json.loads((FIXTURES / "ts_reference.json").read_text())["cries"]

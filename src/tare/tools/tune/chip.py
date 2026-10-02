@@ -173,10 +173,10 @@ def render_program(p: ChipProgram, sr: int) -> np.ndarray:
 # --- Gen 1 data (third-party game data: kept in the repo for reference, not in the package) ---
 
 def _default_data_path() -> Path:
-    env = os.environ.get("CREATURESYNTH_GEN1_DATA")
+    env = os.environ.get("TARE_TOOLS_TUNE_GEN1_DATA")
     if env:
         return Path(env)
-    return Path(__file__).resolve().parents[2] / "data" / "gen1" / "cries.json"
+    return Path(__file__).resolve().parents[4] / "data" / "gen1" / "cries.json"
 
 
 @lru_cache(maxsize=4)
@@ -185,7 +185,7 @@ def load_gen1(path: str | None = None) -> dict:
     if not p.exists():
         raise FileNotFoundError(
             f"Gen 1 cry data not found at {p}. It lives in the repository (data/gen1/cries.json); "
-            "point CREATURESYNTH_GEN1_DATA at it when running from an installed package.")
+            "point TARE_TOOLS_TUNE_GEN1_DATA at it when running from an installed package.")
     return json.loads(p.read_text())
 
 

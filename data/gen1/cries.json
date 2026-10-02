@@ -1,5 +1,5 @@
 {
- "about": "Gen 1 cry data (38 cry types + 151 species modifiers), as used by Pokemon Red/Blue. Third-party game data kept only for reference/tests; it is not part of the creaturesynth package. 'length' is the raw byte: the engine uses length - 0x80. Notes: [length-1, volume, fade, frequency/noise param].",
+ "about": "Gen 1 cry data (38 cry types + 151 species modifiers), as used by Pokemon Red/Blue. Third-party game data kept only for reference/tests; it is not part of the tare.tools.tune package. 'length' is the raw byte: the engine uses length - 0x80. Notes: [length-1, volume, fade, frequency/noise param].",
  "cry_types": [
   {
    "pulse1": [

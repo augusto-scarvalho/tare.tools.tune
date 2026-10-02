@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from creaturesynth import ARCHETYPES, CALLS, Creature, Voice, render
+from tare.tools.tune import ARCHETYPES, CALLS, Creature, Voice, render
 
 SR = 22_050  # faster tests; the synthesis is sample-rate independent
 

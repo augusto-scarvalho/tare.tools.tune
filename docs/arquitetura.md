@@ -205,7 +205,7 @@ Na voz inteira:
 
 **Coeficientes variáveis sem clique:** entre blocos, os filtros carregam o histórico de forma direta I (duas entradas e duas saídas) e recalculam o estado para os coeficientes novos (`render.time_varying`). Reaproveitar o estado do `lfilter` através de uma troca de coeficientes gera um estalo audível a cada transição de fonema.
 
-**Validar uma port:** os fluxos aleatórios devem bater bit a bit (vetores de teste). O áudio não será bit-exato, por ordem de operações em ponto flutuante e convolução por FFT. Para ter material de comparação, rode `creaturesynth bake` com specs: cada entrada do manifest traz o spec e o WAV de referência. Renderize os specs na engine e compare os espectros. Com `space = 0` a diferença deve ser mínima.
+**Validar uma port:** os fluxos aleatórios devem bater bit a bit (vetores de teste). O áudio não será bit-exato, por ordem de operações em ponto flutuante e convolução por FFT. Para ter material de comparação, rode `tare.tools.tune bake` com specs: cada entrada do manifest traz o spec e o WAV de referência. Renderize os specs na engine e compare os espectros. Com `space = 0` a diferença deve ser mínima.
 
 ## Efeitos sonoros
 
@@ -520,7 +520,7 @@ Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um fil
 
 ## As duas formas de uso
 
-**Offline (assets).** `creaturesynth bake bestiario.json -o pasta` gera:
+**Offline (assets).** `tare.tools.tune bake bestiario.json -o pasta` gera:
 
 ```
 pasta/manifest.json
@@ -528,7 +528,7 @@ pasta/<criatura>/<chamado>_<take>.wav   (+ .json com o spec)
 ```
 
 ```json
-{"format": "creaturesynth.bake", "version": 1, "sample_rate": 48000, "takes": 3,
+{"format": "tare.tools.tune.bake", "version": 1, "sample_rate": 48000, "takes": 3,
  "calls": ["idle", "alert", "attack", "hurt", "death"],
  "creatures": {"wolf": {"creature": {"archetype": "mammal", "species": 2183285651, "size": 0.45, ...},
                         "calls": {"hurt": [{"file": "wolf/hurt_00.wav", "duration": 1.1447,
@@ -735,6 +735,6 @@ A verificação contra o motor TypeScript original está em `tests/test_chip.py`
 - Editor visual: sliders de genes e traços, espectrograma e "evoluir" ao vivo.
 - Qualidade: fonte glotal LF, IRs de reverb reais, normalização por loudness (LUFS) nos pacotes.
 - Mais arquétipos (aquático, dragão dedicado, enxame) e mistura entre arquétipos (híbridos).
-- Redesenhar os arquétipos que o juiz CLAP não reconhece (mamífero, pássaro, inseto, robô), medindo com `creaturesynth judge`.
+- Redesenhar os arquétipos que o juiz CLAP não reconhece (mamífero, pássaro, inseto, robô), medindo com `tare.tools.tune judge`.
 - Efeitos fracos no juiz: passos, choque de espadas, eventos soltos dos ambientes. Comparar com gravações reais, como foi feito com vidro, trovão e fogueira.
 - Levar `design`/`match` (CLAP) também para os efeitos sonoros, buscando genes por receita.

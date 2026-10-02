@@ -3,12 +3,12 @@ import json
 import numpy as np
 import pytest
 
-from creaturesynth import Creature, Voice, read_wav, render
-from creaturesynth.bake import bake, load_bestiary
-from creaturesynth.cli import main
-from creaturesynth.runtime import VoiceBank
-from creaturesynth.spec import VERSION
-from creaturesynth.speech import PRESETS, Speaker, g2p_en, g2p_pt
+from tare.tools.tune import Creature, Voice, read_wav, render
+from tare.tools.tune.bake import bake, load_bestiary
+from tare.tools.tune.cli import main
+from tare.tools.tune.runtime import VoiceBank
+from tare.tools.tune.spec import VERSION
+from tare.tools.tune.speech import PRESETS, Speaker, g2p_en, g2p_pt
 
 SR = 22_050
 
