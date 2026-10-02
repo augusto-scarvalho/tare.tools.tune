@@ -273,6 +273,14 @@ As partes:
 - **Batida com os nós dos dedos:** abafada, mais forte em 250–1000 Hz, com 0,15–0,25 s entre as batidas.
 - **Portão de ferro:** ressoa mais longo.
 
+**Itens (`item`): medidos em gravações** de moedas, rolhas, goles e páginas.
+- **Moedas:** tilintam muito agudo (mais forte em 8–13 kHz). As moedas pequenas soam em 8,4–13,7 kHz por 0,06–0,46 s e as grossas em 1,5–5 kHz, em vários toques a 20–100 ms uns dos outros.
+- **Moeda caindo:** quica (~0,1 s entre os quiques) e depois gira, chacoalhando cada vez mais rápido até parar.
+- **Rolha:** estoura grave, com o gargalo ressoando em 500–1150 Hz por ~0,15 s.
+- **Gole:** grave (mais forte em 250–500 Hz, com uma ressonância perto de 1–1,3 kHz), em rajadas de 2–3 estalos da garganta a 40–50 ms.
+- **Página virando:** estala em 1–6 kHz por 0,3–0,6 s e termina num abano suave.
+- **Gema:** soa como cristal.
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.

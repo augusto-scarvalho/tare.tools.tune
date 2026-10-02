@@ -767,6 +767,112 @@ def closure(fx: Fx, kind: str, event: str, iron: bool, size: float) -> list:
         Noise(h[0], 0.03, [(0, 900), (1, 600)], "band", 0.8, amp=decay_curve(5), attack=0.001, release=0.01,
               gain=0.35 * h[1]) for h in hits]
 
+
+# --- items ------------------------------------------------------------------------------------------------------------
+#
+# From recordings: coins clink very high (strongest 8-13 kHz; small coins' modes 8.4-13.7 kHz ringing 0.06-0.46 s,
+# thicker coins 1.5-5 kHz), several clinks 20-100 ms apart; a dropped coin bounces (~0.1 s apart) and then spins,
+# its rattle speeding up until it settles. A cork pops low (the bottle's neck resonating at 500-1150 Hz, ~0.15 s).
+# A swallow is low (strongest 250-500 Hz, a resonance near 1-1.3 kHz) in bursts of 2-3 gulps 40-50 ms apart.
+# A page turning crackles across 1-6 kHz for 0.3-0.6 s and ends in a soft flap.
+
+COIN = [(8437, 0.1, 0.8), (9445, 0.26, 0.6), (9867, 0.12, 1.0), (10125, 0.11, 0.6), (11953, 0.3, 0.9),
+        (12703, 0.19, 0.6), (13101, 0.13, 0.5), (14500, 0.1, 0.5), (15600, 0.08, 0.4), (6700, 0.12, 0.5),
+        (2929, 0.5, 0.25), (3914, 0.45, 0.3), (5156, 0.4, 0.3)]
+
+
+def coins(fx: Fx, n: int, spread: float) -> list:
+    """A handful of coins clinking against each other."""
+    out = []
+    for c in range(2):
+        hits = [(round(spread * fx.rand(f"c{c}t{k}"), 4), round(0.3 + 0.7 * fx.rand(f"c{c}g{k}"), 3), 0.0004)
+                for k in range(n)]
+        out.append(Modal(0.0, round(spread + 0.6, 3), _jittered(fx, COIN, f"coin{c}", 0.08), sorted(hits),
+                         hardness=16000, click=0.1, gain=1.0 - 0.3 * c))
+    return out
+
+
+def coin_drop(fx: Fx) -> list:
+    """One coin dropped: it lands, bounces, then spins faster and faster until it lies still."""
+    hits, t, g = [(0.0, 1.0, 0.0004)], 0.0, 1.0
+    for k in range(2 + int(2 * fx.rand("bounces"))):
+        t += 0.1 + 0.04 * fx.rand(f"b{k}")
+        g *= 0.6
+        hits.append((round(t, 4), round(g, 3), 0.0004))
+    gap = 0.05
+    while gap > 0.008:   # the spin: contacts closing in, quieter
+        t, gap, g = t + gap, gap * 0.82, g * 0.93
+        hits.append((round(t, 4), round(g * 0.6, 3), 0.0004))
+    hits.append((round(t + 0.02, 4), round(g, 3), 0.0004))
+    return [Modal(0.0, round(t + 0.5, 3), _jittered(fx, COIN, "coin0", 0.08), hits, hardness=16000, click=0.1),
+            fx.strike("wood", size=0.3, hits=[(h[0], h[1], 0.001) for h in hits[:3]], gain=0.25, prefix="table",
+                      click=0.0)]
+
+
+def gulps(fx: Fx, start: float, n: int) -> list:
+    """Swallowing: low gulps, each a burst of 2-3 clicks of the throat 40-50 ms apart."""
+    out, t = [], start
+    for k in range(n):
+        sub = [(round(t + j * (0.04 + 0.01 * fx.rand(f"g{k}{j}")), 4), round(1.0 - 0.3 * j, 2), 0.006)
+               for j in range(2 + int(fx.rand(f"gn{k}") * 1.99))]
+        throat = round(330 * (0.85 + 0.3 * fx.rand(f"gf{k}")), 1)
+        out.append(Modal(0.0, round(sub[-1][0] + 0.2, 3), [(throat, 0.06, 1.0), (1150, 0.04, 0.4)], sub, hardness=1800,
+                         click=0.0))
+        t += 0.38 + 0.12 * fx.rand(f"gt{k}")
+    return out
+
+
+def paper(fx: Fx, dur: float, flap: bool = True) -> list:
+    """Paper handled: crackles across 1-6 kHz and, at the end, a soft flap."""
+    out = [Scatter(0.0, round(dur, 3), [(0, 40), (0.5, 90), (1, 30)], "pop", (1000, 6000), (0.001, 0.006), (0.2, 1.0)),
+           Noise(0.0, round(dur, 3), [(0, 2500), (1, 3500)], "band", 0.6, amp=bell_curve(0.6, 1.5), attack=0.02,
+                 wobble=(30.0, 0.8), gain=0.5)]
+    if flap:
+        out.append(Noise(round(dur * 0.9, 3), 0.07, [(0, 700), (1, 450)], "band", 0.8, amp=decay_curve(4),
+                         attack=0.004, gain=0.6))
+    return out
+
+
+def item(fx: Fx, style: str, event: str) -> list:
+    if style == "coins":
+        if event == "pickup":
+            return coins(fx, 5 + int(4 * fx.rand("n")), 0.35)
+        if event == "use":   # paid out: a few coins set down on a counter, one by one
+            out = coins(fx, 3, 0.25)
+            return out + [fx.strike("wood", size=0.3, hits=[(round(0.1 * k, 3), 0.4, 0.001) for k in range(3)],
+                                    gain=0.3, prefix="counter", click=0.0)]
+        return coin_drop(fx)
+    if style == "potion":
+        glass = fx.strike("glass", size=0.35, hits=[(0.0, 1.0, 0.0008)], gain=0.6, prefix="bottle", ring=0.6)
+        if event == "pickup":
+            return [glass, Noise(0.0, 0.08, [(0, 900), (1, 700)], "band", 0.8, amp=decay_curve(4), gain=0.2)]
+        if event == "use":   # uncork, drink, breathe out
+            neck = 500 + 650 * fx.g.base("neck")
+            return [squeak(fx, 0.0, 0.18, 1800, 2600, 0.15, "cork"),
+                    Modal(0.2, 0.3, [(round(neck, 1), 0.15, 1.0), (round(neck * 2.1, 1), 0.06, 0.3)],
+                          [(0.0, 1.0, 0.002)], hardness=4000, click=0.3),
+                    *gulps(fx, 0.6, 3),
+                    Noise(1.9, 0.35, [(0, 900), (1, 500)], "band", 0.7, amp=bell_curve(0.2, 1.5), attack=0.03,
+                          gain=0.25)]
+        # dropped: the bottle breaks
+        return [glass, Scatter(0.0, 0.4, [(0, 400), (1, 0)], "ping", (2500, 9000), (0.002, 0.02), (0.2, 1.0), 0.7),
+                Noise(0.0, 0.25, [(0, 5000), (1, 3000)], "high", 0.7, amp=decay_curve(5), attack=0.001, gain=0.5),
+                Scatter(0.05, 0.3, [(0, 120), (1, 0)], "drop", (600, 2500), (0.003, 0.01), (0.2, 1.0), 0.4)]
+    if style == "scroll":
+        if event == "pickup":
+            return paper(fx, 0.25)
+        if event == "use":
+            return paper(fx, 0.45 + 0.2 * fx.rand("pages"))
+        return paper(fx, 0.12) + [Noise(0.1, 0.08, [(0, 500), (1, 300)], "low", 0.8, amp=decay_curve(5), gain=0.5)]
+    # gem: a crystal that rings
+    ring = 1.5 if event == "use" else 1.0
+    gem = fx.strike("glass", size=0.1, hits=[(0.0, 1.0, 0.0006)], ring=ring * 2, prefix="gem", click=0.05)
+    if event == "use":
+        return [gem, Scatter(0.0, 0.8, [(0, 30), (1, 0)], "ping", (3000, 9000), (0.05, 0.2), (0.2, 0.8), 0.4)]
+    if event == "drop":
+        return [gem, fx.strike("stone", size=0.6, hits=[(0.0, 1.0, 0.001)], gain=0.3, prefix="g", click=0.2)]
+    return [gem]
+
 # --- weapons ----------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -873,6 +979,12 @@ def chest(fx: Fx):
     """Chests: open (latch and creaking lid), close, locked (rattle), unlock."""
     layers = closure(fx, "chest", fx.event, fx.style == "iron", fx.size)
     return fx.voice(fx.level(0.8), **splits(layers))
+
+
+@recipe("item", ("pickup", "use", "drop"), ("coins", "potion", "scroll", "gem"))
+def item_recipe(fx: Fx):
+    """Inventory items: coins, a potion, a scroll or book, a gem; picked up, used (paid, drunk, read), dropped."""
+    return fx.voice(fx.level(0.7), **splits(item(fx, fx.style, fx.event)))
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))
