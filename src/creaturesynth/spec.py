@@ -7,7 +7,7 @@ import json
 from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "creaturesynth.voice"
-VERSION = 1
+VERSION = 2   # 2: added `speech`
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -52,9 +52,36 @@ class ChipProgram:
 
 
 @dataclass
+class SpeechProgram:
+    """Human speech as formant-synthesiser frame tracks (see speech/klatt.py).
+
+    `frames` maps track name -> values at `frame_rate`: f0, av (voicing), ah (aspiration),
+    af/ab (frication: resonant/flat), f1..f5 + b1..b5 (cascade formants), fnp/fnz (nasal
+    pole/zero), fa/wa/ga + fb/wb/gb (two frication resonances: Hz, bandwidth, gain).
+    """
+
+    frames: dict[str, list[float]]
+    frame_rate: float = 400.0
+    start: float = 0.0
+    gain: float = 1.0
+    tilt: float = 3000.0              # glottal source spectral tilt (low-pass), Hz
+    jitter: float = 0.1               # random pitch wander, semitones
+    rough: tuple[float, float] = (0.0, 30.0)    # growl AM depth, rate Hz
+    sub: float = 0.0                  # subharmonics (monster voices)
+    text: str = ""
+    lang: str = ""
+    phonemes: str = ""                # informational transcription
+
+    @property
+    def duration(self) -> float:
+        return len(self.frames["f0"]) / self.frame_rate
+
+
+@dataclass
 class Voice:
     syllables: list[Syllable] = field(default_factory=list)
     chips: list[ChipProgram] = field(default_factory=list)
+    speech: list[SpeechProgram] = field(default_factory=list)
     drive: float = 0.0                # tanh saturation amount
     crush: float = 0.0                # 0..1 sample-rate/bit-depth reduction
     space: float = 0.0                # reverb tail length, seconds (engines may use their own reverb)
@@ -69,6 +96,7 @@ class Voice:
         from .chip import program_duration  # chip imports this module
         ends = [s.start + s.dur for s in self.syllables]
         ends += [c.start + program_duration(c) for c in self.chips]
+        ends += [p.start + p.duration for p in self.speech]
         return max(ends, default=0.0)
 
     def to_dict(self) -> dict:
@@ -80,6 +108,7 @@ class Voice:
         out.update(compact(self))
         out["syllables"] = [compact(s) for s in self.syllables]
         out["chips"] = [compact(c) for c in self.chips]
+        out["speech"] = [compact(p) for p in self.speech]
         return json.loads(json.dumps(out))  # tuples -> lists: exactly what JSON round-trips to
 
     def to_json(self, indent: int | None = None) -> str:
@@ -95,6 +124,8 @@ class Voice:
         kwargs = {k: v for k, v in data.items() if k in known}
         kwargs["syllables"] = [_syllable(s) for s in data.get("syllables", [])]
         kwargs["chips"] = [ChipProgram(**c) for c in data.get("chips", [])]
+        kwargs["speech"] = [SpeechProgram(**{**sp, "rough": tuple(sp.get("rough", (0.0, 30.0)))})
+                            for sp in data.get("speech", [])]
         return cls(**kwargs)
 
     @classmethod

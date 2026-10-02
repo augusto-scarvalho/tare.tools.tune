@@ -47,6 +47,30 @@ def _write(audio, path, sr, png=False):
         spectrogram(audio, sr, Path(path).with_suffix(".png"))
 
 
+def _speaker(a):
+    from .speech import Speaker
+    sp = Speaker.random(int(a.voice[4:])) if a.voice.startswith("npc:") else Speaker.preset(a.voice)
+    overrides = {k: getattr(a, k) for k in ("pitch", "tract", "rate", "range", "breath") if getattr(a, k) is not None}
+    return sp.but(**overrides)
+
+
+def cmd_say(a):
+    speaker = _speaker(a)
+    if a.phonemes:
+        print(speaker.phonemes(a.text, a.lang))
+    voice = speaker.voice(a.text, a.lang)
+    if a.spec:
+        Path(a.spec).write_text(voice.to_json())
+    _write(render(voice, a.sr), a.output or "fala.wav", a.sr, a.png)
+
+
+def cmd_voices(a):
+    from .speech import PRESETS
+    for name, sp in PRESETS.items():
+        print(f"  {name:8s} pitch {sp.pitch:5.0f} Hz  tract {sp.tract:.2f}  rate {sp.rate:.2f}")
+    print("  npc:<seed>  a unique human voice per seed (Speaker.random)")
+
+
 def cmd_list(a):
     print("archetypes:")
     for name in ARCHETYPES:
@@ -80,9 +104,12 @@ def cmd_bake(a):
     calls = a.calls.split(",") if a.calls else settings.get("calls")
     takes = a.takes or settings.get("takes", 4)
     sr = a.sr or settings.get("sample_rate", DEFAULT_SR)
-    manifest = bake(creatures, a.output, calls, takes, sr, specs=not a.no_specs, workers=a.workers)
+    speakers = settings.get("speakers", {})
+    manifest = bake(creatures, a.output, calls, takes, sr, specs=not a.no_specs, workers=a.workers,
+                    speakers=speakers)
     n = sum(len(t) for c in manifest["creatures"].values() for t in c["calls"].values())
-    print(f"{n} sounds for {len(creatures)} creatures -> {a.output}/manifest.json")
+    lines = sum(len(s["lines"]) for s in manifest.get("speakers", {}).values())
+    print(f"{n} sounds for {len(creatures)} creatures, {lines} spoken lines -> {a.output}/manifest.json")
 
 
 def cmd_zoo(a):
@@ -131,6 +158,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--png", action="store_true")
     p.add_argument("--sr", type=int, default=DEFAULT_SR)
     p.set_defaults(fn=cmd_from_spec)
+
+    p = sub.add_parser("say", help="speak text with a procedural human voice (pt or en)")
+    p.add_argument("text")
+    p.add_argument("--lang", choices=["pt", "en"], default="pt")
+    p.add_argument("--voice", default="default", help="preset (see 'voices') or npc:<seed>")
+    for knob in ("pitch", "tract", "rate", "range", "breath"):
+        p.add_argument(f"--{knob}", type=float)
+    p.add_argument("--phonemes", action="store_true", help="print the phonetic transcription")
+    p.add_argument("-o", "--output")
+    p.add_argument("--spec", help="also save the voice spec (JSON)")
+    p.add_argument("--png", action="store_true")
+    p.add_argument("--sr", type=int, default=DEFAULT_SR)
+    p.set_defaults(fn=cmd_say)
+
+    sub.add_parser("voices", help="speech voice presets").set_defaults(fn=cmd_voices)
 
     p = sub.add_parser("bake", help="bestiary JSON -> WAV packs + manifest")
     p.add_argument("bestiary")

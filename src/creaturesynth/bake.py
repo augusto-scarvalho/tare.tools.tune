@@ -13,11 +13,20 @@ Bestiary format (JSON)::
 
 ``species`` may be a number or any string (hashed). ``extends`` inherits from another entry
 (evolutions, variants). ``random`` draws a whole new creature from a seed.
+
+Spoken lines go in an optional ``speakers`` section::
+
+      "speakers": {
+        "blacksmith": {"voice": "deep", "lang": "pt", "lines": {"greet": "Bem-vindo à forja!"}},
+        "guard":      {"voice": "npc:12", "lines": {"halt": "Alto lá!"}},
+        "fairy":      {"voice": {"preset": "fairy", "rate": 1.2}, "lang": "en", "lines": {"hi": "Hi there!"}}
+      }
 """
 import json
 import os
 from collections.abc import Iterable, Mapping
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -27,8 +36,23 @@ from .audio_io import write_wav
 from .calls import CALLS
 from .creature import Creature
 from .render import DEFAULT_SR, render
+from .speech import Speaker
 
 MANIFEST = "manifest.json"
+
+
+def speaker_from_entry(name: str, entry: Mapping) -> Speaker:
+    voice = entry.get("voice", "default")
+    if isinstance(voice, Mapping):
+        voice = dict(voice)
+        base = Speaker.preset(voice.pop("preset")) if "preset" in voice else Speaker()
+        try:
+            return base.but(name=name, **voice)
+        except TypeError as e:
+            raise ValueError(f"speaker {name!r}: {e}") from None
+    if str(voice).startswith("npc:"):
+        return Speaker.random(int(str(voice)[4:]), name=name)
+    return Speaker.preset(voice).but(name=name)
 
 
 def creature_from_entry(name: str, entry: Mapping, entries: Mapping[str, Mapping], _seen=()) -> Creature:
@@ -60,6 +84,10 @@ def load_bestiary(source: str | Path | Mapping) -> tuple[dict[str, Creature], di
     entries = data.get("creatures", {})
     creatures = {name: creature_from_entry(name, e, entries) for name, e in entries.items()}
     settings = {k: data[k] for k in ("sample_rate", "takes", "calls") if k in data}
+    if data.get("speakers"):
+        settings["speakers"] = {name: (speaker_from_entry(name, e), e.get("lang", data.get("lang", "pt")),
+                                       dict(e.get("lines", {})))
+                                for name, e in data["speakers"].items()}
     return creatures, settings
 
 
@@ -77,9 +105,23 @@ def _bake_one(job):
     return name, call, take, entry
 
 
+def _bake_line(job):
+    name, speaker, lang, line_id, text, sr, out_dir, specs = job
+    voice = speaker.voice(text, lang)
+    audio = render(voice, sr)
+    stem = f"{name}/{line_id}"
+    write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
+    entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4)}
+    if specs:
+        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json())
+        entry["spec"] = f"{stem}.json"
+    return name, line_id, entry
+
+
 def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable[str] | None = None,
-         takes: int = 4, sr: int = DEFAULT_SR, specs: bool = True, workers: int | None = None) -> dict:
-    """Render every creature x call x take to ``out_dir`` and write ``manifest.json``."""
+         takes: int = 4, sr: int = DEFAULT_SR, specs: bool = True, workers: int | None = None,
+         speakers: Mapping[str, tuple[Speaker, str, Mapping[str, str]]] | None = None) -> dict:
+    """Render every creature x call x take (and every speaker line) to ``out_dir``; write ``manifest.json``."""
     out_dir = Path(out_dir)
     calls = list(calls or CALLS)
     for call in calls:
@@ -87,12 +129,16 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
             raise ValueError(f"unknown call {call!r}")
     jobs = [(name, c, call, take, sr, str(out_dir), specs)
             for name, c in creatures.items() for call in calls for take in range(takes)]
+    line_jobs = [(name, sp, lang, line_id, text, sr, str(out_dir), specs)
+                 for name, (sp, lang, lines) in (speakers or {}).items() for line_id, text in lines.items()]
     workers = workers or min(os.cpu_count() or 1, 8)
-    if workers > 1 and len(jobs) > 1:
+    if workers > 1 and len(jobs) + len(line_jobs) > 1:
         with ProcessPoolExecutor(workers) as pool:
             results = list(pool.map(_bake_one, jobs))
+            line_results = list(pool.map(_bake_line, line_jobs))
     else:
         results = [_bake_one(j) for j in jobs]
+        line_results = [_bake_line(j) for j in line_jobs]
 
     manifest = {"format": "creaturesynth.bake", "version": 1, "generator": f"creaturesynth {__version__}",
                 "sample_rate": sr, "takes": takes, "calls": calls,
@@ -100,6 +146,11 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
                               for name, c in creatures.items()}}
     for name, call, take, entry in results:
         manifest["creatures"][name]["calls"][call][take] = entry
+    if speakers:
+        manifest["speakers"] = {name: {"speaker": asdict(sp), "lang": lang, "lines": {}}
+                                for name, (sp, lang, _) in speakers.items()}
+        for name, line_id, entry in line_results:
+            manifest["speakers"][name]["lines"][line_id] = entry
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / MANIFEST).write_text(json.dumps(manifest, indent=1))
     return manifest

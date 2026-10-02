@@ -54,7 +54,7 @@ class VoiceBank:
 
     def ready(self, creature: Creature, call: str = "idle") -> bool:
         with self._lock:
-            return any(f.done() for (c, k, _), f in self._cache.items() if c == creature and k == call)
+            return any(f.done() for key, f in self._cache.items() if key[:2] == (creature, call))
 
     def get(self, creature: Creature, call: str = "idle", block: bool = True) -> np.ndarray | None:
         """A take of `call`, never the same one twice in a row.
@@ -76,6 +76,20 @@ class VoiceBank:
         take = self._random.choice(options)
         self._last[(creature, call)] = take
         return self._future(creature, call, take).result()
+
+    def line(self, speaker, text: str, lang: str = "pt", block: bool = True) -> np.ndarray | None:
+        """A spoken line (cached); with ``block=False`` returns None until it is ready."""
+        k = ("line", speaker, text, lang)
+        with self._lock:
+            fut = self._cache.get(k)
+            if fut is None:
+                fut = self._pool.submit(lambda: render(speaker.voice(text, lang), self.sample_rate))
+                self._cache[k] = fut
+                while len(self._cache) > self.max_items:
+                    self._cache.popitem(last=False)
+        if not block and not fut.done():
+            return None
+        return fut.result()
 
     def close(self):
         self._pool.shutdown(wait=False, cancel_futures=True)

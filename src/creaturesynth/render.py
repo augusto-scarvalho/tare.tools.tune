@@ -76,6 +76,41 @@ def _source(s: Syllable, f0: np.ndarray, sr: int, k: int) -> np.ndarray:
     return x
 
 
+def time_varying(x: np.ndarray, coeffs, block: int) -> np.ndarray:
+    """Second-order filter whose (b, a) coefficients change every `block` samples.
+
+    Between blocks we carry the Direct Form I history (last two inputs and outputs) and
+    rebuild lfilter's state for the new coefficients; reusing lfilter's own state across a
+    coefficient change would click.
+    """
+    y = np.empty_like(x)
+    x1 = x2 = y1 = y2 = 0.0
+    for i, (b, a) in enumerate(coeffs):
+        k = i * block
+        seg = x[k:k + block]
+        if not len(seg):
+            break
+        b0, b1, b2 = (list(b) + [0.0, 0.0])[:3]
+        _, a1, a2 = (list(a) + [0.0, 0.0])[:3]
+        zi = [b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2, b2 * x1 - a2 * y1]
+        out, _ = lfilter([b0, b1, b2], [1.0, a1, a2], seg, zi=zi)
+        y[k:k + len(seg)] = out
+        if len(seg) >= 2:
+            x1, x2, y1, y2 = seg[-1], seg[-2], out[-1], out[-2]
+        else:
+            x1, x2, y1, y2 = seg[-1], x1, out[-1], y1
+    return y
+
+
+def bandpass_coeffs(f: float, bw: float, sr: int):
+    """RBJ band-pass with 0 dB peak gain."""
+    f = min(f, 0.45 * sr)
+    w0 = 2 * np.pi * f / sr
+    alpha = np.sin(w0) * min(bw, f) / (2 * f)
+    a0 = 1 + alpha
+    return [alpha / a0, 0.0, -alpha / a0], [1.0, -2 * np.cos(w0) / a0, (1 - alpha) / a0]
+
+
 def _formants(x: np.ndarray, s: Syllable, sr: int) -> np.ndarray:
     if not s.formants:
         return x
@@ -83,18 +118,8 @@ def _formants(x: np.ndarray, s: Syllable, sr: int) -> np.ndarray:
     blocks = (n + BLOCK - 1) // BLOCK
     scale = curve(s.mouth, blocks, log=True)
     out = np.zeros(n)
-    for hz, bw, gain in s.formants:
-        y, zi = np.empty(n), np.zeros(2)
-        for b in range(blocks):
-            k = b * BLOCK
-            f = min(hz * scale[b], 0.45 * sr)
-            w0 = 2 * np.pi * f / sr
-            alpha = np.sin(w0) * min(bw * scale[b], f) / (2 * f)   # constant-Q as the mouth moves
-            a0 = 1 + alpha
-            y[k:k + BLOCK], zi = lfilter([alpha / a0, 0.0, -alpha / a0],
-                                         [1.0, -2 * np.cos(w0) / a0, (1 - alpha) / a0],
-                                         x[k:k + BLOCK], zi=zi)
-        out += gain * y
+    for hz, bw, gain in s.formants:  # constant-Q as the mouth moves
+        out += gain * time_varying(x, (bandpass_coeffs(hz * m, bw * m, sr) for m in scale), BLOCK)
     return out
 
 
@@ -146,8 +171,12 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
     for c in voice.chips:
         y = render_program(c, sr)
         parts.append((int(c.start * sr), c.gain * y / (np.max(np.abs(y)) + 1e-12)))
+    if voice.speech:
+        from .speech.klatt import render_speech  # the speech module builds on this one
+        for i, p in enumerate(voice.speech):
+            parts.append((int(p.start * sr), render_speech(p, sr, rng.key(voice.seed, "speech", i))))
     if not parts:
-        raise ValueError("voice has no syllables or chip programs")
+        raise ValueError("voice has no syllables, chip programs or speech")
     out = np.zeros(max(k + len(y) for k, y in parts))
     for k, y in parts:
         out[k:k + len(y)] += y

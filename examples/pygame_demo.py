@@ -3,12 +3,13 @@
     pip install pygame
     python examples/pygame_demo.py
 
-1-5: idle / alert / attack / hurt / death    TAB: next creature    SPACE: new random creature
+1-5: idle / alert / attack / hurt / death    T: talk    TAB: next creature    SPACE: new random creature
 """
 import pygame
 
 from creaturesynth import CALLS, Creature, to_pcm16
 from creaturesynth.runtime import VoiceBank
+from creaturesynth.speech import Speaker
 
 SR = 44_100
 CREATURES = [
@@ -40,6 +41,11 @@ def main():
                     seed += 1
                     CREATURES[index] = Creature.random(seed)
                     bank.warm(CREATURES[index])
+                elif event.key == pygame.K_t:  # the creature talks, in a voice that fits its body
+                    speaker = Speaker.from_creature(CREATURES[index])
+                    audio = bank.line(speaker, "Olá, viajante! Cuidado com os lobos.", "pt", block=False)
+                    if audio is not None:
+                        pygame.mixer.Sound(buffer=to_pcm16(audio)).play()
                 elif pygame.K_1 <= event.key <= pygame.K_5:
                     audio = bank.get(CREATURES[index], calls[event.key - pygame.K_1], block=False)
                     if audio is not None:  # still rendering: skip rather than stall the frame
@@ -49,7 +55,7 @@ def main():
         label = c.name or f"{c.archetype} #{c.species}"
         screen.blit(font.render(f"{label}  (size {c.size:.2f}, aggression {c.aggression:.2f})", True, "white"),
                     (16, 40))
-        screen.blit(font.render("1-5: " + " / ".join(calls) + "   TAB / SPACE", True, "gray"), (16, 90))
+        screen.blit(font.render("1-5: " + " / ".join(calls) + "   T: talk   TAB / SPACE", True, "gray"), (16, 90))
         pygame.display.flip()
         pygame.time.wait(16)
     bank.close()

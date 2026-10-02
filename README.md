@@ -1,6 +1,6 @@
 # creaturesynth
 
-Vozes procedurais de criaturas para jogos. Você descreve **quem** chama (espécie, tamanho, agressividade) e **por quê** (idle, alerta, ataque, dor, morte), e o creaturesynth gera o som. A mesma entrada sempre gera o mesmo som, e cada indivíduo e cada repetição varia um pouco.
+Vozes procedurais para jogos: **criaturas** e **fala humana** (português e inglês). Para criaturas, você descreve **quem** chama (espécie, tamanho, agressividade) e **por quê** (idle, alerta, ataque, dor, morte). Para pessoas, você escolhe uma voz e escreve o texto. A mesma entrada sempre gera o mesmo som, e cada indivíduo e cada repetição varia um pouco.
 
 Nasceu de um fork do [sintetizador de gritos da 1ª geração de Pokémon](https://github.com/ardean/pokemon-gen1-cry-synthesizer). A ideia do jogo, que tira 151 gritos de 38 moldes mais tom e duração, virou o modelo geral aqui: **espécie = genes estáveis; indivíduo = pequenas variações; traços = evolução**. O motor original continua disponível como arquétipo `chip` e como reprodução fiel dos 151 gritos.
 
@@ -12,6 +12,13 @@ write_wav("lobo_ataque.wav", lobo.render("attack"), 48000)
 
 lobo_terrivel = lobo.evolve(size=0.45, aggression=0.35)   # mesma espécie, maior e mais feroz
 write_wav("lobo_terrivel_morte.wav", lobo_terrivel.render("death", take=2), 48000)
+
+from creaturesynth.speech import Speaker
+
+ferreiro = Speaker.preset("deep")
+write_wav("ferreiro.wav", ferreiro.render("Bem-vindo à forja, viajante!", lang="pt"), 48000)
+npc = Speaker.random(42)                                   # uma voz única e repetível por NPC
+write_wav("npc.wav", npc.render("Did you see the dragon?", lang="en"), 48000)
 ```
 
 ## Instalação
@@ -48,6 +55,21 @@ Requer Python 3.10 ou mais novo.
 - `take` e `take_variation`: o quanto repetições do mesmo chamado diferem.
 - `genes={"nome": 0..1}`: fixa genes para direção de arte. Ex.: `{"kind": 0.1}` força o monstro "brute".
 
+## Fala humana
+
+Texto em **português brasileiro** ou **inglês** vira fala por síntese de formantes, a mesma família de técnica das vozes de computador clássicas. O processo:
+
+1. **Texto → fonemas.** No português, por regras: dígrafos, nasais, "t/d" antes de "i", "r"/"s"/"x", sílaba tônica e números por extenso. No inglês, pelo dicionário CMUdict (~126 mil palavras), com regras para palavras que não estão nele, como nomes inventados.
+2. **Fonemas → alvos acústicos.** Cada fonema tem duração e alvos de formantes; a coarticulação suaviza a passagem entre eles.
+3. **Entonação.** Afirmação cai no fim, pergunta sim/não sobe, pergunta com "where/what" cai, exclamação tem pico mais alto, vírgula deixa a frase em suspenso.
+4. **Síntese.** Um sintetizador em cascata/paralelo no estilo Klatt gera o áudio.
+
+Soa robótico e retrô, mas é 100% procedural, leve, determinístico e portável.
+
+**Vozes prontas:** `default`, `deep`, `high`, `child`, `cute`, `fairy`, `elder`, `giant`, `monster`, `robot` e `whisper`. Use `Speaker.random(seed)` para dar uma voz humana única a cada NPC, e `Speaker.from_creature(criatura)` para uma criatura falar com voz compatível com o corpo dela. Dá para ajustar `pitch`, `tract` (tamanho do trato vocal), `rate`, `range` (entonação), `breath`, `rough` e outros.
+
+**Inteligibilidade** medida com o Whisper (`tools/intelligibility.py`) em 16 frases de diálogo de jogo por idioma: no inglês, CER entre 0,04 e 0,06 conforme a voz (a maioria das frases sai perfeita); no português, entre 0,24 e 0,34 (cerca de 70 a 75% dos caracteres certos). O português ainda é o ponto a melhorar.
+
 ## Duas formas de usar
 
 ### 1. Offline: gerar assets para qualquer engine
@@ -70,7 +92,16 @@ creaturesynth bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamad
 }
 ```
 
-`extends` herda de outra entrada (evoluções, variantes) e `random` sorteia uma criatura nova. Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por chamado.
+`extends` herda de outra entrada (evoluções, variantes) e `random` sorteia uma criatura nova. Falas de NPC entram numa seção `speakers`, com uma voz e as falas de cada um:
+
+```json
+"speakers": {
+  "ferreiro": {"voice": "deep", "lang": "pt", "lines": {"oi": "Bem-vindo à forja, viajante!"}},
+  "guarda":   {"voice": "npc:12", "lines": {"alto": "Alto lá! Quem vem?"}}
+}
+```
+
+Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por chamado.
 
 ### 2. Runtime: gerar dentro do jogo
 
@@ -82,6 +113,7 @@ creaturesynth bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamad
   bank = VoiceBank(sample_rate=44100, takes=4)
   bank.warm(lobo)                                     # durante o loading
   audio = bank.get(lobo, "attack", block=False)       # None se ainda não ficou pronto
+  fala = bank.line(Speaker.preset("child"), "Oi!")    # falas também, com cache
   ```
 
 - **Outras engines:** o som é descrito por um **spec JSON** portável. A aleatoriedade é SplitMix64 + FNV-1a, com vetores de teste, e o renderizador usa só blocos simples (PolyBLEP, biquads, one-pole). Um renderizador nativo em C#, GDScript ou C++ pode tocar specs gerados aqui ou, portando também os arquétipos, inventar criaturas novas em tempo real. O contrato de portabilidade está em [`docs/arquitetura.md`](docs/arquitetura.md).
@@ -96,6 +128,9 @@ creaturesynth from-spec pixel_hurt.json -o pixel_hurt.wav
 creaturesynth zoo -n 30 -o zoo                                        # 30 criaturas inéditas
 creaturesynth gen1 pikachu                                            # reprodução da 1ª geração
 creaturesynth gen1 all -o gen1/
+creaturesynth say "Olá, viajante!" --voice child -o ola.wav --phonemes  # fala
+creaturesynth say "Hello there!" --lang en --voice npc:7 --pitch 140
+creaturesynth voices                                                  # vozes prontas
 ```
 
 ## Reprodução da 1ª geração
@@ -112,12 +147,17 @@ Os dados dos gritos (`data/gen1/cries.json`) são dados de jogo de terceiros. Fi
 ## Desenvolvimento
 
 ```bash
-pytest -q          # ~200 testes, incluindo os 151 gritos contra a referência
+pytest -q          # ~270 testes, incluindo os 151 gritos contra a referência
 ruff check .
+
+pip install -e ".[asr]"
+python tools/intelligibility.py -v    # a fala, transcrita pelo Whisper (taxa de erro por caractere)
 ```
 
 O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som leva de 20 a 250 ms para gerar, e `bake` produz cerca de 40 sons por segundo.
 
 ## Créditos
+
+A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/creaturesynth/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
 
 O motor de gritos da 1ª geração é baseado no [sintetizador original de dotsarecool](http://dotsarecool.com/rgme/tech/gen1cries.html) ([vídeo](https://www.youtube.com/watch?v=gDLpbFXnpeY)) e no [port em TypeScript de ardean](https://github.com/ardean/pokemon-gen1-cry-synthesizer), de onde este repositório foi forkado.

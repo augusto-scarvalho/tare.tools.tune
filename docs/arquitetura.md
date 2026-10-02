@@ -32,6 +32,7 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `bake.py` | uso offline: bestiário → WAVs + manifest |
 | `runtime.py` | uso em jogo Python: `VoiceBank` |
 | `cli.py` | linha de comando |
+| `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `Speaker` |
 
 ## Determinismo
 
@@ -57,7 +58,7 @@ Vetores de teste para conferir uma port estão em `tests/test_rng_genome.py`. O 
 
 **Atenção:** mudar a fórmula de um arquétipo muda a voz das espécies que já existem. Assets "bakeados" não sofrem com isso, porque guardam o WAV e o spec.
 
-## Spec v1
+## Spec (versão 2)
 
 Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 
@@ -67,6 +68,7 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 |---|---|
 | `syllables` | lista de `Syllable` |
 | `chips` | lista de `ChipProgram` (motor Game Boy) |
+| `speech` | lista de `SpeechProgram` (fala humana, v2) |
 | `drive` | saturação `tanh` |
 | `crush` | 0..1, reduz taxa de amostragem e bits |
 | `space`, `wet` | cauda de reverb em segundos e mix. A engine pode trocar pelo reverb dela |
@@ -79,6 +81,16 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 Uma curva é `[[t, valor], ...]` com `t` de 0 a 1. O tom é interpolado em escala log; o resto, linear.
 
 **ChipProgram**: `pulse1`, `pulse2` e `noise` são comandos `{"duty": byte}` ou `{"note": [dur-1, volume, fade, frequência ou parâmetro NR43]}`; `pitch`; `length` (-128..127); `start`; `gain`; `hardware_noise`.
+
+**SpeechProgram** (versão 2 do spec): `frames` é um dicionário de trilhas a `frame_rate` (400 por segundo):
+- `f0`: tom;
+- `av`, `ah`: vozeamento e aspiração;
+- `af`, `ab`: fricção ressonante e plana;
+- `f1`…`f5` e `b1`…`b5`: formantes da cascata;
+- `fnp`, `fnz`: polo e zero nasais;
+- `fa`/`wa`/`ga` e `fb`/`wb`/`gb`: duas ressonâncias de fricção (Hz, largura, ganho).
+
+Também guarda `tilt`, `jitter`, `rough`, `sub`, e `text`, `lang` e `phonemes` como informação. Specs da versão 1 continuam sendo lidos.
 
 ## Algoritmo do render (para ports)
 
@@ -117,6 +129,17 @@ Na voz inteira:
    - Saída: `(1−wet)·seco + wet·cauda·pico(seco)/pico(cauda)`.
 6. Fade de 4 ms no fim e normalização para pico `0.89·gain`.
 
+**Fala (`speech/klatt.py`)**, com trilhas interpoladas: amplitudes e `f0` por amostra, coeficientes a cada 48 amostras.
+1. **Fonte:** serra PolyBLEP em `f0` (com jitter), passa-baixa de 1ª ordem em `tilt`, opcionalmente `sub`. Soma-se `av·fonte` com `ah·ruído`; o ruído pulsa com o ciclo glotal quando há vozeamento.
+2. **Cascata:**
+   - polo nasal (`fnp`, largura 100) → zero nasal (`fnz`, largura 100) → R1…R5 (`fK`, `bK`);
+   - ressonadores de Klatt com ganho DC unitário: `C = −e^(−2π·bw/sr)`, `B = 2e^(−π·bw/sr)·cos(2πf/sr)`, `A = 1 − B − C`;
+   - o antirressonador usa `[1/A, −B/A, −C/A]`.
+3. **Paralelo:** `af·ruído` passa por dois band-pass (`fa`/`wa`·`ga` e `fb`/`wb`·`gb`), mais `ab·ruído` com passa-alta em 1,2 kHz, tudo vezes `FRIC_GAIN`.
+4. **Saída:** soma, `rough` (AM), passa-alta em 60 Hz e normalização para `gain`.
+
+**Coeficientes variáveis sem clique:** entre blocos, os filtros carregam o histórico de forma direta I (duas entradas e duas saídas) e recalculam o estado para os coeficientes novos (`render.time_varying`). Reaproveitar o estado do `lfilter` através de uma troca de coeficientes gera um estalo audível a cada transição de fonema.
+
 **Validar uma port:** os fluxos aleatórios devem bater bit a bit (vetores de teste). O áudio não será bit-exato, por ordem de operações em ponto flutuante e convolução por FFT. Para ter material de comparação, rode `creaturesynth bake` com specs: cada entrada do manifest traz o spec e o WAV de referência. Renderize os specs na engine e compare os espectros. Com `space = 0` a diferença deve ser mínima.
 
 ## As duas formas de uso
@@ -143,6 +166,31 @@ Na engine, cada chamado vira um "random container" (FMOD/Wwise) ou um array de c
 1. **Jogo em Python:** `VoiceBank` gera on-demand com cache e threads. Use `warm()` no loading.
 2. **Engine nativa tocando specs:** o design fica no Python (specs vão junto do jogo, são pequenos) e a engine só porta o `render`, cerca de 170 linhas de DSP simples.
 3. **Engine nativa 100% procedural:** porta também `rng`, `genome`, `calls` e os arquétipos, que são só aritmética. Aí o jogo inventa criaturas novas em tempo real (spawn procedural, mutações, evoluções), com o mesmo spec que o Python geraria.
+
+## Fala humana
+
+```
+texto ─► g2p (pt: regras | en: CMUdict + regras) ─► frases/palavras/sílabas de fonemas
+      ─► phonetics.segments: duração por fonema (tônica, fim de frase, velocidade),
+         oclusivas = fechamento + explosão + aspiração, fricativas, nasais...
+      ─► grade de 1 ms: alvos por segmento, suavizados (coarticulação):
+         formantes 28 ms, semivogais/líquidas 80 ms, F1 abrupto na soltura de nasais
+      ─► entonação: declinação + acentos nas tônicas + contorno final por tipo de frase
+      ─► SpeechProgram (trilhas a 400 Hz) ─► klatt.render_speech
+```
+
+**Escolhas regionais** (constantes do módulo):
+- **"r" em final de sílaba** (`g2p_pt.CODA_R`): `"R"`, fricativo como no Rio (padrão), ou `"r"`, tap como em São Paulo.
+- **"r" forte** (`phonetics.R_STYLE`): `"x"`, velar (padrão), ou `"h"`, glotal.
+- **Inglês:** americano geral, com flap em "water" e "l" escuro no fim de sílaba.
+
+**Como foi afinado:** com o Whisper como "ouvido" (`tools/intelligibility.py`), comparando versões A/B num conjunto fixo de frases de jogo. Um teste mostrou que a fricção estava ~10 dB abaixo do natural; outro achou o clique de troca de coeficientes. Execuções idênticas do Whisper variam cerca de ±0,03 de CER, então diferenças menores que isso não significam nada.
+
+**Próximos passos da fala:**
+- Melhorar o português (nasais, "v", encontros consonantais).
+- Mais idiomas: o front-end é plugável (`speech.LANGS`).
+- Um modo "balbucio" estilo Animal Crossing.
+- Opcionalmente, um backend neural para quem quiser voz natural e aceitar o custo.
 
 ## Motor da 1ª geração
 
