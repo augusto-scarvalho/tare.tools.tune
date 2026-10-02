@@ -167,9 +167,7 @@ O demo do pygame tem espada (Q/W), bola de fogo (E), raio (R) e tempestade (A).
 Cada evento é um ponto de escuta:
 - `release` é o que ouve quem atira, e já traz a flecha se afastando;
 - `fly` é a flecha passando perto de quem ouve, com Doppler;
-- `hit_wood` é a flecha cravando no alvo.
-
-`hit_flesh` e `hit_stone` ainda usam os sons antigos.
+- `hit_wood`, `hit_flesh` e `hit_stone` são a flecha cravando no alvo, entrando num corpo ou ricocheteando na pedra.
 
 **A espada** (golpe no ar, choque de lâminas e golpes em madeira, pedra, armadura e carne, em aço e ferro) seguiu o mesmo método. O tamanho e a força escolhem entre as três versões aprovadas:
 

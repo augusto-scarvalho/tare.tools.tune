@@ -240,6 +240,45 @@ def arrow_in_wood(fx: Fx, cross: bool = False) -> list:
                   [(0.0, 1.0, 0.003)], hardness=4000, gain=1.1)]
 
 
+
+def arrow_in_flesh(fx: Fx, cross: bool = False) -> list:
+    """An arrow into a body or a soft target, from recordings: a dull thud near 195 Hz (-20 dB in ~50 ms),
+    a short wet tear near 2.8 kHz, a pierce tick, and the shaft's quiver, damped by the flesh."""
+    tune = (1.3 if cross else 1.0) * (1 + 0.06 * (fx.rand("tune") - 0.5))
+    thud = 195 * (0.9 + 0.2 * fx.g.base("thud"))
+    body = [(round(thud, 1), 0.18, 1.0), (round(thud * 2, 1), 0.06, 0.3), (round(thud * 0.62, 1), 0.1, 0.4)]
+    return [Modal(0.0, 0.4, body, [(0.0, 1.0, 0.004)], hardness=1500, click=0.0),
+            Noise(0.0, 0.04, [(0, 2800), (1, 2200)], "band", 1.2, amp=decay_curve(4), attack=0.001, release=0.01,
+                  wobble=(60.0, 0.7), gain=0.45 * (0.7 + 0.6 * fx.power)),
+            Noise(0.0, 0.003, [(0, 4000), (1, 4000)], "high", 0.7, amp=decay_curve(4), attack=0.0002, release=0.001,
+                  gain=0.3),
+            Modal(0.0, 0.5, [(round(158 * tune, 1), 0.25, 1.0), (round(158 * tune + 26, 1), 0.25, 0.8),
+                             (round(316 * tune, 1), 0.12, 0.3)], [(0.005, 1.0, 0.003)], hardness=3000, gain=0.25)]
+
+
+def arrow_on_stone(fx: Fx, cross: bool = False) -> list:
+    """An arrow glancing off stone, from a recording of arrows clattering: a hard crack, the head and shaft
+    ringing short and high (1.3-10 kHz, ~40 ms), and the arrow falling and bouncing (the next contacts
+    ~0.39 s and ~0.23 s apart, -14 and -18 dB); sometimes the shaft snaps."""
+    tune = (1.15 if cross else 1.0) * (0.9 + 0.2 * fx.g.base("head"))
+    gap = 0.39 * (0.75 + 0.5 * fx.rand("gap"))
+    hits = [(0.0, 1.0, 0.0005), (round(gap, 4), 0.35, 0.0005), (round(gap * 1.59, 4), 0.22, 0.0005)]
+    if fx.rand("more") < 0.6:
+        hits.append((round(gap * 1.95, 4), 0.1, 0.0005))
+    ring = [(1265, 0.04, 0.25), (1781, 0.05, 0.6), (3351, 0.04, 0.4), (5460, 0.05, 1.0), (6421, 0.04, 0.9),
+            (9281, 0.03, 0.45), (10400, 0.03, 0.3)]
+    stone = [(round(f * (0.8 + 0.4 * fx.g.base(f"s{i}")), 1), d, g) for i, (f, d, g) in
+             enumerate(((1100, 0.2, 0.6), (2000, 0.07, 0.9), (3100, 0.16, 1.0), (5100, 0.17, 0.4)))]
+    out = [Noise(0.0, 0.003, [(0, 3000), (1, 3000)], "high", 0.7, amp=decay_curve(4), attack=0.0002, release=0.001),
+           Modal(0.0, round(hits[-1][0] + 0.2, 3), [(round(f * tune * (0.95 + 0.1 * fx.rand(f"r{i}")), 1), d, g)
+                                                     for i, (f, d, g) in enumerate(ring)], hits, hardness=14000,
+                 click=0.3),
+           Modal(0.0, 0.4, stone, [(0.0, 1.0, 0.0005)], hardness=12000, click=0.3, gain=0.25),
+           Scatter(0.002, 0.05, [(0, 600), (1, 0)], "pop", (1500, 7000), (0.0003, 0.0012), (0.2, 1.0), 0.2)]
+    if fx.rand("snap") < 0.35:   # the shaft breaks
+        out.append(fx.strike("wood", size=0.1, hits=[(0.004, 0.8, 0.001)], gain=0.35, prefix="snap"))
+    return out
+
 # --- blades ---------------------------------------------------------------------------------------------------------
 #
 # Modelled on recordings of sword clashes and swings. A clash is short and bright: a contact, the
@@ -527,15 +566,8 @@ def bow(fx: Fx):
     if e == "fly":  # passing the listener (the release already carries it away from the archer)
         approach = 0.45 * (0.8 + 0.4 * fx.rand("approach")) * (1.15 - 0.3 * p) * (0.7 if cross else 1.0)
         return fx.voice(fx.level(0.8), noise=fletching(0.0, *flyby(approach, centre=3400.0 if cross else 2800.0)))
-    target = TARGETS[e]
-    if target == "wood":
-        return fx.voice(fx.level(0.95), **splits(arrow_in_wood(fx, cross)))
-    if target == "flesh":
-        return fx.voice(**splits(flesh(fx, 0.0, 0.6, 0.8)))
-    layers = [fx.strike(target, size=0.5, hits=[(0.0, 1.0, 0.0012)], prefix="t"),
-              thud(0.0, 0.08, 400, 0.4),
-              fx.strike("wood", size=0.1, hits=[(0.01, 0.8, 0.001)], gain=0.6, prefix="snap")]   # it breaks
-    return fx.voice(**splits(layers), space=0.3, wet=0.1)
+    hit = {"wood": arrow_in_wood, "flesh": arrow_in_flesh, "stone": arrow_on_stone}[TARGETS[e]]
+    return fx.voice(fx.level(0.95), **splits(hit(fx, cross)))
 
 
 # --- footsteps ------------------------------------------------------------------------------------------------------

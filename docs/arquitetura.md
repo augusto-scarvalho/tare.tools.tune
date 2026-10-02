@@ -215,6 +215,8 @@ As partes:
   - um estalo (~15 ms, banda larga);
   - o corpo do alvo (modos de ~140 a ~240 Hz, ~60 ms);
   - a haste cravada zumbindo perto de 160 Hz, com harmônicos, por mais de um segundo. Ela pulsa ~26 vezes por segundo enquanto balança (dois modos próximos batendo).
+- **Flecha na carne (`arrow_in_flesh`):** um baque surdo perto de 195 Hz (−20 dB em ~50 ms), um rasgo úmido curto perto de 2,8 kHz, o tique da perfuração e a haste vibrando, abafada pela carne.
+- **Flecha na pedra (`arrow_on_stone`):** um estalo duro; a ponta e a haste soam curto e agudo (1,3–10 kHz, ~40 ms); a flecha cai e quica, com os próximos contatos a ~0,39 s e ~0,23 s, em −14 e −18 dB. Às vezes a haste quebra.
 - **Níveis:** o voo e o impacto ficam ~4 e ~6 dB acima do soltar, como na mistura escolhida de ouvido.
 
 **Espada: medida em gravações de golpes e choques.**
