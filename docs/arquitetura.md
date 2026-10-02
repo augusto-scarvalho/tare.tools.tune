@@ -255,6 +255,20 @@ As partes:
 - **Flecha no escudo:** deixa a haste vibrando.
 - **Empurrão:** abafado pelo corpo do outro, com alças, borda e umbo chacoalhando.
 
+**Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
+- **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
+- **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.
+- **Cascalho:** quase sem grave (−21 dB abaixo de 300 Hz), com uma crocância mais forte em 1–1,6 kHz e ~150 ms de grãos.
+- **Grama:** aguda, um farfalhar centrado perto de 8 kHz que dura ~0,35 s, com um baque grave suave.
+- **Neve:** um baque grave forte (250 Hz) sob uma crocância que range, em 1–2,5 kHz.
+- **Metal** (chapas e escadas, quase sempre abafados): grave e ressoando, mais forte abaixo de 300 Hz.
+- **Terra:** grave-médio, curta (−20 dB em ~24 ms), com grãos finos.
+- **Água:** nenhum grave; os respingos são mais fortes em 2,5–5 kHz.
+
+As camadas (baque, contato da sola, clique, chão, grãos, farfalhar, respingos) são as mesmas para todos os chãos. Os ganhos foram ajustados renderizando e comparando até o espectro mediano de cada chão bater com as gravações (±5 dB por faixa de terço de oitava). A versão anterior, guiada pelo CLAP, era aguda demais (+8 a +20 dB acima de 2 kHz) e durava três a seis vezes mais. Um atrito baixinho da sola rolando mantém os agudos vivos por mais tempo, como nas gravações.
+
+Mesmo com o espectro batendo, o juiz CLAP ainda não reconhece nossos passos: ouve "bola quicando" e "pau batendo em madeira". Acrescentar sala ou reverberação não mudou isso. As gravações reais ele reconhece (6 de 8).
+
 **Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
 - **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.

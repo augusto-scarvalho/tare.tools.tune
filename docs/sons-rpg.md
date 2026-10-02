@@ -22,7 +22,7 @@ As gravações servem só para medir e não entram no repositório.
 | 4 | Arco: flecha em carne e em pedra | `bow` hit_flesh, hit_stone | medido |
 | 5 | Maça e martelo: golpe no ar, acertos, cair no chão | `blunt` | medido |
 | 6 | Escudo: bloquear espada, maça e flecha (madeira, metal), empurrão | `shield` block_blade, block_blunt, block_arrow, bash | medido |
-| 7 | Passos: 8 chãos × andar, correr, aterrissar, arrastar | `footstep` | antigo |
+| 7 | Passos: 8 chãos × andar, correr, aterrissar, arrastar | `footstep` | medido |
 | 8 | Equipamento em movimento: cota de malha, placas, couro | `gear` | falta |
 | 9 | Corpo caindo no chão | `body` | falta |
 | 10 | Baú: abrir, fechar, trancado | `chest` | falta |

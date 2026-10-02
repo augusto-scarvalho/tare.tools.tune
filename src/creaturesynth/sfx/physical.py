@@ -3,6 +3,8 @@
 Struck bodies are modal (Fx.strike): the material sets the modes, size their pitch and decay,
 power how hard the contact is. Air and debris are moving noise bands and scattered events.
 """
+from dataclasses import replace
+
 import numpy as np
 
 from ..spec import Modal, Noise, Scatter, Syllable
@@ -705,18 +707,33 @@ def bow(fx: Fx):
 
 # --- footsteps --------------------------------------------------------------------------------------------------------
 
-STEPS = {  # surface: heel/toe thump Hz, thump length s, thump Q, sole click Hz, click gain, floor material,
-    #          heel-toe gap s, toe level, roll (sole friction) Hz, roll gain,
-    #          texture (rate/s, Hz range, decay range, gain)
-    # Structure found by a CLAP-guided search over walking sequences (docs/arquitetura.md, efeitos sonoros).
-    "stone": (495, 0.055, 0.8, 1000, 1.2, "stone", 0.12, 0.25, 2800, 0.3, (700, (800, 6000), (0.0005, 0.002), 0.35)),
-    "wood": (480, 0.17, 3.0, 4000, 0.85, "wood", 0.2, 0.64, 1860, 0.2, (120, (600, 2500), (0.002, 0.006), 0.8)),
-    "metal": (480, 0.06, 1.0, 2500, 1.0, "iron", 0.12, 0.3, 2800, 0.3, None),
-    "gravel": (405, 0.125, 2.0, 5700, 0.0, None, 0.18, 0.2, 3700, 0.55, (850, (600, 5000), (0.001, 0.005), 0.85)),
-    "dirt": (300, 0.12, 1.5, 2000, 0.3, None, 0.15, 0.3, 1500, 0.4, (300, (300, 2000), (0.001, 0.004), 0.6)),
-    "grass": (420, 0.095, 1.9, 3000, 0.9, None, 0.15, 0.23, 2400, 0.45, (900, (1500, 8000), (0.0005, 0.002), 0.4)),
-    "snow": (350, 0.12, 1.5, 3000, 0.2, None, 0.16, 0.4, 2000, 0.3, (1500, (800, 3500), (0.0006, 0.003), 0.9)),
-    "water": (300, 0.12, 1.0, 2000, 0.0, None, 0.15, 0.3, 1500, 0.0, None),
+# Measured on recordings of walking on each surface (single steps cut from sequences, median of 16-46 steps):
+#   stone   low-mid knock (strongest 250-500 Hz), a hard sole click, -20 dB in ~33 ms
+#   wood    lower and longer (strongest 250 Hz, -20 dB in ~51 ms), the heel and toe ~60 ms apart, a creak now and then
+#   gravel  little low (-21 dB below 300 Hz), a crunch strongest at 1-1.6 kHz, ~150 ms of grains
+#   grass   bright: a rustle centred near 8 kHz lasting ~0.35 s, a soft low thump
+#   snow    a strong low thump (250 Hz) under a squeaky crunch at 1-2.5 kHz
+#   metal   (plate floors and stairs, mostly muffled) low and ringing: strongest below 300 Hz for ~0.24 s
+#   dirt    low-mid, short (-20 dB in ~24 ms), with fine grit
+#   water   no low at all: splashes strongest at 2.5-5 kHz
+STEPS = {  # thump (Hz, s, Q, gain), sole contact (Hz, gain), click (Hz, gain), floor (material, gain), heel-toe gap s,
+    #        toe level, grains (rate/s, Hz range, decay range, s, gain), rustle (Hz, s, gain)
+    # Gains balanced by rendering until each surface's median step spectrum matched the recordings (±5 dB per band).
+    "stone": dict(thump=(350, 0.05, 0.9, 1.0), sole=(1200, 0.85), click=(2500, 0.24), floor=("stone", 0.23), gap=0.03,
+                  toe=0.35, grains=(90, (1500, 6000), (0.0005, 0.002), 0.15, 0.11)),
+    "wood": dict(thump=(240, 0.08, 1.2, 1.0), sole=(1200, 0.85), click=(2500, 0.12), floor=("wood", 1.27), gap=0.06,
+                 toe=0.5, grains=(40, (600, 2500), (0.002, 0.006), 0.18, 0.17), creak=0.25),
+    "gravel": dict(thump=(380, 0.05, 1.0, 0.5), sole=(1200, 3.36), click=None, floor=None, gap=0.035, toe=0.6,
+                   grains=(700, (500, 3500), (0.001, 0.004), 0.15, 0.7)),
+    "grass": dict(thump=(300, 0.07, 0.8, 1.6), click=None, floor=None, gap=0.045, toe=0.5,
+                  grains=(120, (2000, 9000), (0.0005, 0.002), 0.25, 0.15), rustle=(8000, 0.33, 0.6)),
+    "snow": dict(thump=(240, 0.1, 1.0, 1.6), sole=(1200, 2.39), click=None, floor=None, gap=0.045, toe=0.5,
+                 grains=(600, (900, 3000), (0.0008, 0.003), 0.16, 0.45)),
+    "metal": dict(thump=(180, 0.14, 1.2, 1.0), sole=(1200, 0.85), click=None, floor=("iron", 0.4), gap=0.05, toe=0.5,
+                  grains=None),
+    "dirt": dict(thump=(330, 0.045, 1.0, 1.0), sole=(1200, 0.85), click=None, floor=None, gap=0.04, toe=0.4,
+                 grains=(300, (400, 2500), (0.0008, 0.003), 0.18, 0.12)),
+    "water": dict(thump=(300, 0.04, 1.0, 0.1), click=None, floor=None, gap=0.03, toe=0.6, grains=None, splash=1.0),
 }
 
 
@@ -724,33 +741,50 @@ STEPS = {  # surface: heel/toe thump Hz, thump length s, thump Q, sole click Hz,
 def footstep(fx: Fx):
     """Footsteps on a surface: walk, run, land (after a jump), scuff."""
     surf, s, e = fx.style, fx.size, fx.event
-    thump_hz, thump_len, thump_q, click_hz, click, floor, gap, toe, roll_hz, roll, texture = STEPS[surf]
+    st = STEPS[surf]
     force = {"walk": 0.5, "run": 0.8, "land": 1.0, "scuff": 0.4}[e] * (0.6 + 0.4 * fx.power)
-    gap *= {"walk": 1.0, "run": 0.5, "land": 0.0, "scuff": 1.5}[e] * (0.85 + 0.3 * fx.rand("gap"))
+    gap = st["gap"] * {"walk": 1.0, "run": 0.6, "land": 0.0, "scuff": 1.5}[e] * (0.8 + 0.4 * fx.rand("gap"))
     weight = 1.4 - 0.8 * s                                    # heavier walkers sound lower
-    contacts = [(0.0, force)] + ([(round(gap, 4), toe * force)] if gap else [])
+    contacts = [(0.0, force)] + ([(round(gap, 4), st["toe"] * force)] if gap else [])
+    hz, length, q, thump = st["thump"]
     layers = []
     for t, g in contacts:
-        layers.append(Noise(t, round(thump_len * (1 + 0.5 * (e == "land")), 4), [(0, thump_hz * weight),
-                                                                                (1, thump_hz * weight * 0.6)],
-                            "band", thump_q, amp=decay_curve(5), attack=0.002, gain=g))
-        if click:
-            layers.append(Noise(t, 0.035, [(0, click_hz), (1, click_hz)], "high", 0.7, amp=decay_curve(6),
-                                attack=0.0005, gain=g * click))
-    if floor:
-        layers.append(fx.strike(floor, size=0.5 + 0.35 * s, hits=[(t, g, 0.003) for t, g in contacts], hardness=4000,
-                                gain=0.5 * force, prefix="floor"))
-    if roll:
-        layers.append(Noise(0.005, round(gap + 0.04 + 0.2 * (e == "scuff"), 4), [(0, roll_hz), (1, roll_hz * 0.7)],
-                            "band", 1.0, amp=bell_curve(0.4), gain=roll * (2 if e == "scuff" else 1)))
-    if texture:
-        rate, hz, decay, gain = texture
-        dur = round(0.12 + gap + 0.1 * (e == "land"), 4)
-        layers.append(Scatter(0.0, dur, [(0, rate * force), (1, 0)], "pop", hz, decay, (0.2, 1.0), gain * force))
-    if surf == "water":
-        layers += [Scatter(0.0, 0.3, [(0, 250), (1, 0)], "drop", (400, 1800), (0.004, 0.012), (0.2, 1.0), 0.8 * force),
-                   Noise(0.0, 0.25, [(0, 1500), (1, 3000)], "band", 1.0, amp=decay_curve(4), attack=0.005,
-                         gain=0.5 * force)]
+        layers.append(Noise(t, round(length * (1 + 0.6 * (e == "land")), 4), [(0, hz * weight), (1, hz * weight * 0.6)],
+                            "low", q, amp=decay_curve(5), attack=0.002, gain=thump * g))   # 12 dB/octave above
+        if st.get("sole"):   # the sole meeting the floor: a short broad contact
+            layers.append(Noise(t, 0.015, [(0, st["sole"][0]), (1, st["sole"][0] * 0.8)], "band", 0.6,
+                                amp=decay_curve(5), attack=0.0005, gain=st["sole"][1] * g))
+        if st["click"]:
+            layers.append(Noise(t, 0.008, [(0, st["click"][0]), (1, st["click"][0])], "high", 0.7, amp=decay_curve(5),
+                                attack=0.0005, gain=st["click"][1] * g * (1 + 0.5 * (e == "run"))))
+    if st["floor"]:
+        mat, g = st["floor"]
+        layers.append(fx.strike(mat, size=0.5 + 0.35 * s, hits=[(t, c, 0.003) for t, c in contacts], hardness=3000,
+                                gain=g * force, prefix="floor", click=0.15))
+    if st["grains"]:
+        rate, band, decay, dur, g = st["grains"]
+        dur = round(dur + gap + 0.08 * (e == "land") + 0.15 * (e == "scuff"), 4)
+        layers.append(Scatter(0.0, dur, [(0, rate * force), (0.4, rate * force * 0.7), (1, 0)], "pop", band, decay,
+                              (0.2, 1.0), g * force))
+    if "rustle" in st:
+        hz_r, dur, g = st["rustle"]
+        for k in (1.0, 0.2):   # the blades' hiss and the stems' swish
+            layers.append(Noise(0.0, round(dur * (1 + 0.5 * (e == "scuff")), 4), [(0, hz_r * k * 0.8), (1, hz_r * k)],
+                                "band", 0.7, amp=[(0, 1.0), (0.3, 0.6), (1, 0.0)], attack=0.01, wobble=(30.0, 0.7),
+                                gain=g * force * (1.0 if k == 1 else 0.6)))
+    roll_hz, roll_dur, roll = st.get("roll", (2500, 0.2, 0.04))
+    if e == "scuff":   # the sole dragging: friction noise
+        roll_dur, roll = 0.3, max(roll * 3, 0.5)
+    # the sole rolling from heel to toe and the cloth moving: quiet friction that keeps the highs alive ~0.15-0.35 s
+    layers.append(Noise(0.003, round(roll_dur + gap, 4), [(0, roll_hz), (1, roll_hz * 0.8)], "band", 0.7,
+                        amp=[(0, 1.0), (0.35, 0.7), (1, 0.0)], attack=0.01, wobble=(25.0, 0.6), gain=roll * force))
+    if st.get("creak") and fx.rand("creak") < st["creak"]:
+        layers += [replace(c, start=0.02, gain=c.gain * 0.25) for c in creak(fx, 0.18)]
+    if st.get("splash"):
+        layers += [Scatter(0.0, 0.25, [(0, 300), (1, 0)], "drop", (900, 4000), (0.002, 0.008), (0.2, 1.0),
+                           0.6 * force),
+                   Noise(0.0, 0.18, [(0, 3500), (1, 2500)], "band", 0.8, amp=decay_curve(4), attack=0.003,
+                         wobble=(40.0, 0.6), gain=st["splash"] * force)]
     return fx.voice(**splits(layers), gain=0.4 + 0.6 * force)
 
 

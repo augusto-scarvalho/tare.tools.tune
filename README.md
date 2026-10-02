@@ -177,9 +177,10 @@ Cada evento é um ponto de escuta:
 | **força 0,5** | a medida nas gravações | pesada: mais grave, mais baque, golpe lento com "vum", osso na carne |
 | **força 1** | cinema: raspa mais, soa mais, golpe com assobio, corte afiado | as duas coisas |
 
-Sacar e derrubar ainda usam os sons antigos.
 
-**Como soam, segundo o CLAP.** Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
+**Os outros sons de RPG** seguem o mesmo método, um por um. A lista e o estado de cada um estão em [`docs/sons-rpg.md`](docs/sons-rpg.md).
+
+**Como soavam, segundo o CLAP** (a primeira versão, desenhada sem gravações). Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
 
 | família | descrição certa em 1º | entre as 3 primeiras |
 |---|---|---|
