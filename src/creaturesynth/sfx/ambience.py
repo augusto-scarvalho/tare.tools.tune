@@ -39,6 +39,20 @@ def gusts(fx: Fx, n: int, floor: float = 0.35) -> list[tuple[float, float]]:
     return pts
 
 
+def gust_curve(fx: Fx, n: int, floor: float) -> list[tuple[float, float]]:
+    """Gusts that rise and fall back: between each pair of gusts the wind drops to near `floor` (seamless loop)."""
+    pts = [(0.0, floor)]
+    for k in range(n):
+        c = (k + 0.5 + 0.3 * (fx.g.u(f"gc{k}") - 0.5)) / n
+        w = 0.35 / n * (0.7 + 0.6 * fx.g.u(f"gw{k}"))
+        lo = floor * (0.8 + 0.6 * fx.g.u(f"gf{k}"))
+        peak = round(0.6 + 0.4 * fx.g.u(f"gp{k}"), 3)
+        pts += [(round(max(c - w, pts[-1][0] + 0.005), 3), round(lo, 3)), (round(c, 3), peak),
+                (round(min(c + 1.4 * w, 0.995), 3), round(lo, 3))]
+    pts.append((1.0, floor))
+    return pts
+
+
 def place(voice: Voice, at: float, gain: float = 1.0, end: float = LENGTH + XFADE) -> list[Syllable]:
     """A creature's call as syllables placed at `at` seconds in a bigger scene, finishing before `end`."""
     at = max(min(at, end - voice.duration), 0.0)
@@ -85,20 +99,26 @@ def ambience(fx: Fx):
             L = [drops([(0, 6), (1, 2)], (700, 2200), (0.015, 0.04), 1.0, 2.5, level=(0.4, 1.0))]
             extra = {"space": 0.8, "wet": 0.2}
         else:
-            L = thunder(fx, 4.0 + 3 * s)
+            L = thunder(fx, 3.0 + 2 * s, near=max(p - 0.6, 0) * 2.5)   # only a violent storm strikes close
             extra = {"space": 2.5, "wet": 0.3, "lowpass": 3000 + 6000 * (1 - s)}
 
     elif st == "wind":
         if loop:
-            # a narrow, whistling band sweeping up through each gust (CLAP-guided search, confirmed by the judge)
-            hz = (700 + 600 * p) * (0.85 + 0.3 * fx.g.u("pitch"))
-            L = [band(hz, 6.0, 0.25, (1.5, 0.68), amp=gusts(fx, 2, 0.6), hz_end=hz * 1.67),
-                 band(hz * 2.5, 5.4, 0.03, (0.2, 0.7), amp=gusts(fx, 3, 0.4)),
-                 band(250, 0.8, 1.0, (0.4, 0.4), "brown", amp=gusts(fx, 2, 0.6)),
-                 band(500, 0.9, 0.35, (0.6, 0.4), amp=gusts(fx, 3, 0.6))]
-        else:
-            L = [band(400, 2.0, 1.0, (0.3, 0.4), dur=3.5, amp=bell_curve(0.4, 1.5), hz_end=900),
-                 band(1100, 8.0, 0.5, (0.4, 0.6), dur=3.5, amp=bell_curve(0.45, 2.5), hz_end=1600)]
+            # measured on recordings of wind: a body strongest near 250 Hz, gusts every 3-10 s rising 4-11 dB, a mild
+            # whistle (3-9 dB over the spectrum) whose pitch rides the gusts; stronger wind is gustier and brighter
+            n = int(2 + 3 * p + fx.g.u("gusty") * 1.99)
+            g = gust_curve(fx, n, 0.3 - 0.12 * p)
+            hz = (650 + 500 * p) * (0.85 + 0.3 * fx.g.u("pitch"))
+            L = [band(250, 0.8, 1.0, (0.4, 0.3), "brown", amp=g),
+                 band(700, 0.8, 0.45, (0.6, 0.3), amp=g),
+                 Noise(0.0, round(LENGTH + XFADE, 3), [(t, round(hz * (0.8 + 0.4 * a), 1)) for t, a in g], "band", 5.0,
+                       amp=[(t, round(a ** 1.5, 3)) for t, a in g], attack=0.05, release=0.05, wobble=(0.8, 0.3),
+                       gain=0.5 + 0.3 * p),
+                 band(5000, 0.7, 0.05 + 0.15 * p, (1.0, 0.5), amp=[(t, round(a ** 2, 3)) for t, a in g])]
+        else:   # a gust passing
+            L = [band(300, 0.8, 1.0, (0.5, 0.3), "brown", dur=3.5, amp=bell_curve(0.4, 1.5)),
+                 band(800, 0.8, 0.5, (0.6, 0.3), dur=3.5, amp=bell_curve(0.42, 1.8), hz_end=1100),
+                 band(1000, 3.0, 0.3, (0.8, 0.3), dur=3.5, amp=bell_curve(0.45, 2.5), hz_end=1400)]
 
     elif st == "fire":
         if loop:

@@ -885,8 +885,9 @@ BREAK_BODIES = {   # the intact object's own modes (Hz, T60 s, gain)
     "crate": [(160, 0.08, 0.6), (290, 0.07, 1.0), (450, 0.06, 0.8), (720, 0.05, 0.6), (1100, 0.04, 0.4)],
     "barrel": [(130, 0.12, 0.8), (240, 0.1, 1.0), (410, 0.08, 0.7), (650, 0.06, 0.5), (1600, 0.3, 0.3),
                (2700, 0.25, 0.25)],
-    "pot": [(1250, 0.16, 0.8), (1700, 0.14, 1.0), (2600, 0.1, 0.7), (3600, 0.1, 0.7), (5200, 0.08, 0.8),
-            (7400, 0.06, 0.7), (9800, 0.04, 0.5)],
+    "pot": [(1100, 0.16, 0.7), (1250, 0.16, 0.8), (1700, 0.14, 1.0), (2100, 0.12, 0.8), (2600, 0.1, 0.8),
+            (3100, 0.1, 0.7), (3600, 0.1, 0.8), (4300, 0.09, 0.8), (5200, 0.08, 0.8), (6200, 0.07, 0.7),
+            (7400, 0.06, 0.7), (8600, 0.05, 0.6), (9800, 0.04, 0.5)],   # fired clay rings in many close modes
     "glass": [(2200, 0.4, 1.0), (3500, 0.3, 0.8), (5300, 0.25, 0.6), (7800, 0.2, 0.4), (10500, 0.15, 0.3)],
 }
 
@@ -894,7 +895,7 @@ BREAK_BODIES = {   # the intact object's own modes (Hz, T60 s, gain)
 def breakable(fx: Fx, style: str, broken: bool, size: float) -> list:
     k = 2 ** (-0.6 * (size - 0.5))
     body = _jittered(fx, BREAK_BODIES[style], style, 0.1, k)
-    hard = {"crate": 3500, "barrel": 4000, "pot": 9000, "glass": 14000}[style]
+    hard = {"crate": 3500, "barrel": 4000, "pot": 16000, "glass": 14000}[style]
     out = [Modal(0.0, 1.0, body, [(0.0, 1.0, 0.003 if style in ("crate", "barrel") else 0.001)], hardness=hard,
                  click=0.3),
            Noise(0.0, 0.06, [(0, 300 * k), (1, 150 * k)], "low", 0.9, amp=decay_curve(5), attack=0.001, release=0.01,
@@ -914,11 +915,11 @@ def breakable(fx: Fx, style: str, broken: bool, size: float) -> list:
             out.append(fx.strike("iron", size=0.6, hits=[(0.0, 0.6, 0.001), (round(0.3 + 0.2 * fx.rand("hoop"), 3),
                                                                              0.4, 0.001)], gain=0.4, prefix="hoop"))
         return out
-    if style == "pot":   # a short burst and a few shards
-        return out + [Noise(0.0, 0.03, [(0, 2500), (1, 1800)], "band", 0.7, amp=decay_curve(4), attack=0.0005,
-                            gain=0.8),
-                      Noise(0.0, 0.02, [(0, 4500), (1, 4000)], "high", 0.7, amp=decay_curve(4), attack=0.0005,
+    if style == "pot":   # a short broadband burst and a few shards
+        return out + [Noise(0.0, 0.03, [(0, 2500), (1, 1800)], "band", 0.4, amp=decay_curve(4), attack=0.0005,
                             gain=0.6),
+                      Noise(0.0, 0.03, [(0, 3000), (1, 2500)], "high", 0.7, amp=decay_curve(4), attack=0.0005,
+                            gain=1.0),
                       Scatter(0.01, 0.3, [(0, 60), (1, 0)], "pop", (2000, 10000), (0.002, 0.008), (0.3, 1.0), 0.7),
                       Scatter(0.05, 0.3, [(0, 15), (1, 0)], "ping", (2500, 6000), (0.01, 0.04), (0.2, 0.7), 0.35)]
     out[1] = replace(out[1], gain=1.3)   # glass breaks with a thump of whatever broke it

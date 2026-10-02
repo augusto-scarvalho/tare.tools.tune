@@ -77,19 +77,27 @@ def shatter(fx: Fx, size: float, power: float) -> list:
                     0.3)]
 
 
-def thunder(fx: Fx, length: float) -> list:
-    """Thunder rolls: a low-mid rumble up to ~1 kHz swelling and fading a few times."""
-    rolls = [(0.0, 0.0), (0.05, 1.0)]
-    t = 0.05
-    for k in range(4):
-        t += 0.12 + 0.2 * fx.rand(f"roll{k}")
-        rolls.append((round(min(t, 0.95), 3), round(0.35 + 0.6 * fx.rand(f"lvl{k}") * (1 - 0.18 * k), 3)))
-    rolls.append((1.0, 0.0))
-    # a sharp crack or crackle on top reads as fire to listeners (and CLAP): thunder is the rumble
-    return [Noise(0.03, round(length, 3), [(0, 1200), (0.3, 600), (1, 250)], "low", 0.7, "brown", rolls,
-                  attack=0.02, release=0.5, wobble=(3.0, 0.5), gain=1.0),
-            Noise(0.03, round(length, 3), [(0, 120), (1, 60)], "low", 0.8, "brown", rolls, attack=0.05, release=0.5,
-                  gain=0.8)]
+def thunder(fx: Fx, length: float, near: float = 0.0) -> list:
+    """Thunder, from recordings: a rumble strongest near 250 Hz (-12 dB at 1 kHz, -25 at 2 kHz) lasting 2.5-5 s,
+    rolling: a new burst every ~0.3 s, each 6-12 dB over the bed. A strike close by (`near`) tears first with a few
+    sharp broadband cracks."""
+    bed = [(0.0, 0.0), (0.03, 1.0), (0.4, 0.45), (1.0, 0.0)]
+    out = [Noise(0.0, round(length, 3), [(0, 320), (1, 220)], "band", 0.45, "brown", bed, attack=0.03, release=0.4,
+                 wobble=(3.0, 0.4), gain=0.5)]
+    t, k = 0.02, 0
+    while t < length * 0.85:
+        fade = 1 - t / length
+        dur = 0.25 + 0.3 * fx.rand(f"rd{k}")
+        g = (0.35 + 0.65 * fx.rand(f"rg{k}")) * fade ** 0.7
+        hz = 240 + 120 * fx.rand(f"rh{k}")
+        out.append(Noise(round(t, 3), round(dur, 3), [(0, hz), (1, hz * 0.8)], "band", 0.5, "brown", decay_curve(4),
+                         attack=0.01, release=0.05, gain=round(g, 3)))
+        t += 0.2 + 0.25 * fx.rand(f"rt{k}")
+        k += 1
+    for j in range(int(round(near * (1 + 2 * fx.rand("cracks"))))):   # the air tearing close to the bolt
+        out.append(Noise(round(0.01 + 0.12 * j * fx.rand(f"ct{j}"), 3), 0.06, [(0, 2500), (1, 1500)], "high", 0.6,
+                         amp=decay_curve(5), attack=0.0005, release=0.01, gain=round(0.6 * near, 3)))
+    return out
 
 
 @recipe("spell", ("charge", "cast", "travel", "impact"), ELEMENTS, loops=("travel",))
@@ -160,7 +168,7 @@ def spell(fx: Fx):
             L = [buzz(0, trip + LOOP, 0.6), crackle(0, trip + LOOP, [(0, 150), (1, 150)], (2000, 11_000), 0.7),
                  bed(0, trip + LOOP, 3500, 1.0, 0.3, (25, 0.9))]
         else:   # the bolt strikes (a bright zap, crackle) and the thunder rolls after it
-            L = [*thunder(fx, 2.0 + 1.5 * s), buzz(0, 0.25, 0.8, 0.5), burst(0.0, 0.15, 3000, 1.0, q=0.5),
+            L = [*thunder(fx, 2.5 + 1.5 * s, near=1.0), buzz(0, 0.25, 0.8, 0.5), burst(0.0, 0.15, 3000, 1.0, q=0.5),
                  crackle(0, 0.6, [(0, 1500), (0.3, 400), (1, 0)], (2000, 11_000), 1.0)]
             extra = {"space": 2.0, "wet": 0.25}
 

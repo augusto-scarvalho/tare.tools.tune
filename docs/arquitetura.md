@@ -310,6 +310,8 @@ As partes:
 - **Caverna:** o ronco grave estava ~20 dB alto demais, e as gotas eram poucas (1,4 por segundo; real: 3,8).
 - **Noite:** faltavam os insetos agudos (8–12,5 kHz).
 - **Tempestade:** ganhou um trovão grave rolando sob a chuva. Os clipes reais são quase só trovão; o nosso loop continua sendo chuva com trovão.
+- **Vento (refeito sem a busca do CLAP):** em gravações CC0 de vento, o corpo é mais forte perto de 250 Hz, as rajadas vêm a cada 3–10 s e sobem 4–11 dB, e o assobio é leve (3–9 dB acima do espectro). A versão guiada pelo CLAP tinha um assobio estreito e quase não variava (1–2 dB). Agora as rajadas sobem e voltam, e o assobio acompanha a altura da rajada.
+- **Trovão (`magic.thunder`, refeito com gravações):** um ronco mais forte perto de 250 Hz (−12 dB em 1 kHz, −25 em 2 kHz) que dura 2,5–5 s e rola, com uma rajada nova a cada ~0,3 s, 6–12 dB acima do fundo. Um raio caindo perto rasga antes com alguns estalos secos. A versão anterior tinha tirado os estalos porque o CLAP os ouvia como fogo, e rolava só 4 vezes.
 
 O mar e a floresta já estavam perto. O riacho e a masmorra não têm referência no ESC-50.
 
@@ -339,14 +341,14 @@ As camadas (baque, contato da sola, clique, chão, grãos, farfalhar, respingos)
 
 Mesmo com o espectro batendo, o juiz CLAP ainda não reconhece nossos passos: ouve "bola quicando" e "pau batendo em madeira". Acrescentar sala ou reverberação não mudou isso. As gravações reais ele reconhece (6 de 8).
 
-**Calibração.** Os sons foram desenhados ouvindo o CLAP otimizador e conferidos no fim com o juiz, que não participou de nenhum ajuste, como na calibração das criaturas.
+**Calibração da primeira versão (histórico).** Os primeiros efeitos foram desenhados ouvindo o CLAP otimizador e conferidos com o juiz. O CLAP saiu do processo: os efeitos agora são medidos e imitados a partir de gravações reais e amostras abertas, e julgados de ouvido. O que segue registra a primeira versão; as partes guiadas pelo CLAP (vento, trovão, passos) já foram refeitas.
 - **Conjunto de rótulos:** cerca de 80 descrições (efeitos, lugares e distratores como fala, música e "8-bit").
 - **Teto:** gravações reais do ESC-50 (8 por categoria, só para análise, CC BY-NC) dão a referência do que o CLAP reconhece com esses rótulos: passos 6/8 em primeiro, vidro quebrando 8/8, fogueira 8/8, chuva 6/8, trovão em 1º ou 2º.
 - **Comparação de espectrogramas com o real:**
   - o vidro quebrando real é uma explosão de ruído de banda larga, não tons puros (antes soava como "sininhos");
   - o trovão real é um ronco longo até ~1 kHz, e um estalo ou crepitar por cima faz soar como fogo;
   - fogueira pede estalos densos.
-- **Passos:** uma busca guiada pelo CLAP sobre sequências de caminhada encontrou a estrutura de cada superfície (`physical.STEPS`).
+- **Passos:** uma busca guiada pelo CLAP encontrou a primeira estrutura de cada superfície. Foi substituída pela medição de gravações (veja "Passos").
 
 **Resultado no juiz** (2 identidades por estilo, 80 rótulos; o acaso ficaria em ~1% para o 1º lugar):
 
