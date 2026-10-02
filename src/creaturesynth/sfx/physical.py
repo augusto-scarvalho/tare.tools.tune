@@ -399,6 +399,38 @@ def blade_hit(fx: Fx, target: str, shift: float, ring: float, weight: float, dra
     return out
 
 
+def blade_draw(fx: Fx, shift: float, ring: float, dur: float) -> list:
+    """Out of the scabbard, from recordings: a scrape swelling ~25 dB in its first 70-170 ms and held,
+    broad and bright (2.5-6 kHz), sometimes a tick as the guard leaves the throat; then the blade, freed,
+    rings on (-20 dB after ~0.3 s, -35 dB after 0.5-1.2 s), strongest 1-4 kHz."""
+    hits = [(round(dur, 4), 0.6, 0.001)]
+    if fx.rand("throat") < 0.5:
+        hits.insert(0, (0.0, 0.5, 0.0006))
+    amp = [(0.0, 0.056), (0.15, 0.3), (0.3, 0.8), (0.4, 1.0), (0.85, 0.9), (1.0, 0.7)]
+    return [Noise(0.0, round(dur, 3), [(0, 2600), (0.7, 3600), (1, 4200)], "band", 0.9, amp=amp, attack=0.01,
+                  release=0.015, wobble=(14.0, 0.35)),
+            Noise(0.0, round(dur, 3), [(0, 6000), (1, 7500)], "high", 0.7, amp=amp, attack=0.01, release=0.015,
+                  gain=0.3),
+            Modal(0.0, round(dur + 2.4 * ring, 3), blade_modes(fx, "a", shift, 2.2 * ring), hits,
+                  (0.0, round(dur, 4), 0.7, 0.0), 3500, 0.0, 0.8)]
+
+
+def blade_drop(fx: Fx, shift: float, ring: float) -> list:
+    """Dropped on stone, from recordings: the hilt lands, 30-45 ms later the blade slaps down (the loudest),
+    one smaller bounce ~0.27 s on; the blade rings, damped by the floor, over the floor's own knock."""
+    slap = round(0.03 + 0.015 * fx.rand("slap"), 4)
+    bounce = round(slap + 0.24 + 0.06 * fx.rand("bounce"), 4)
+    hits = [(0.0, 0.5, 0.001), (slap, 1.0, 0.0008), (bounce, 0.22, 0.0008)]
+    if fx.rand("again") < 0.5:
+        hits.append((round(bounce + 0.09 + 0.05 * fx.rand("again2"), 4), 0.08, 0.0008))
+    out = [Modal(0.0, round(bounce + 1.2 * ring, 3), blade_modes(fx, "a", shift, 0.6 * ring), hits, hardness=12000,
+                 click=0.3),
+           fx.strike("stone", size=0.75, hits=[(t, g, 0.002) for t, g, _ in hits], gain=0.6, prefix="g")]
+    out += [Noise(t, 0.05, [(0, 400), (1, 200)], "low", 1.0, amp=decay_curve(6), attack=0.001, release=0.01,
+                  gain=0.5 * g) for t, g, _ in hits[:3]]
+    return out
+
+
 # --- weapons --------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -421,6 +453,12 @@ def blade(fx: Fx):
     if e in TARGETS and mat in ("steel", "iron"):
         layers = blade_hit(fx, TARGETS[e], shift, 0.5 if mat == "iron" else 1.0, big, hard)
         return fx.voice(fx.level(0.95), **splits(layers))
+    if e == "draw" and mat in ("steel", "iron"):
+        dur = (0.3 + 0.25 * s) * (0.85 + 0.3 * fx.rand("pull")) * (1 - 0.3 * hard)
+        ring = (1 + 1.2 * hard) * (0.5 if mat == "iron" else 1.0)
+        return fx.voice(fx.level(0.6), **splits(blade_draw(fx, shift, ring, dur)))
+    if e == "drop" and mat in ("steel", "iron"):
+        return fx.voice(fx.level(0.8), **splits(blade_drop(fx, shift, 0.5 if mat == "iron" else 1.0)))
     if e == "clash":
         lag = 0.002 + 0.006 * fx.rand("lag")
         slide = (0.0, 0.04 + 0.16 * fx.rand("slide"), 0.5 + 0.5 * p, 60 + 80 * fx.rand("judder"))
