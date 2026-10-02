@@ -607,6 +607,39 @@ def shield_hit(fx: Fx, style: str, by: str, weight: float, drama: float) -> list
                                0.35))
     return out
 
+
+# --- gear in motion ---------------------------------------------------------------------------------------------------
+#
+# From recordings of chainmail, plate armour and leather moving. Chainmail is a swell of tiny rings jingling, strongest
+# at 8-12 kHz; plate armour a few separate clanks (1.6-8 kHz, strongest 4-6 kHz) over rubbing; leather a creak of
+# dense stick-slip (70-100 per second) low down (strongest 250-500 Hz, -20 dB above 2.5 kHz) over a soft rustle.
+
+def gear_move(fx: Fx, style: str, dur: float, energy: float) -> list:
+    """One movement (a step, a turn, a swing of the arms) of a body wearing this gear."""
+    swell = bell_curve(0.35 + 0.2 * fx.rand("peak"), 1.5)
+    if style == "chainmail":
+        return [Scatter(0.0, round(dur, 3), [(t, round(a * 1800 * energy, 1)) for t, a in swell], "ping", (4000, 12000),
+                        (0.0005, 0.003), (0.2, 1.0)),
+                Noise(0.0, round(dur, 3), [(0, 7000), (1, 9000)], "band", 0.6, amp=swell, attack=0.02, release=0.05,
+                      wobble=(18.0, 0.6), gain=0.3)]
+    if style == "plate":
+        n = 2 + int(3 * energy * fx.rand("clanks") + 0.5)
+        hits = sorted((round(dur * (0.15 + 0.7 * fx.rand(f"c{k}")), 4), round(0.4 + 0.6 * fx.rand(f"cg{k}"), 3), 0.0008)
+                      for k in range(n))
+        plate = []
+        for i in range(24):
+            f = 1500 * (11000 / 1500) ** ((i + fx.g.base(f"pl{i}")) / 24)
+            lvl = np.interp(np.log(f), np.log([1500, 3000, 5000, 8000, 11000]), [-8, -3, 0, -2, -8])
+            plate.append((round(f, 1), round(0.06 + 0.1 * fx.g.base(f"pld{i}"), 4), round(10 ** (lvl / 20), 4)))
+        return [Modal(0.0, round(dur + 0.3, 3), plate, hits, (0.0, round(dur, 3), 0.25, 0.0), 12000, 0.2),
+                Noise(0.0, round(dur, 3), [(0, 900), (1, 700)], "band", 0.7, amp=swell, attack=0.02, release=0.05,
+                      wobble=(12.0, 0.5), gain=0.2)]
+    # leather: a low creak and a rustle
+    hits = stick_slip(fx, dur, 0.012, 0.35, 0.8)
+    body = Modal(0.0, round(dur + 0.1, 3), wood_modes(fx, 0.15, 0.02, 8), hits, hardness=1600, click=0.02)
+    return [body, Noise(0.0, round(dur, 3), [(0, 600), (1, 750)], "low", 0.9, amp=swell, attack=0.02, release=0.05,
+                        wobble=(20.0, 0.7), gain=0.35)]
+
 # --- weapons ----------------------------------------------------------------------------------------------------------
 
 @recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
@@ -679,6 +712,19 @@ def shield(fx: Fx):
     by = fx.event.removeprefix("block_")
     layers = shield_hit(fx, fx.style, by, max(s - 0.5, 0) * 2, max(p - 0.5, 0) * 2)
     return fx.voice(fx.level(0.95), **splits(layers))
+
+
+@recipe("gear", ("move", "run", "equip"), ("chainmail", "plate", "leather"))
+def gear(fx: Fx):
+    """Armour and clothing moving: chainmail jingling, plate clanking, leather creaking."""
+    s, p, e = fx.size, fx.power, fx.event
+    if e == "equip":   # putting it on: two movements and a buckle or a latch
+        a = gear_move(fx, fx.style, 0.6 + 0.3 * s, 0.8)
+        b = [replace(x, start=round(x.start + 0.75, 3)) for x in gear_move(fx, fx.style, 0.45, 0.6)]
+        latch = fx.strike("iron", size=0.05, start=1.3, hits=[(0.0, 1.0, 0.0006)], gain=0.5, prefix="latch")
+        return fx.voice(fx.level(0.7), **splits([*a, *b, latch]))
+    dur = (0.5 + 0.3 * s) * (0.55 if e == "run" else 1.0) * (0.85 + 0.3 * fx.rand("dur"))
+    return fx.voice(fx.level(0.5 + 0.2 * (e == "run")), **splits(gear_move(fx, fx.style, dur, 0.6 + 0.4 * p)))
 
 
 @recipe("bow", ("draw", "release", "fly", "hit_wood", "hit_flesh", "hit_stone"), ("longbow", "crossbow"))

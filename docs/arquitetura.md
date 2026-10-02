@@ -255,6 +255,12 @@ As partes:
 - **Flecha no escudo:** deixa a haste vibrando.
 - **Empurrão:** abafado pelo corpo do outro, com alças, borda e umbo chacoalhando.
 
+**Equipamento em movimento (`gear`): medido em gravações** de cota de malha, armadura de placas e couro.
+- **Cota de malha:** um crescendo de anéis pequenos tilintando, mais forte em 8–12 kHz.
+- **Placas:** algumas batidas separadas (1,6–8 kHz, mais fortes em 4–6 kHz) sobre um roçar.
+- **Couro:** um rangido de escorregões densos (70–100 por segundo) lá embaixo (mais forte em 250–500 Hz, −20 dB acima de 2,5 kHz) sobre um farfalhar suave. É o mesmo mecanismo do arco sendo puxado, mais grave e mais amortecido.
+- **Eventos:** `move` para um passo ou um gesto, `run` para um movimento mais curto e forte, `equip` para vestir (dois movimentos e uma fivela).
+
 **Passos (`footstep`): medidos em gravações de caminhada.** Cada passo foi recortado das sequências, e cada chão tem a mediana de 16 a 46 passos.
 - **Pedra:** um toque grave-médio (mais forte em 250–500 Hz) com o clique da sola dura; −20 dB em ~33 ms.
 - **Madeira:** mais grave e mais longa (mais forte em 250 Hz, −20 dB em ~51 ms). O calcanhar e a ponta do pé ficam ~60 ms separados, e às vezes o chão range.
