@@ -1,0 +1,26 @@
+{
+ "sample_rate": 48000,
+ "takes": 3,
+ "calls": ["idle", "alert", "attack", "hurt", "death"],
+ "creatures": {
+  "cub":         {"archetype": "mammal", "species": "wolf", "size": 0.15, "aggression": 0.15},
+  "wolf":        {"extends": "cub", "size": 0.45, "aggression": 0.5},
+  "dire_wolf":   {"extends": "wolf", "size": 0.9, "aggression": 0.85},
+  "sparrow":     {"archetype": "bird", "species": "sparrow", "size": 0.15},
+  "crow":        {"archetype": "bird", "species": "crow", "size": 0.55, "aggression": 0.75, "genes": {"voice": 0.9}},
+  "cricket":     {"archetype": "insect", "species": "cricket", "size": 0.2, "genes": {"kind": 0.1}},
+  "giant_fly":   {"archetype": "insect", "species": "fly", "size": 0.6, "aggression": 0.5, "genes": {"kind": 0.5}},
+  "viper":       {"archetype": "reptile", "species": "viper", "size": 0.35, "aggression": 0.5},
+  "toad":        {"archetype": "amphibian", "species": "toad", "size": 0.55},
+  "ogre":        {"archetype": "monster", "species": "ogre", "size": 0.85, "aggression": 0.7, "genes": {"kind": 0.1}},
+  "banshee":     {"archetype": "monster", "species": "banshee", "size": 0.3, "aggression": 0.6, "genes": {"kind": 0.5}},
+  "bog_horror":  {"archetype": "monster", "species": "bog", "size": 0.7, "aggression": 0.6, "genes": {"kind": 0.9}},
+  "green_slime": {"archetype": "slime", "species": "slime", "size": 0.35},
+  "king_slime":  {"extends": "green_slime", "size": 0.85, "aggression": 0.5},
+  "wraith":      {"archetype": "spirit", "species": "wraith", "size": 0.5, "aggression": 0.4},
+  "sentry_bot":  {"archetype": "robot", "species": "sentry", "size": 0.4, "aggression": 0.3},
+  "pixel_pal":   {"archetype": "chip", "species": "pal", "size": 0.25, "aggression": 0.2},
+  "pixel_brute": {"extends": "pixel_pal", "size": 0.8, "aggression": 0.75},
+  "mystery":     {"random": 7}
+ }
+}

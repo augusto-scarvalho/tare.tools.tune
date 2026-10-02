@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "creaturesynth"
+version = "0.1.0"
+description = "Procedural creature voices for games: species genes, traits and calls rendered with a source-filter synth (plus a Game Boy cry engine)."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+keywords = ["procedural audio", "sound design", "game audio", "creature", "synthesizer"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=8", "ruff>=0.6", "matplotlib>=3.7"]
+
+[project.scripts]
+creaturesynth = "creaturesynth.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/creaturesynth"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]

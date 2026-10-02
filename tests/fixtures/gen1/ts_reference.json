@@ -1,0 +1,1968 @@
+{
+ "source": "CryGenerator.ts @ 2c1ea40 (pre-Python rewrite); int8 = round(sample * 16)",
+ "cries": [
+  {
+   "name": "Bulbasaur",
+   "lengths": [
+    509124,
+    491568,
+    965580
+   ],
+   "sha256": [
+    "29a28355ec7252f81aa65304d030e858c0435b3fd7d35a3a8a88f4e798f9975a",
+    "fadd2096d1df01d1e4e482548123a6c84c09445e056ed45c98827b46f8fd7929",
+    "2fc6541f50b7a54adc3c1487e8733639be0249ce15adfad49da2a4c4e1bf7c16"
+   ]
+  },
+  {
+   "name": "Ivysaur",
+   "lengths": [
+    825132,
+    807576,
+    965580
+   ],
+   "sha256": [
+    "cd5d9552949c7dbf8a5a38070a193146647e668967300e77e3793e9a97c59286",
+    "4bbf5fa2c0e506bc9d836de3a3eb17d3cd6c937ce3ab18b8f33784c381fa2d12",
+    "cf6db7cbbe96cd9f66980183db63e37b9def532994e2dc9f39b91079b9babbcc"
+   ]
+  },
+  {
+   "name": "Venusaur",
+   "lengths": [
+    965580,
+    983136,
+    965580
+   ],
+   "sha256": [
+    "dfe1ef2b2a1faca8dec857e632601f77f383598f886c40abab7f4a0e3ecd7e6e",
+    "512541f660566a7600be04ce71ffebbe105475767925b6660a5a1a1bccdac276",
+    "8cdec3b231f4465b5e9b0150ac491380a38eb98a9baaa0d1198ddd5354ac5f11"
+   ]
+  },
+  {
+   "name": "Charmander",
+   "lengths": [
+    790020,
+    772464,
+    790020
+   ],
+   "sha256": [
+    "1615f5a4599d4baf082aba64e5d6739b4366571341d6c6247cf94edbed6b24b4",
+    "e0ea023868ac6faa920347f4da4386db3459c7402a3f9cb869118a6d547e8d1c",
+    "007def090f36c60755b0f9a9dcde28eeb4b3e247224018a396655155687a8aa5"
+   ]
+  },
+  {
+   "name": "Charmeleon",
+   "lengths": [
+    790020,
+    772464,
+    790020
+   ],
+   "sha256": [
+    "76665c68de6e82de294db98298b21aea4701becc18b35b5086172375c43ae927",
+    "43738077b9b4f604f1aff089f83553fe20eea32f621e3422738a8a58620dbdef",
+    "5b95358e37279ea601b31d53156d4df92fda841dbb850e45ef6057177636f157"
+   ]
+  },
+  {
+   "name": "Charizard",
+   "lengths": [
+    1000692,
+    983136,
+    790020
+   ],
+   "sha256": [
+    "4b70ea9755aa0961fed373fdd83d3d99405e81c12789dd3865c96110d5b8cbf0",
+    "95b82c12dd33beb3fe0393dd13e4217a9d2221ce457ae4109ad966912e11715f",
+    "2b0e597bbd6a56e797b368273effdaea7f8270109f926936840782667f9f90bf"
+   ]
+  },
+  {
+   "name": "Squirtle",
+   "lengths": [
+    772464,
+    719796,
+    1053360
+   ],
+   "sha256": [
+    "47154adea97398607751d4581865f8a3e99168d474647d9d4065c9ff02bfd503",
+    "450dac8d7e0c0e52a7dc0604589bcf78af35628119c68f0be79f29a250da271c",
+    "187dca022c69930055c327e329b12480877158dd18f08ff6a8f4d931cdee4d6e"
+   ]
+  },
+  {
+   "name": "Wartortle",
+   "lengths": [
+    772464,
+    719796,
+    1053360
+   ],
+   "sha256": [
+    "0ef4bed627ac2762d426007dfe2404599fdaca05ce88995ff7d6b6514f1f6ac0",
+    "ce67574b27fbd1b2c4fa80d831df493249fd2154c278b599eb619de73127137d",
+    "5dafaaaff58572cc8acb080b05262f4811ed49db7b117fcbd30601eee7400f38"
+   ]
+  },
+  {
+   "name": "Blastoise",
+   "lengths": [
+    1000692,
+    948024,
+    930468
+   ],
+   "sha256": [
+    "399f289d9b099dbe5db234687ba987c6bf85f12b2466439084bd2a5dae4371d5",
+    "680d47ea0ef472b1f686782017fde182087fb7a9400ad986c651eb7a07f83534",
+    "4e6c8ebcc32e5aa25cb201524be0cf06da90d23cb8cabf1ac715492719bf76da"
+   ]
+  },
+  {
+   "name": "Caterpie",
+   "lengths": [
+    684684,
+    649572,
+    860244
+   ],
+   "sha256": [
+    "fb4c38220fde663867c41a3d39c7c77e1cc1bc39f4ad7dc5f860d34a399a8ab3",
+    "27cbd8b23d4e5b35a4fb8485e776fc9dc665369b067f62e489e4f51214bd3b0d",
+    "295c95a6b4681a80d474b9b6de49d61f05980083ecd40af5c839a85016d285aa"
+   ]
+  },
+  {
+   "name": "Metapod",
+   "lengths": [
+    649572,
+    702240,
+    1457148
+   ],
+   "sha256": [
+    "e3d63e2f0a078e6d0b0f249cde05959536440019f265428e23ef8c7a05480103",
+    "d232cedbc38b5050ee10679495bd9c0f2d95e26f7f584886c23e13b504f3f248",
+    "d72907b93c9eb1688a77db0bd41c6bd4c69256577e0c290da20f582d242b9630"
+   ]
+  },
+  {
+   "name": "Butterfree",
+   "lengths": [
+    719796,
+    702240,
+    860244
+   ],
+   "sha256": [
+    "715d3712c55585c96089427422a39dfc816559b55cd7d50d5e7fde230b5fd85a",
+    "cfb5e81caa7d750d40fec09fe9042525410d1fa31e59ae746eba5924aa2d4018",
+    "89668661b4b2578d6f121d6f24d6915151c1b1628dd108fb090ec6093375e184"
+   ]
+  },
+  {
+   "name": "Weedle",
+   "lengths": [
+    561792,
+    509124,
+    842688
+   ],
+   "sha256": [
+    "dea46ea8d9ddaef0d4aae55a382db8b8e71286836522350ff6303ffb7dcdd6ee",
+    "bcddc5c1bf3a67974705a045068166dee6adfb745bdb05f1a79ab4186ff11e7a",
+    "72e9a0bc53727c4f711cb64a4e9e4b83f02ce53732438faee72b86f83bc21dae"
+   ]
+  },
+  {
+   "name": "Kakuna",
+   "lengths": [
+    596904,
+    544236,
+    930468
+   ],
+   "sha256": [
+    "0a4c328f4741cccb5db6810fc2e810996d634217f0ace5e264cd7f9d111190a7",
+    "a0bb09be1f1b8a52c00a2159d9a972edcb371d9f57d1b6e2d09a8065eb87405a",
+    "2eae0257341a958765b416852490fda95fa034258fb9b66f02c6e7801558903e"
+   ]
+  },
+  {
+   "name": "Beedrill",
+   "lengths": [
+    1000692,
+    948024,
+    930468
+   ],
+   "sha256": [
+    "6dbf78dc2836c2115777089f86807211f7af5b7dfa3b3a2670c0177111216d32",
+    "f0f2854c182f58f7db2e27bf984321ed1b5829651dc0d479db2aa91df2ae861e",
+    "f158a86fc2182fa84b774e1e4612d072c4bfb0d657ca27cdbef0799c296d62c9"
+   ]
+  },
+  {
+   "name": "Pidgey",
+   "lengths": [
+    351120,
+    298452,
+    263340
+   ],
+   "sha256": [
+    "b83d6da68c618c5abafafe818c8dba4cd264815b6ae1682ca87500deb0a7643a",
+    "29b3a6b084e58f46391ae95adf299368ba77766f988d03700658f9882e6a111e",
+    "e1e103feab0c90705deee052be7012f6c1671a36b246731b4bfb2a85dd8bcc51"
+   ]
+  },
+  {
+   "name": "Pidgeotto",
+   "lengths": [
+    772464,
+    790020,
+    649572
+   ],
+   "sha256": [
+    "62711e7c6e429122c9de0bee09e14659943ff34d5cefccd58c86a796ac52e1f4",
+    "a5d20ec54a8d0ff2d14e75d67d54548670afb7018a7cd843b6595d4313f67a1f",
+    "da119ebab51117dc5aa2335ec28ad0c95201056fcf9c7cace10333b8c29fd10a"
+   ]
+  },
+  {
+   "name": "Pidgeot",
+   "lengths": [
+    877800,
+    930468,
+    649572
+   ],
+   "sha256": [
+    "f3e524ae27e19411ece324cf0195388d85256a89ce22835f931a6bc7295ca9d3",
+    "01ffa3d516039d0731bfa60259dffbfbf1ff3da078bdf7b11bc61f77c0cb8bc0",
+    "05c8f17feb9eea4e26a5de3a766512939a88cf3ea1b498a9935a3e55f0517cf8"
+   ]
+  },
+  {
+   "name": "Rattata",
+   "lengths": [
+    386232,
+    386232,
+    386232
+   ],
+   "sha256": [
+    "b9879c39a9296e711667d2ff4d49a77fc0af59bc86d1629c40265d4342d2aedb",
+    "b545470e1fb10b2cfc5422f759496b501b40fe5dbc15eef9eee7d0865825d107",
+    "e2cdf5a585514fdd9e2df7daab919f95012cc5e841ec7527bf95da711724581e"
+   ]
+  },
+  {
+   "name": "Raticate",
+   "lengths": [
+    561792,
+    561792,
+    386232
+   ],
+   "sha256": [
+    "0bf97bc37e608feb9ed95b53c232be2f40092a3028c41dcb783af0b9ce4e2ef7",
+    "695a8994f7a8909b23d24b9e5f82ba5f432d7a59d902b48fa3904e42c83bb62a",
+    "adb611da2ee62254bfeea82584a2569d7f1ae41d5a611ec715f1448b49fea0a5"
+   ]
+  },
+  {
+   "name": "Spearow",
+   "lengths": [
+    1018248,
+    1018248,
+    298452
+   ],
+   "sha256": [
+    "a577293d16fa39b18dda409a5e74b0ce25443dd1e648e3eee2f2cad3e31f6c5a",
+    "20fc0ba65d35018acde8039f1bd43b32326566e90bf3d4ecd7d03ce2259fdbda",
+    "251cb6382039c805acf15ab771c67fc2e36457d50a4a44b2729d5dfc54ea0db8"
+   ]
+  },
+  {
+   "name": "Fearow",
+   "lengths": [
+    895356,
+    860244,
+    737352
+   ],
+   "sha256": [
+    "29c4539cce80cc10354e1a28fd7b918ddea32c957c4f84239bf7c257ea4ef3af",
+    "8d3663f520d776996ca2ed84e48029b2a4030e6af9aa7078ec2d480f521cb19d",
+    "59e76a71829bebe3181b6f0eaba0cd3020962223e020ef3151cdd563f49092ae"
+   ]
+  },
+  {
+   "name": "Ekans",
+   "lengths": [
+    877800,
+    948024,
+    1158696
+   ],
+   "sha256": [
+    "d3550b368ddd84bcebb8b9664cc3492a02ac7936a04aac954ac4759cf6a2e930",
+    "acfae5467ab7598ff00f02d623483ae7b710c4c631ab68936078765e82933082",
+    "9ebd9e65e74eca6a1b696eb586cacdbd5bbc56784bc8fdad71944f1a5f8e1e74"
+   ]
+  },
+  {
+   "name": "Arbok",
+   "lengths": [
+    754908,
+    825132,
+    1158696
+   ],
+   "sha256": [
+    "33264879038be4d95bdc6f4bc696dfc16cafcd0b43e06c83180815e79b37c4cd",
+    "16fa585d93d0c702e6411ccf26e774eb32f392ac06925b65c669e36e85e0005c",
+    "08fffe1ed43dbfdd97accf1ddd47e7f508e73bf2cd6fe5b644f85cea025b9096"
+   ]
+  },
+  {
+   "name": "Pikachu",
+   "lengths": [
+    509124,
+    491568,
+    965580
+   ],
+   "sha256": [
+    "331c40c8d7f997dc0a5c2ee47d5b6139c532d9092348b4d0113f32e54b6f69e5",
+    "1a52f095c9f961c1e49f4b4a472fc68be05b2c38aaa963295ba008c70b0df1ca",
+    "f6d24925b603dfa9470e04f589b742d9eef0e2719f8d7679d70fc1097a62a786"
+   ]
+  },
+  {
+   "name": "Raichu",
+   "lengths": [
+    983136,
+    842688,
+    1228920
+   ],
+   "sha256": [
+    "cc83576e31e957ba72b87f800d5a3e38be95021943e5dcb31dcffce9e1033b31",
+    "7a1624e8611b19ed3ddf15665ef9740ebcf12453d66acab4a23e9677bcb91185",
+    "d30b63becb45d7648f3f0e1f8ca8ab70458331895bac01feaef697ff833738fe"
+   ]
+  },
+  {
+   "name": "Sandshrew",
+   "lengths": [
+    421344,
+    403788,
+    491568
+   ],
+   "sha256": [
+    "b9ab168385183b117d1d1630fd6d8a0364d3ab3bd0ee175fd78cf9836d29d919",
+    "e1082a3cda11ddfb8aa2f0914341ee2a91ab0b1fc6e0c3d834019b81602cf665",
+    "b4d58c01bb44e4f6b925001e2f4cbbbd140434b0126a6eed05de5c30d176e8f9"
+   ]
+  },
+  {
+   "name": "Sandslash",
+   "lengths": [
+    772464,
+    807576,
+    491568
+   ],
+   "sha256": [
+    "1d8fb6af85d5688d4f6de863d2006a672c6e810c8a38a637383403a2ff62c9d1",
+    "ee84f28aba27e7a68ca1a19094dc396430416e33e7927f11936385c5aa837a83",
+    "d6c9413d4f556d37eff46f9f25dc975f38b062222911b34a536494e275836252"
+   ]
+  },
+  {
+   "name": "Nidoran&female;",
+   "lengths": [
+    544236,
+    509124,
+    526680
+   ],
+   "sha256": [
+    "a5c9d2370ef601d3debd3144f9846ae786ab2ee8f91884d644e1657d277287e9",
+    "d561973f617d628cb25d13effd515d236203ca8bce7bafeeb909b9cebb339625",
+    "825ffffc258b8bf22fd7c130b61c8bbfece03dbd55face761ce75249e3c424f8"
+   ]
+  },
+  {
+   "name": "Nidorina",
+   "lengths": [
+    649572,
+    649572,
+    526680
+   ],
+   "sha256": [
+    "dc2f03059fbeb46e7230b44c6e520c455993400760ae589920c044b5922b85d7",
+    "2224689e08d0bfda0ba74e1bc48311335de412de65a10075467c7af2de361499",
+    "825ffffc258b8bf22fd7c130b61c8bbfece03dbd55face761ce75249e3c424f8"
+   ]
+  },
+  {
+   "name": "Nidoqueen",
+   "lengths": [
+    930468,
+    930468,
+    825132
+   ],
+   "sha256": [
+    "43509dc86c5b897ee8c34ce94d845bc10b873718b6299725bfeeb1ee85a9d2aa",
+    "3f9ecefee159b1a9e0a210f0c13ed6c40503462c18a7b072d0a26dcc6d2aae1d",
+    "553d144923af74ca8e674028b2f37af8ae0f188704c16d1414a4d757c32e6f71"
+   ]
+  },
+  {
+   "name": "Nidoran&male;",
+   "lengths": [
+    526680,
+    544236,
+    491568
+   ],
+   "sha256": [
+    "4a9289165063a18e00598d09f3f257a1686ffcdafbfa02b068801104bc07970b",
+    "fb975d40fc13ae1db02e189e96534d3147659c204e3a4589176c2be2f952e45f",
+    "1fc948de9a709406b878fbe36aa21b7258a74429be3b8848142c9971d71826ec"
+   ]
+  },
+  {
+   "name": "Nidorino",
+   "lengths": [
+    649572,
+    667128,
+    491568
+   ],
+   "sha256": [
+    "548b8cd40b875192bdaaebb0f975fbd3ba0f0f668d085e13f2d19d2c216aeb3c",
+    "3c7b31bf7f3d3a8162f381582524a98d55e4ef6e0bb39eb8a371123c77d7d4ae",
+    "1fc948de9a709406b878fbe36aa21b7258a74429be3b8848142c9971d71826ec"
+   ]
+  },
+  {
+   "name": "Nidoking",
+   "lengths": [
+    1404480,
+    1281588,
+    1228920
+   ],
+   "sha256": [
+    "efbab9a11aaaa15a446c4e868c2fcdf648cb198b40958aac8cd9d01607a4e28a",
+    "2ba5ef9c696235eb19ef5b07f06336c52aba9f7126c165597f608542b5202011",
+    "3fdd21beb2e45e8fce907ec6f82be3171788bc1c8ab487d6cec6296158171f74"
+   ]
+  },
+  {
+   "name": "Clefairy",
+   "lengths": [
+    421344,
+    561792,
+    0
+   ],
+   "sha256": [
+    "cd972e5881860432e4e8d6da04183256b58fb95f364a90ec430cbad8f66f63d8",
+    "3fa3cdcbaedd61a16cd78e74144b7c8ade13072ec7a89dddb329611650b03d20",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Clefable",
+   "lengths": [
+    474012,
+    614460,
+    0
+   ],
+   "sha256": [
+    "2c87bdc09f246f0372e52da5002d0b93668390047f96f9db1d7b8063e4c158ed",
+    "bc46a117342c090d34969ffd9d3894ff6566883595b5bbe83f427b7698ebbeff",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Vulpix",
+   "lengths": [
+    895356,
+    807576,
+    1246476
+   ],
+   "sha256": [
+    "edb89904d60a698eebbdf5a90bf974facf47a435b6be141ca13d03444ff9767c",
+    "0d34ae5faccb3817daf14e5dcc2aa12c48b43fb7e16d86da5f750e8b9ca8efdb",
+    "556650df8b3fbbaf3ac1b47c9fedc0fb7a7664c13768d6fccaa7e1fdc7ec58cc"
+   ]
+  },
+  {
+   "name": "Ninetales",
+   "lengths": [
+    1281588,
+    1211364,
+    1246476
+   ],
+   "sha256": [
+    "d4f7583a96430b69e6a8b268559fd6fcd31346bc10d55fbfb3b97f38ab3b122d",
+    "f3b5112007e542dbe1f5d78af50107d0032d56d6d6a75974b3fcb44568c436cd",
+    "7385379b263ae74369024703c6053054a2edda11c7dfe8d66c39dfa5c3ac872f"
+   ]
+  },
+  {
+   "name": "Jigglypuff",
+   "lengths": [
+    403788,
+    351120,
+    263340
+   ],
+   "sha256": [
+    "fe6cf6eb197e079b18997d3b6f29df608d762eb5815534fdb8acd6a9a9a6da1f",
+    "44d0b28d6355c43006ce46222fcc8986dae007885d28c0fa91f97d450e1b91c4",
+    "ae386e8d0b23a4de576cf26554c25caaadf8071a386b73473d48263625f8a5e3"
+   ]
+  },
+  {
+   "name": "Wigglytuff",
+   "lengths": [
+    438900,
+    386232,
+    263340
+   ],
+   "sha256": [
+    "377e046c71c2c4e1e612686bf4debadb8f7579ac94d23757e312aff6a6ff7b4e",
+    "1cc1b164eb9f7840f3dcab1eb452f5c6d8480d28d0d019ea52d6efac50f1958c",
+    "be80d2504942564c36d13468d1474bfec5d22cbcbbdc259b22f3a0e0094b2c3a"
+   ]
+  },
+  {
+   "name": "Zubat",
+   "lengths": [
+    983136,
+    965580,
+    1053360
+   ],
+   "sha256": [
+    "ffa50cac2bdaaac9ea4fdc9cd61805bb37ea1ed8cd4fcae5c9fe0f8332c06858",
+    "f69b86128cb08463a76ba8d7cfe092ddf3186b3f64d6ac371f7c7a7f1f587901",
+    "34a15cbdfa19f9f982fab7f20f551152f7a7d147373fd32d695794cfee311271"
+   ]
+  },
+  {
+   "name": "Golbat",
+   "lengths": [
+    983136,
+    965580,
+    1053360
+   ],
+   "sha256": [
+    "60b681ef924dc72979454beee642fc7e7eb2c2756fc314f0aab1032e453573a7",
+    "aa1426a9254594e1f3504b4a4dc7b2b886118832749b4196c87619b79c35b991",
+    "a18e19c42571fdde0400d9fcb2acc3dc18077be2e2c25ebfbf5221d1aea57140"
+   ]
+  },
+  {
+   "name": "Oddish",
+   "lengths": [
+    649572,
+    614460,
+    860244
+   ],
+   "sha256": [
+    "5f61d4ec9a59c58b16bd1faa97efd4449a0769eb457ffd665ee49d6e7d42a606",
+    "b737eaf728805ac02fa3bf0d6e97547ed83db129284a399313afd49c346eee17",
+    "350fe78d775f53debd14e01c7112de7e54567fa1e9af7f6afd1ce306a9572780"
+   ]
+  },
+  {
+   "name": "Gloom",
+   "lengths": [
+    790020,
+    737352,
+    860244
+   ],
+   "sha256": [
+    "451ffe543fae082faffee195c05af9f2b1b38dc926181bc733451ef5a5a8d2a3",
+    "335b7c6cc83dd64d4444600990a02b8c4b38e6f0e5b614c195fa78b24ba0e6e0",
+    "6661ffd63abf7dd4745bbc735d655c9bf1b244618c3eb68538c26c0733828040"
+   ]
+  },
+  {
+   "name": "Vileplume",
+   "lengths": [
+    1246476,
+    1299144,
+    807576
+   ],
+   "sha256": [
+    "20564b3e7672ca79e351698798814d2ae86fc036a4f100fe8a6d4fe7b580c353",
+    "d7c2b3223f9280077c743e4ec7ac3406b430a43e6a993429de734b3e52f21bde",
+    "acc01cf31867029ddc1f1b4f28264ec844226d8adeb432aefb3c669827197a94"
+   ]
+  },
+  {
+   "name": "Paras",
+   "lengths": [
+    1386924,
+    1492260,
+    1018248
+   ],
+   "sha256": [
+    "10eaa6a86bc0422627473daaac4eb0254d8c4f08c9803a07bd84ff518adab210",
+    "29ed55b86b75c7154c0ed02cf68987acc5cfd8df4638dad51db24e51b23752de",
+    "5dd44dca5539aa1ad49f15fbd48005f5a9f0111efc8f871c197f46ccdbc675a8"
+   ]
+  },
+  {
+   "name": "Parasect",
+   "lengths": [
+    1509816,
+    1615152,
+    1018248
+   ],
+   "sha256": [
+    "0276c15053afb70ca4386b7183d499706841f1355f6b5a66538d7627682ecdb8",
+    "8b691fa4cf060d768a6802feb4dc2523419042e86baf500dc6847228ddf6636d",
+    "3b012303e2c235ddf110e67a2beb91fe500d70f781c3454335b8cb6bd5dc4f43"
+   ]
+  },
+  {
+   "name": "Venonat",
+   "lengths": [
+    702240,
+    614460,
+    842688
+   ],
+   "sha256": [
+    "d822147749977fe1bc64f0429bbeedf86bb6ad924fe79416ac0dd42c0a8d7e51",
+    "cea4ea0fb8470398c97094068b3120c9b3fb27321374d39719dfef1b2ab66e3e",
+    "d20e83f459ad7050174c0bd1b4ef42220fffbabd0f8e577d104f8a4eac7cb689"
+   ]
+  },
+  {
+   "name": "Venomoth",
+   "lengths": [
+    860244,
+    772464,
+    842688
+   ],
+   "sha256": [
+    "f6c9ff55d4534cc0040168d831810150fc3e5d898d83687cfa64e41fa9f1fa0c",
+    "9a8fbca9dd34db49dd289c468df6e2cbdd42b5c3851ca5b5909784e57bbc553e",
+    "8d79e70774862c49076f83e3846b38472912000fea7d75809fbba76f68a8affd"
+   ]
+  },
+  {
+   "name": "Diglett",
+   "lengths": [
+    579348,
+    561792,
+    983136
+   ],
+   "sha256": [
+    "522b8004e22176a56915b134e8fb7fe78331dfab169b842d665b09959ab39d0a",
+    "01d9b4bc03c7afd933e1a535ece8bda01e32c0dfe03fd8ad7da1fa00f1e3a7da",
+    "21a404571719c755c893af1debc13898586c7ff4511f77288520c197dc0f5f07"
+   ]
+  },
+  {
+   "name": "Dugtrio",
+   "lengths": [
+    632016,
+    596904,
+    983136
+   ],
+   "sha256": [
+    "17b4086758b626e6332a16fa4c674807de5b2d4bf255a248bf88cc9630ae84c8",
+    "7ed2bbdfcc32b4f99b7f2d86efff7cc023d7c8af0f2027940e375a00eefe6eb6",
+    "35ccb516aa7489a54b107d0597557c2cd76765915af84426e02e9e4b4b4a2b38"
+   ]
+  },
+  {
+   "name": "Meowth",
+   "lengths": [
+    438900,
+    579348,
+    0
+   ],
+   "sha256": [
+    "9f866af26ae4101e8f9a14857f5b469ecadf6772222cf7e6d4c7856be2962f20",
+    "e3c060a59ee47908531ddc075350a4abb93f4926b4b0a825ba3fda932a45ce06",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Persian",
+   "lengths": [
+    1035804,
+    1035804,
+    0
+   ],
+   "sha256": [
+    "25c0b4b1908c5c5af678c85761a3577685dcfaaaba16b605cabe0bbfdca4d3e6",
+    "32308ff3db62bcd7ef70c68d6bfeb2eb5cbbbaf84e7602921d352e7a3c0cb44c",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Psyduck",
+   "lengths": [
+    737352,
+    702240,
+    0
+   ],
+   "sha256": [
+    "75257517d0f1490fc379d1dcb009c7784791a1f227b5c2f0cf88459d85497784",
+    "cfe6428996709af7d935cd3781c0d21f04ef21ece506bbf72727a67d9899951b",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Golduck",
+   "lengths": [
+    667128,
+    632016,
+    0
+   ],
+   "sha256": [
+    "fadc0333be42fa60f4ef2c1e6862795f26629ac59c9fa0204c126d80646f9da9",
+    "8c8373af0884991edd36e64dfc822a606aed11f5ec73d5b12f35a18b4795d04a",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Mankey",
+   "lengths": [
+    842688,
+    807576,
+    825132
+   ],
+   "sha256": [
+    "99f60b81c7eb959924c1d737adc3b9bbc522185178e16f8fa110b4bb398a9bfd",
+    "2797030a8ba6dbd49fe0174bdfb8d858d817a7ddb5a214e3a53580822c9925d9",
+    "34cf543ca7edb94cedf16bfd0f3b22ca04e87834772691d96ee34d75ad74e9a3"
+   ]
+  },
+  {
+   "name": "Primeape",
+   "lengths": [
+    772464,
+    719796,
+    825132
+   ],
+   "sha256": [
+    "f89e0add593313a362768f238341894b506a69700b75d2d79338152c52ea9a54",
+    "4d83cfdc3f88e9af5a40b030687cbc851ee2f4ff22bd0c038e86ce1786060c64",
+    "3fa6c20a72f914c35e91bace8c7400a459cb13c212988782ac1b454365a6cbfb"
+   ]
+  },
+  {
+   "name": "Growlithe",
+   "lengths": [
+    561792,
+    596904,
+    702240
+   ],
+   "sha256": [
+    "8f81a3e997bac86e81e78d6a6eddf12533f298885a6b37b8cf21fe2c9c677d78",
+    "330469f49d57cdaf6e05cb34c38d99e518d99227a7fb71e66f99222259a45b13",
+    "233cfed05ea03feec1a6f5e9aa935a2fd2adad123c18673676a3306674a47970"
+   ]
+  },
+  {
+   "name": "Arcanine",
+   "lengths": [
+    912912,
+    860244,
+    842688
+   ],
+   "sha256": [
+    "d7742ab6dc65e39af0403c1cf634955b5b41c3ab49da8e3325b4e0c424aa2dc4",
+    "3197e7dcccf1854f3d5471a0457ea1fe392025edaec8743dc11da7f633cdb950",
+    "7df7dd2d402d53427e39e89a53cd25203e2548f8f4052e49322a929aa901e683"
+   ]
+  },
+  {
+   "name": "Poliwag",
+   "lengths": [
+    579348,
+    561792,
+    263340
+   ],
+   "sha256": [
+    "004b21877c732155c45e832093e057b49f8de5ada434b1eb4bd3fe05eb5f4db2",
+    "5c344d500c5c1c023dbbad8e2cb78bab3fb48bf5454984e72e40988d6c56ea57",
+    "ae386e8d0b23a4de576cf26554c25caaadf8071a386b73473d48263625f8a5e3"
+   ]
+  },
+  {
+   "name": "Poliwhirl",
+   "lengths": [
+    438900,
+    386232,
+    263340
+   ],
+   "sha256": [
+    "685b2d4c4f34044cba2630a15c7d2a969570edccee285e0dc1ada658404018df",
+    "7c6789abbe5309283c84ea55c794976790df3a578e9e2ebc99681263dc5ca6c3",
+    "be80d2504942564c36d13468d1474bfec5d22cbcbbdc259b22f3a0e0094b2c3a"
+   ]
+  },
+  {
+   "name": "Poliwrath",
+   "lengths": [
+    579348,
+    561792,
+    263340
+   ],
+   "sha256": [
+    "7cfe7d87d0fbb329f6df1ff16a2dcb0c979cb72854945e89b0dea51b3da19752",
+    "577ed72a6810474103d923bc78ca485756f0aa44ca19a3c5cc62fd625fc7d59f",
+    "5952dd5d2b0348b3fcaedb7c03e604bf164fb5983a8f343ae2954525f43cb4e6"
+   ]
+  },
+  {
+   "name": "Abra",
+   "lengths": [
+    649572,
+    702240,
+    1457148
+   ],
+   "sha256": [
+    "ef83b8a741907ed80f267461090b17fcc6522f9eb3df7b00f4a52cf9faa4425d",
+    "3998b8da3e000343abfd34480ecb7101ac6a1055ccb0224b1af42530d153d7f5",
+    "f248b77790259fc342bb15c9c7d09e42504fc787ac23ed6edac7ee77a847765e"
+   ]
+  },
+  {
+   "name": "Kadabra",
+   "lengths": [
+    1369368,
+    1246476,
+    1457148
+   ],
+   "sha256": [
+    "9c2ab53abdbd4119a46144d1c305d458a3564bf153fe3b0dfdf284ad600269b7",
+    "b2b79c0cfe2c98c514a2ddd8a2d68aa55eb51c5d62f0af82486e3e0bc04a6b38",
+    "ef436eff35dbdf72c34a2b2546651bf8060b9a220ee712a41c8347f578db0cca"
+   ]
+  },
+  {
+   "name": "Alakazam",
+   "lengths": [
+    1650264,
+    1492260,
+    1457148
+   ],
+   "sha256": [
+    "b32ed977a02380b4b09b6cd967c798488fa7abfb702a58a74315159f4aa88dba",
+    "1a7d6a12d32d26fdde4ccdc9649941d4b92d832934ef839f45574e2f1c38898b",
+    "57c3aef326647f616b518f9506ad84eee6648ede11404cdf6156fd8e0e3d5910"
+   ]
+  },
+  {
+   "name": "Machop",
+   "lengths": [
+    438900,
+    474012,
+    702240
+   ],
+   "sha256": [
+    "ea39f5536ba13b90bfea786b3c868f061958a11fc074f09d99c92936c8cd1a0b",
+    "586e36552efc4ba3202887b54ac9e78c72742f996d1c67053df86c35ab9e704c",
+    "29cd48c95c80dbbfeb2bcf03e3aaedf453fe4afae8688dddc4c0454f189a6fa8"
+   ]
+  },
+  {
+   "name": "Machoke",
+   "lengths": [
+    614460,
+    667128,
+    702240
+   ],
+   "sha256": [
+    "762c0cf83f35a9c4cef19fd65191463e40e969af99d14980813df7aca88b2f54",
+    "8b62af8f87eb374c04eafa92df42fc77bdbcecf4018e99c067f2246a858c6081",
+    "6676ee1c462207f6e67b0c29b397cb87abfec540ab168d6f03e3f064e4a64a3a"
+   ]
+  },
+  {
+   "name": "Machamp",
+   "lengths": [
+    790020,
+    860244,
+    702240
+   ],
+   "sha256": [
+    "080faaff0e98ec4fb417f2413249aac1de0ff9245821fc685ad5c31614e6150d",
+    "fe2661a543da5cbf2b919523052caaa882b7cdfa373113225b7110ec4cb80b75",
+    "ba5068df7dd38534e3cd9b16741276c5dbf8f5f23d368266e56c124630e28cdf"
+   ]
+  },
+  {
+   "name": "Bellsprout",
+   "lengths": [
+    526680,
+    491568,
+    0
+   ],
+   "sha256": [
+    "09a30b3b272d6bebac15c3f10cc7b8c30d96d713e6ef6e78759f77e7a119c9ef",
+    "fec6af6e016f19c343fe1ab686d6e1f10b7ac546cc5cf616e3403a638e047072",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Weepinbell",
+   "lengths": [
+    596904,
+    544236,
+    737352
+   ],
+   "sha256": [
+    "0af6b0d3aa01ec26ace9b0815a246e2f7f4286496cfb4fbd3fddcd2fa31d8dc5",
+    "72cebfaab75912ee7abd41c10e2927868ac2b25b7e0c2f9917d573394546b782",
+    "e7e2d61e456b4c91e50c933419f0df1487d218d028cf52958116c46ed73a2e0c"
+   ]
+  },
+  {
+   "name": "Victreebel",
+   "lengths": [
+    1000692,
+    930468,
+    737352
+   ],
+   "sha256": [
+    "b62b9b3231b48bcf447e36591f1ea0e2d092514f0af98dab6b7757aafe60a646",
+    "98495eef9755db9dc6aa4a0f16e8cca7dc599f746d3917f0cbf1463691155d5c",
+    "f5473f16f239e3258d675baec2b9a8f5e223c0eccd15d12ff7807fb12907badb"
+   ]
+  },
+  {
+   "name": "Tentacool",
+   "lengths": [
+    860244,
+    772464,
+    842688
+   ],
+   "sha256": [
+    "05598347daa76029f93eb94df8e35492a612edd1833e800e49ab764be7d07b25",
+    "d2b2ece6e17358943189de510e5be85b1b5c08fd6ba3ccc4ccccfa4be727fa3a",
+    "d2c935c1c089a0727de5b7432c712c114febe082bac5a9a34e05af41f9a97d8a"
+   ]
+  },
+  {
+   "name": "Tentacruel",
+   "lengths": [
+    1176252,
+    1141140,
+    842688
+   ],
+   "sha256": [
+    "aa8015f38a9cbb7a26a93f0f85cd4e885d301342361fce75c12b77a4894feb5f",
+    "a58eea7737a9bc846a08c26216f2aedb548f2fa0bec78a936048f32f969cba31",
+    "466bd8fd2075fec4a2a6a6efaf9a28c45d8485c2f5dcb947403e2e0ba15a46a2"
+   ]
+  },
+  {
+   "name": "Geodude",
+   "lengths": [
+    895356,
+    807576,
+    1246476
+   ],
+   "sha256": [
+    "137b93b77ab9a1a96f4d85f33e588a3c37c7a7f7673c5c2204aba01b18dfe62d",
+    "0111fed4c5415138c3946aacb76e037b451d7b19f8491b21cc21bb4345626c25",
+    "84d1326572cea0f2769e6ec7692ef87d08803731d3cec5301d68ec7998260e9f"
+   ]
+  },
+  {
+   "name": "Graveler",
+   "lengths": [
+    1439592,
+    1386924,
+    1246476
+   ],
+   "sha256": [
+    "d97cdd2cbaf5768741ded5ab18cc3dd4bf95303abb991a6cabd0b458ce4a3dd7",
+    "e8619e55ba1873626098590ae39791809f1bf63306c93ec02c0e8f524dde1ffd",
+    "c12ef5b276177518657442b9b99c4cbecdffc3ec7b35ec6c027e8fed177edadd"
+   ]
+  },
+  {
+   "name": "Golem",
+   "lengths": [
+    667128,
+    596904,
+    772464
+   ],
+   "sha256": [
+    "f9fffe49ff760a761a5db7244a59743eb8f1b8fe7cb804213ecc062163a8b24f",
+    "15c0eea29a0b05a63960a866be76ded41b380538836aa3cb2cd8238a1149e19f",
+    "306cb883ac00a366b08dddd6376cb132244deb32e1fe6a6f5b5df754d343dd48"
+   ]
+  },
+  {
+   "name": "Ponyta",
+   "lengths": [
+    825132,
+    754908,
+    737352
+   ],
+   "sha256": [
+    "7ecfc927d4a4423743b6535157f014a30e7fc769ca1434134e2aecf742fd56c4",
+    "e426cffbf695110ee53cc9025346f00ddf44ecf76ee13c5f2bb50f40e431149b",
+    "23b69b8b25fe61871470866c2168badebc2b3548ba5e5299cf37fc4f3dba3e94"
+   ]
+  },
+  {
+   "name": "Rapidash",
+   "lengths": [
+    965580,
+    895356,
+    737352
+   ],
+   "sha256": [
+    "8e491f9439e14d7f33e7ce87a5d23d4dcd4f0e47d64d253b9d3ae09b6e6613d1",
+    "d87be0a7ad599d3b06613cb9b938c48b598b9b548134f6e59c2486fbc25c3746",
+    "aec6c7158a75ab9f906308e07c7c774e33d8e0eba38705e6f963a02d6c98ac54"
+   ]
+  },
+  {
+   "name": "Slowpoke",
+   "lengths": [
+    438900,
+    351120,
+    0
+   ],
+   "sha256": [
+    "232554ca18f184fb99b4552e96289b0e3fb912c20e7be94d0cebd675e3e0514a",
+    "8b7ac0214ad144c1414952357db94efaa696be6998f83b87b68aedf66dead227",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Slowbro",
+   "lengths": [
+    684684,
+    737352,
+    702240
+   ],
+   "sha256": [
+    "641abcf688b0c0cdefcf78014b941c7fd9121e9c1d4022f51147356fa3ba1b1e",
+    "c8b022d7f182fa8d017e8c677b0e00501f618a1c0734719e67506f1fdd5f9e4f",
+    "eb74fb6363c29b3197ae351b61333218e8783b62136cbdbce7e7e974c2a59f49"
+   ]
+  },
+  {
+   "name": "Magnemite",
+   "lengths": [
+    1000692,
+    965580,
+    1457148
+   ],
+   "sha256": [
+    "536bb4823f57f8b33e1147d84cbab99c6de56dc602b0454603d5c7c47a67d753",
+    "e1659bfb4ab0ff620d8ef5e9c619839e846d2d58b7b5a16c1c35ed85681f1fd1",
+    "501c85962bbd7e9b01c6c383f72b86862b485a23435a59b7f7ec541d2dbca65d"
+   ]
+  },
+  {
+   "name": "Magneton",
+   "lengths": [
+    1369368,
+    1246476,
+    1457148
+   ],
+   "sha256": [
+    "aa27abda164f2b76c2d5838351a6acc30de568508338e52c6d01108d68a80920",
+    "e4bb008d90bf6de1ecc9a7e30c52743a3b6eb8d9e92cb2ce64e0ea2355ea6d74",
+    "7c5a12571844320bc544ad008fcc9eba0c83b2d48c30e7833baf36271f9aa9e6"
+   ]
+  },
+  {
+   "name": "Farfetch'd",
+   "lengths": [
+    526680,
+    509124,
+    298452
+   ],
+   "sha256": [
+    "79264ea76ab20ee72d8c9392cad37bf59e302112aa2fc5a748766e7029886729",
+    "c91be75bcad3d55a16b33f77738abac05c6c774171a1017e371648153d2d4aa5",
+    "79cb9660b10154e585d3cce02e18a86b633f380d3d4db42f5bc4b5d040716e73"
+   ]
+  },
+  {
+   "name": "Doduo",
+   "lengths": [
+    579348,
+    561792,
+    983136
+   ],
+   "sha256": [
+    "aa728c979c382856b51bce7f1643a2916fef85f786291e49470727630c345538",
+    "49b88b64c564f908e28702601f09a064b587977d4eb1c1705e345a2b29890ee0",
+    "75866a59bdb606d6c158a7eca467c75affbbd9f82f286590826e484e5e8dbb7f"
+   ]
+  },
+  {
+   "name": "Dodrio",
+   "lengths": [
+    684684,
+    632016,
+    983136
+   ],
+   "sha256": [
+    "ad021180db4eaf4175146ea744fcc0e293506714970023c75505cc3ba3628895",
+    "640217c406b5c9599a6202c9f386c3c0a150e2781b2a035c7adee5c5f5c7d17e",
+    "fcc994fcc07963032fa3cd12e5fba9d5d207c25d297b73ee795ee94498b7e3e5"
+   ]
+  },
+  {
+   "name": "Seel",
+   "lengths": [
+    860244,
+    965580,
+    0
+   ],
+   "sha256": [
+    "2a1ff063728fe75b8408e8adf3babe21b590a6a293ef238a6ff70174126c9143",
+    "657dce4decf8c9b2d1803b2190ef772949fc906d35b9ba816093db0b42cb7e1f",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Dewgong",
+   "lengths": [
+    1018248,
+    1141140,
+    0
+   ],
+   "sha256": [
+    "0c096c46c349d066612ea5e3afa01c52bced56cbb0d6b003b8f7e81eeb728f08",
+    "966e3735ee4159bb5d3342b95cbe44638db891aa27f04b12f3ee3eb989a792f5",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Grimer",
+   "lengths": [
+    544236,
+    526680,
+    0
+   ],
+   "sha256": [
+    "ed9e7495ccdab7aa447a42fe12461c82be4954b7c0c2cf0fda705e2fcf72d402",
+    "023b2ccc804ffa797e34f3d81d6ee1465aafd2301b6aef86b89e990608671493",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Muk",
+   "lengths": [
+    772464,
+    719796,
+    561792
+   ],
+   "sha256": [
+    "a3cc1f52dcac9a5a4f26b6dac9225f4d36aca159ec3dcbdc87d4c473b60a99ca",
+    "9c88c36e4a7cf5976eab9e2e5f29b84f3b7ba0970e291aa9aeda774c6c82b487",
+    "7dfbe4e87ae2353966261b6bd7325e76ba957190f788f602dbea20e7a215865c"
+   ]
+  },
+  {
+   "name": "Shellder",
+   "lengths": [
+    825132,
+    790020,
+    737352
+   ],
+   "sha256": [
+    "7d477aa5402dfcd2fdb2a007ec7707795978f962d739e76a5b8193827fc758c4",
+    "815d5ec1d9fc85420e22ec094b59ca25aa3763f66bcbadb7845da89c765c1d8b",
+    "9b8e1d383db7914948c225b2bc2e9343ac37df0bc58e0d9f823570618a433cf7"
+   ]
+  },
+  {
+   "name": "Cloyster",
+   "lengths": [
+    1053360,
+    1035804,
+    737352
+   ],
+   "sha256": [
+    "88d7ac873ec2d34e2442547cbca0b2099b415fe709fc6ff6ef929ce1074bd000",
+    "f41e2c86dfbc00a0a9b3203b4f520590ad20be74876d2c87132cc4ade48d35c4",
+    "ff16df723bf40795a84a640e60793da95a177abe24b1da3805257fbe57bce2be"
+   ]
+  },
+  {
+   "name": "Gastly",
+   "lengths": [
+    1123584,
+    1070916,
+    1457148
+   ],
+   "sha256": [
+    "310d1f87b13623db5e103d740082cc329fde5b69154d01715a0ad684e3f83f50",
+    "0dac2314859b1b79eda8a45de2c9525af89452f0aefa17c81650891dd9edf420",
+    "2b38338ff54ff99cc5a59077c165a81df29132cc4b3f45e26f76d6ae920c1e75"
+   ]
+  },
+  {
+   "name": "Haunter",
+   "lengths": [
+    877800,
+    877800,
+    1457148
+   ],
+   "sha256": [
+    "619bedec824eb039031905752645853cb79070dcdc07e1d418b84d5a649532bb",
+    "4ea9167ab7fe46f728091d816b43f848f1f0e4b3bd167659067e8d90c8cd3050",
+    "ea3d561785cc5d7133cbf06bd5ade441e0540a08e79f8efa94fd5ebd51484948"
+   ]
+  },
+  {
+   "name": "Gengar",
+   "lengths": [
+    772464,
+    719796,
+    561792
+   ],
+   "sha256": [
+    "249a62048b732a1c5f66297b2ed0ecd891c48a43212fea9ca54e86155ed0b583",
+    "c191e5099afc742f000fce368f323d31eaf50678195f5de15a99b2a68b4189c5",
+    "cd149b0b02bfa688db12f5d7abbc5b976ff0edefa9e73a5f46c965fd0ae6c51c"
+   ]
+  },
+  {
+   "name": "Onix",
+   "lengths": [
+    1246476,
+    1316700,
+    1158696
+   ],
+   "sha256": [
+    "46ce7ccc6b5a7ad0e8cd74cf690c5bd68ac15470eb718a699119608d2b3e4ac7",
+    "a2c774a738143938e33f291e0731c09b4e162c41d6e6f7f26c1cce66901f1bc8",
+    "df6d5493a7331aa8c89b5d3c7b786537d0bf7952b43007f8e8e1c7f0e8e1ef91"
+   ]
+  },
+  {
+   "name": "Drowzee",
+   "lengths": [
+    1123584,
+    1053360,
+    1527372
+   ],
+   "sha256": [
+    "12db22fd890974543f5b9dc26a6117858424cb1aa8b63eb5c3e4151e9e90b660",
+    "e100cad6755859a5ccfebb207fa5ca42f2327b04bd65dd3179cefe77635d1d8b",
+    "e2ff93b3555da438d7853ac93d32fcf25f38435966fed9042726b9c2ef6a7185"
+   ]
+  },
+  {
+   "name": "Hypno",
+   "lengths": [
+    1316700,
+    1228920,
+    1527372
+   ],
+   "sha256": [
+    "a0ad0791fe30ad942c72ada9acb1152c89e41c4e16af471a557c9970a35558c2",
+    "47ecb7ce439c5b542234f308f73f4f35fd64254c2f121047224759af3e599f2c",
+    "e8feec3846c20e2ddefacc9852aa7bb18dfb826146c3b5b54cf0ff41fac46c39"
+   ]
+  },
+  {
+   "name": "Krabby",
+   "lengths": [
+    1228920,
+    1193808,
+    1000692
+   ],
+   "sha256": [
+    "baa8d1db3e3cc8b570074f7948735238d0e6aac39eed07ef6b32d2d6272ac5fc",
+    "0d7964821f57ad9004eb2c39412b831aa9d44a24fee8acc08ae41e402c60d817",
+    "64b67d3d5d61b17b3f6f65679d3226ee339a6eda73df81e78232471c36994b9b"
+   ]
+  },
+  {
+   "name": "Kingler",
+   "lengths": [
+    1228920,
+    1193808,
+    1000692
+   ],
+   "sha256": [
+    "651e363107a11f295fd0c377936c0bc16accd1b50f9d45639a8622ed0499fca7",
+    "036bacf27d7bef1929cefafe1f7a9f5793f69e1eee24db0a5981d35134582768",
+    "9fd31e2495001a0b62b46552d7df256f449e7f703322d2b17abfd0f89abc9be3"
+   ]
+  },
+  {
+   "name": "Voltorb",
+   "lengths": [
+    1228920,
+    0,
+    1492260
+   ],
+   "sha256": [
+    "b930a0ee103652ec924090e46b9e87acb408d0799d0a704632ee9cfb78fefc54",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "74ca93f079d2b328d298f3efb8f2fd4714565e0383b451a75f76c05de09b5004"
+   ]
+  },
+  {
+   "name": "Electrode",
+   "lengths": [
+    1299144,
+    0,
+    1492260
+   ],
+   "sha256": [
+    "729b0e7dff657f6cc1f1134fabd6f5df64233a210cbdc3ec83d21b1a56c59e55",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "be0e0e8bbb814b0eae125d35492eddc16892bc8adfc5f83214901180b272d030"
+   ]
+  },
+  {
+   "name": "Exeggcute",
+   "lengths": [
+    983136,
+    895356,
+    983136
+   ],
+   "sha256": [
+    "7a984cd1e95a1c2bea2d7031e89efd7a3bbcd3fa0c9523966762724350b5ff29",
+    "3f9fd1e6e25be9ae0ebba9863e8b7d315c7dde1b4e8731fb133a574aa880232a",
+    "eab84ec9668d96dee666ebc23fdd1e37ce14621e49ed7c0df041e21c5235afe9"
+   ]
+  },
+  {
+   "name": "Exeggutor",
+   "lengths": [
+    1685376,
+    1562484,
+    1527372
+   ],
+   "sha256": [
+    "ffaf4c54f3591ea3132b3a2991e6b5d9389837f55f573ab6f10b7cfaf50c377b",
+    "170b9fce526e7640c605f36b654e6ba238689df64025588bfb83a9da388ee179",
+    "4513a58340dbf934d8ebd0bcb41e9b656a659036eeda91538ba9119a10437bd4"
+   ]
+  },
+  {
+   "name": "Cubone",
+   "lengths": [
+    702240,
+    772464,
+    0
+   ],
+   "sha256": [
+    "c0897532fbe984f8ccfb790ce89f7029e4406db504db97eca7c459a01f59f5e1",
+    "9002098d518a058c23df5a1a30ced708dc93481e18c32cec5bc13d873075a114",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Marowak",
+   "lengths": [
+    860244,
+    807576,
+    860244
+   ],
+   "sha256": [
+    "900781d6fb97294df6fb8befb42fab3de752844551d968f791cc9c8d61c37b22",
+    "d92076788bc98fdffae98ce0c1253fadef13ae6dfff034e439dc62b391e70642",
+    "ee3758ae805872928abb0afe5a08064b7abc42d2f8bbb24700eacf11a614849f"
+   ]
+  },
+  {
+   "name": "Hitmonlee",
+   "lengths": [
+    965580,
+    877800,
+    772464
+   ],
+   "sha256": [
+    "dbeb608ad0d56dc8c9c1a7dd3521c0f9153f0ae8108acc39225718375a037fdb",
+    "a0ac8ea5117cc3abf96a0fdc1bd5aca9b6bd819334d2d37dff1147a92e8a8bfb",
+    "56c34cd922cd52a4d7b47ab491f47ae4493bdf13eb76d03bd31f21b76c43e920"
+   ]
+  },
+  {
+   "name": "Hitmonchan",
+   "lengths": [
+    860244,
+    965580,
+    0
+   ],
+   "sha256": [
+    "f3162bdd0585e85e9e2c4dd03245c1fc051bc78ebe8b5a079fe985cc3a33bd8b",
+    "7db86a1fdd3bce5b7c52d4c90d07831f40e48e6df6052da7d377e7d9f80525a9",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Lickitung",
+   "lengths": [
+    737352,
+    772464,
+    0
+   ],
+   "sha256": [
+    "d5ab7673ed1e799718850d728863e0005a51a7f3d0c22727184e78481683d167",
+    "70b3bf131beb75f1262d6ba835ca8438e310ca3d1d8bdf0c8e1ee79422acbcb3",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Koffing",
+   "lengths": [
+    1035804,
+    948024,
+    772464
+   ],
+   "sha256": [
+    "8375d58c483ff2a2c7f690f8bb275ae008394b7969a2bc65b525b55703818323",
+    "c32c84696c031c185b82edc69c745c6747e77773d5260d783b11d91ed61b1a68",
+    "fdc2f314e1cea26556cfb8bd9602982e2d8d0485b736ade6d1e4b3b5fb560ad4"
+   ]
+  },
+  {
+   "name": "Weezing",
+   "lengths": [
+    1123584,
+    1035804,
+    772464
+   ],
+   "sha256": [
+    "4f52c462a9cf94971c2595bb925fe72e48065b4b328ec97cb3afe598b52b12d6",
+    "126ed1f4d6eec3aadcdaf262d50f6295f424d4eb29f9444a1a3c70d1ad80427b",
+    "c532d6008a7e9e4eb3ea7fefd47e48f4f94ea989b6ae7a81ff42604c056816e9"
+   ]
+  },
+  {
+   "name": "Rhyhorn",
+   "lengths": [
+    1000692,
+    983136,
+    790020
+   ],
+   "sha256": [
+    "4b70ea9755aa0961fed373fdd83d3d99405e81c12789dd3865c96110d5b8cbf0",
+    "95b82c12dd33beb3fe0393dd13e4217a9d2221ce457ae4109ad966912e11715f",
+    "2b0e597bbd6a56e797b368273effdaea7f8270109f926936840782667f9f90bf"
+   ]
+  },
+  {
+   "name": "Rhydon",
+   "lengths": [
+    1053360,
+    1070916,
+    1000692
+   ],
+   "sha256": [
+    "ee3c8fda6af3bd071941833455e19fe7bee19eb46a40980504f3013caef552ea",
+    "447a3a821c003f7a9d6f751d5a17908f14c0dd42d4368ca246b2863c4558ebaf",
+    "eb8e58f43c7672aa5d0b65af74f3179962800fb63b1ad238a9c7791794fc88b5"
+   ]
+  },
+  {
+   "name": "Chansey",
+   "lengths": [
+    772464,
+    790020,
+    649572
+   ],
+   "sha256": [
+    "d2fe23f99cd087734ba9f7fd7039bb54845a65b5e65db3c1ffa2fd862820e62d",
+    "f7c5cb4c8c780f0f7094b45b56cf2ffdd9e92097b764ced6577a36aa6e9f4ba3",
+    "a350a1039cd8020eb3ca77001f8a641a305f5e075a8c19b6558e1875db756d9d"
+   ]
+  },
+  {
+   "name": "Tangela",
+   "lengths": [
+    825132,
+    737352,
+    772464
+   ],
+   "sha256": [
+    "7fe1f244fd4e35cd9f4e3b5b9dcccea786175627368954fd9054873278cdea9a",
+    "38b57f26d5e15fce9814c58b61aafcfe70b17751e2d44c508c99bf3026a4c2e0",
+    "bab123aa0340a3ced0b9b2e825183e75f61f94a418a0c1e752c4b8f577cf0c5e"
+   ]
+  },
+  {
+   "name": "Kangaskhan",
+   "lengths": [
+    895356,
+    825132,
+    1000692
+   ],
+   "sha256": [
+    "e7e48ef6b7bf0bd2d479f10fcd0c14f47a2ea3c4b785d561b48d32ffa6c28cb6",
+    "efe93f8c567518ed09103344997317e3a4145d652bf13a4a029a7d79a64434a7",
+    "d0fcffc7f62179cd9ee2abd934596ec1e74e8973d9bb047ba16308c4c19f7bf1"
+   ]
+  },
+  {
+   "name": "Horsea",
+   "lengths": [
+    438900,
+    579348,
+    0
+   ],
+   "sha256": [
+    "8be0527f0fffd2da4f0657d4b9e9dd34b2d75837b2b1e3b453c70fc41ffc8aa6",
+    "00e65200bb139b55dc66502892b9c28c5e96b74f96e5baeec1b7c6990e9fd395",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Seadra",
+   "lengths": [
+    421344,
+    561792,
+    0
+   ],
+   "sha256": [
+    "24bae3c83181bb3f79727404ed81bb7bc5f389e542e01fa3fa2ea217839beb35",
+    "d34d025bd63d2355a423f1316f05e94a98c8081b355bc283f0588578ef7ff335",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Goldeen",
+   "lengths": [
+    719796,
+    702240,
+    860244
+   ],
+   "sha256": [
+    "4ba0409d0c31672433f854e8b6b7f56789cc3a41b063aee6abbd54bb2c9e9312",
+    "15ce1acc9fffdebaa94b0dfac83f0550b58df10f3c8b770eefde165b7710f77e",
+    "295c95a6b4681a80d474b9b6de49d61f05980083ecd40af5c839a85016d285aa"
+   ]
+  },
+  {
+   "name": "Seaking",
+   "lengths": [
+    1000692,
+    983136,
+    860244
+   ],
+   "sha256": [
+    "0cecf8841465700267eb494d207847735df819fce695c2983663aa104a6439cc",
+    "44393cbfc813666ce75761b00855940f9016c28ae2208513f674fde54b925b23",
+    "c044530c185e7256922d112304b4e0c32bce94444d8b7a1ded942b939f6ad5b9"
+   ]
+  },
+  {
+   "name": "Staryu",
+   "lengths": [
+    702240,
+    719796,
+    1018248
+   ],
+   "sha256": [
+    "be9d079434d9b237decf5000f04348105d48e53aa4379056f49335059ee31a02",
+    "eac0f5015f991bfda42fbdb9d99f868d31e1409551bd4ed96b49b7548cacb8bb",
+    "2744d6cf22c8868f3d3be326860846f118e52e504f0e9357388035448087f8c8"
+   ]
+  },
+  {
+   "name": "Starmie",
+   "lengths": [
+    1035804,
+    1088472,
+    1018248
+   ],
+   "sha256": [
+    "11732f6f67b50b58ed0da2f60fa4b3dcd610c23eae362648302bccfb47348303",
+    "061ce757c1edda39f0023f7f6c1d5b717362a8e28eeae3d686def0530fdfd7e5",
+    "9c8bd6c6b17bc095a62a61d14c17d21173efc226de5e1479e5e2977a54aea891"
+   ]
+  },
+  {
+   "name": "Mr.Mime",
+   "lengths": [
+    772464,
+    737352,
+    1000692
+   ],
+   "sha256": [
+    "082ed494ae80137002bdddfff33518ae2254ab1cf695df7670120961c63ff3ae",
+    "165a5e36d78422e0b69ebb391285027f84af3f307fc67d58f88d2523ed285835",
+    "5b03efa6f9b48492829fddb5d134306e50b528e6eae671be7ba0d105e1a5611f"
+   ]
+  },
+  {
+   "name": "Scyther",
+   "lengths": [
+    825132,
+    807576,
+    860244
+   ],
+   "sha256": [
+    "6573c310d1bee9ff41dca3376b2f0a74db82eb17516ffd1348b200834deea7dd",
+    "358da7da5b32e28565df02e57e841638faf496725025fd20e0cba611993de018",
+    "d2351990bffea63283403134aa46846cc8a9e33c4b3ec8e10b37f43efb9e811e"
+   ]
+  },
+  {
+   "name": "Jynx",
+   "lengths": [
+    2405172,
+    2212056,
+    1527372
+   ],
+   "sha256": [
+    "f4e4163d1ae5887e05dfcb2e0552ba8fb7f6d9eaecd2abd579c9c623552b9a5d",
+    "c36bceb66ced8508da99a925d7e7341fb7601a7423e7dfd8880016be700aaba4",
+    "12b19f02fab1d0e07fc2e0015625b2b8a63c117c210ec974eed7a1f0d84abd51"
+   ]
+  },
+  {
+   "name": "Electabuzz",
+   "lengths": [
+    1825824,
+    0,
+    1492260
+   ],
+   "sha256": [
+    "dceffea06917389a5351d74257356e1b5cc4bf67de4daa1bec6bd23aa619fe13",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "6bb3be03bd419e3387f9afd82d5a7dbb47213f91ed0fa6901ea8e6caabfbcc0b"
+   ]
+  },
+  {
+   "name": "Magmar",
+   "lengths": [
+    737352,
+    719796,
+    790020
+   ],
+   "sha256": [
+    "e3797be1c558d7438dc6861df7d6736d7d0ac1f9b26edcf326fe3910434792f9",
+    "5b5267ed6442b335f3a34ac6875cc78d34e9e364e2dc51c81b6c7288f6259eba",
+    "d549d25838cce977fa69e6a608b5ad755ed7e5f59d9066281a264284c19e422d"
+   ]
+  },
+  {
+   "name": "Pinsir",
+   "lengths": [
+    667128,
+    649572,
+    649572
+   ],
+   "sha256": [
+    "84eeca4b482d7fb51dc76cbd89a7288fcbf1cfd5d5bc75b0038d6d43b5d80549",
+    "33a65bafe271ce102a89b2cab1de7012e97a7f82eb37552b1fd16b36996e46c5",
+    "117095e8aa63262946623dd5f8e2ec38caa2f0d75608927e1168007cee0133a0"
+   ]
+  },
+  {
+   "name": "Tauros",
+   "lengths": [
+    772464,
+    719796,
+    1053360
+   ],
+   "sha256": [
+    "af9570e0d6a7ed34249b5b4fbbdcd0c36258aa6a8ece2e72e707b37650f67d65",
+    "e06db74314faba60cbd3dbe6719c5e1b887271f9af9cc9fd5563b7d84466b87f",
+    "af376d426bc5413bc9eaf1ffe5c967fee5bef87c0a776c361f999779435b752c"
+   ]
+  },
+  {
+   "name": "Magikarp",
+   "lengths": [
+    702240,
+    772464,
+    1158696
+   ],
+   "sha256": [
+    "6eb95cb1f3db862f10c3cc5c3ece0352a5db05a952f9c34de6c540852f0edf54",
+    "7569be8a8f78f275c39e89e22ae86095dd105c484ef8446a8f7c45a3d9aaf835",
+    "e7bc1a09bb39060b0648946319626ef98d2efcab9a748f23ac021c27915a2669"
+   ]
+  },
+  {
+   "name": "Gyarados",
+   "lengths": [
+    1070916,
+    1141140,
+    1158696
+   ],
+   "sha256": [
+    "7f7420d7f6449c5ab4502add6adc8fd5c6034eb1bb475f9f212c7dcb83174524",
+    "8afd7c020ee088a11603a34a00bb6be21baefb587301b560efcc58a449efe213",
+    "c8b6b0a394a50ff3122ea970317436ae2c1fcc59dfd3eec9ae48d9624e445254"
+   ]
+  },
+  {
+   "name": "Lapras",
+   "lengths": [
+    807576,
+    790020,
+    719796
+   ],
+   "sha256": [
+    "6057c520c4bcb2dc5f26d876d2b9262762e1e088b66089aeb1fc2ebcc24613fc",
+    "c673345849f8e19e2663de68bc0c846cbec14e8282d7a3ffb03ea29d752187a5",
+    "4ce560878a468bf6076cb0a0f97bcb6ad3f7c3395fe24a75012308728e72ee10"
+   ]
+  },
+  {
+   "name": "Ditto",
+   "lengths": [
+    579348,
+    561792,
+    263340
+   ],
+   "sha256": [
+    "004b21877c732155c45e832093e057b49f8de5ada434b1eb4bd3fe05eb5f4db2",
+    "5c344d500c5c1c023dbbad8e2cb78bab3fb48bf5454984e72e40988d6c56ea57",
+    "ae386e8d0b23a4de576cf26554c25caaadf8071a386b73473d48263625f8a5e3"
+   ]
+  },
+  {
+   "name": "Eevee",
+   "lengths": [
+    772464,
+    684684,
+    842688
+   ],
+   "sha256": [
+    "59851cd9f693c99d642537ff503878ddd6f073476e39358fcae434a6eadfdc54",
+    "5de2a5549629ed400f908e97356fdeece0662322689ebecf4d583bd2d74be348",
+    "678fe1c294fc1ebbe55e122527792c76d01bb660b653d0af6ef16675d678d32b"
+   ]
+  },
+  {
+   "name": "Vaporeon",
+   "lengths": [
+    1176252,
+    1141140,
+    842688
+   ],
+   "sha256": [
+    "22e4848c3368883fd3f799dfd83e9d2283ad33705faa0d468b7e7edb8da33799",
+    "0905a25dd1838c36afc013ad661100d2bb3c255dbb9bebd01b2d459b82218e12",
+    "678fe1c294fc1ebbe55e122527792c76d01bb660b653d0af6ef16675d678d32b"
+   ]
+  },
+  {
+   "name": "Jolteon",
+   "lengths": [
+    860244,
+    772464,
+    842688
+   ],
+   "sha256": [
+    "4fc7b352c7a93c1b54fb998fcc8d0cf87e5d24d6c1fe24176db2c15950eb44de",
+    "1cd2b1fc716f900fe0313b94959d239f6a1fe101bc0e034ff7e25ca190cc4448",
+    "3a39ea66aa0d5cbc4bda5d2904cd73127e98f5847e50f47674436241ea027dfd"
+   ]
+  },
+  {
+   "name": "Flareon",
+   "lengths": [
+    614460,
+    526680,
+    842688
+   ],
+   "sha256": [
+    "089160799db63b099a48e0d006f186df3a1c8fd71153b3451a567fc3ae3b0c77",
+    "446518443c6e200be9e070d27232d9e7ffa1c7cf9e184a75b390f9aca0c1378e",
+    "fd110e7d73a1c6137f9a006e006eadf3230ea8f1b769cf1b33f33b41b9bae09e"
+   ]
+  },
+  {
+   "name": "Porygon",
+   "lengths": [
+    1123584,
+    1070916,
+    737352
+   ],
+   "sha256": [
+    "3e2e0564a8cb27ace8415c194ef27cb0433eb0f4276e5c18e07c2fcdf6755bf4",
+    "dbc63017bf8986d2aa43b967f8f39280c2279810517c776fd748505ff91d43d0",
+    "9517aa34884089690ae9197d8ed9571f8fb098e9e751f2db888adbf847895bd4"
+   ]
+  },
+  {
+   "name": "Omanyte",
+   "lengths": [
+    438900,
+    474012,
+    702240
+   ],
+   "sha256": [
+    "65dfdc7236aef89219fbee26d7c2187ecd34aaaa9d7b744e19fd4792970ad566",
+    "b1831115e883983b8e183f8ee4c73f95475174bf3d6f8480d629a974a4e7ff39",
+    "5a7326f76bdb0256a35ec60d3106a34d1f24e6d77e3d9e563dc7ecd1135c6741"
+   ]
+  },
+  {
+   "name": "Omastar",
+   "lengths": [
+    561792,
+    596904,
+    702240
+   ],
+   "sha256": [
+    "f3807d2adb119a70d0600f6c74901a9576818d81afa97a9f5d028849d4bf1b8e",
+    "a166c36601807f890c02d8e815e8b82031163e6130d34a2917b2e018b0325cb3",
+    "9495cb90728c4bdeef10b2c8764a7553ef717905f602a5f5c78b8b35fca72066"
+   ]
+  },
+  {
+   "name": "Kabuto",
+   "lengths": [
+    719796,
+    702240,
+    860244
+   ],
+   "sha256": [
+    "eba627d7d8b76934b41c7e68401e7bb9e9ed5f4d5146a57172e5bcd8dd010897",
+    "b4b28c6a95cf38caa6ae800081f0e721ac3c03773fc432282ec3b1ba5faed2c3",
+    "70a521af7703cae3e8ea00a2cb826feeacb580e32b72c6ed6f24848900be9409"
+   ]
+  },
+  {
+   "name": "Kabutops",
+   "lengths": [
+    509124,
+    491568,
+    737352
+   ],
+   "sha256": [
+    "634f9fb23b57aa21571895be559e75d965b7fb94e3ef9f0d53f1e6df34b8079d",
+    "f67c342b0bf3aa7e88d0d1dd93024ea9ab81109c53eb7db960f3e68a1dfbcff7",
+    "ff0fdd1b8753d82076ca3681f5fd907f81bd16631d9be9ad4110a81e165e001a"
+   ]
+  },
+  {
+   "name": "Aerodactyl",
+   "lengths": [
+    1211364,
+    1264032,
+    807576
+   ],
+   "sha256": [
+    "e5a1966eeaf3ecdc81792f433fbd59505fc083ccf12765655ff8e38938d6bcf1",
+    "a90e94fa7987754f9d9f34a9b87d7a2d5048d83dfaae19866d25a43a4afa180c",
+    "93081ced14b014f568676b8c739985143d943a5aa9136419ecf1e7c56248b2db"
+   ]
+  },
+  {
+   "name": "Snorlax",
+   "lengths": [
+    351120,
+    316008,
+    0
+   ],
+   "sha256": [
+    "c07c78ee6a3d593cbce7a19bf6d84e9626b9f65c720d7095967ac5500853cd52",
+    "4cd8374aeecdf6188f7eb501a393e0ed53d5dec35593dce667da94f2dfc492ae",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   ]
+  },
+  {
+   "name": "Articuno",
+   "lengths": [
+    1176252,
+    1035804,
+    1228920
+   ],
+   "sha256": [
+    "ae704d7c2381d9f3bab21dc756c662acec56e826814065e848bd030cac88581f",
+    "d19e1cf81c8f39d87a0422a2c8a6d97f33f0381fcb60a2296f70ff3b1b1606a1",
+    "d2d9ad311ed1a45833e791db0c3833447f4cacdef4394544786109c517ae3dc1"
+   ]
+  },
+  {
+   "name": "Zapdos",
+   "lengths": [
+    825132,
+    790020,
+    737352
+   ],
+   "sha256": [
+    "398a57370c40c5fc156f2e67342215d3a96e9fe1bd0cc03e29213389d7ceef7c",
+    "91053619b0fa0d27584c85e26ed9db330758f2c8b554a1ca3c050ee717a828b1",
+    "0189bfdb84592c280c22888362b13c20b64389b523e19556f493e88ca8bfa0ab"
+   ]
+  },
+  {
+   "name": "Moltres",
+   "lengths": [
+    1176252,
+    1035804,
+    1228920
+   ],
+   "sha256": [
+    "3b3875d2fc0f4a9023916dcfb6b52ffd9222b03f7134b541900b9efcbd271a3c",
+    "9157ab2051cf691b6f3452832b0b9175b8198bc1fa6ffe1bd9c122c8243849c5",
+    "453c7f09209752400db25d5162dfd1cfa2f87b75c753c82e46c5f1d660fa14cb"
+   ]
+  },
+  {
+   "name": "Dratini",
+   "lengths": [
+    667128,
+    649572,
+    965580
+   ],
+   "sha256": [
+    "c8f5b8129902c12657800911565d8a71dad4828c55a887efa88b3095fbaa5378",
+    "9d7cae430fbf4e1cd24d662ef3868c8cc2f557127325e57bdc72201c1844e955",
+    "d1425e379596a2cb54b12bf32a249f8fe89961dd9bbd2dde383d3828382e0037"
+   ]
+  },
+  {
+   "name": "Dragonair",
+   "lengths": [
+    825132,
+    807576,
+    965580
+   ],
+   "sha256": [
+    "66f0b9fe498fd90d812428c53215804a912d0dce036244114f3b9bb571825e8f",
+    "5ef40ed527a8c3adb687a142c0ddd60c3fd7ba807804254bf75abd89910fe441",
+    "f60f77025507800eecab1ea9e627815169820148773eada4d9cbe9f22960c14a"
+   ]
+  },
+  {
+   "name": "Dragonite",
+   "lengths": [
+    965580,
+    983136,
+    965580
+   ],
+   "sha256": [
+    "83366995e853cf4866774414a6acc824e78745acd8322276e839691bbd69cebb",
+    "148833a435f979bb133323566952d80e9cae4b2cd459903e97d3a7a257f39d09",
+    "bf942f3e68b95de9fadbdf30ef1bbb789781cbc6d8e55f9ecdb4a1232890da62"
+   ]
+  },
+  {
+   "name": "Mewtwo",
+   "lengths": [
+    1509816,
+    1615152,
+    1018248
+   ],
+   "sha256": [
+    "5645a968596624d3ac41fd7155cf06bf8bf72e2f0fde43a1ea0a99143060e3e0",
+    "267f0a782af05ff1801aa906b887b1198ad7c2d0583b211f1fc1f06bf0ecf918",
+    "80aab66e930f83bfc15331417939c05e1b534ca87855e0816edce7c91495f884"
+   ]
+  },
+  {
+   "name": "Mew",
+   "lengths": [
+    1509816,
+    1615152,
+    1018248
+   ],
+   "sha256": [
+    "f77c92a5491eefebdb68c352b42bbe9210948bc620194cbf03f391ecd0f6b3b5",
+    "75f9c2751145ac98c0667eedd4a1783f182463fd58a51452277f3f899ca527fb",
+    "6b987afeace1637f9ad0456e0ccc86ce1abcd04d35ef67fb88d4687aaa400fe4"
+   ]
+  }
+ ]
+}

@@ -1,9 +1,0 @@
-textarea {
-  resize: none;
-}
-
-.wave-diagram-container {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-}

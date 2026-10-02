@@ -1,0 +1,173 @@
+"""Command line: creaturesynth {list,render,spec,from-spec,bake,zoo,gen1}."""
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from . import rng
+from .archetypes import ARCHETYPES, DESCRIPTIONS
+from .audio_io import write_wav
+from .calls import CALLS
+from .chip import gen1_voice, load_gen1
+from .creature import Creature
+from .render import DEFAULT_SR, render
+from .spec import Voice
+
+
+def _species(value: str) -> int:
+    return int(value) if value.lstrip("-").isdigit() else rng.seed32(value)
+
+
+def _creature_args(p: argparse.ArgumentParser):
+    p.add_argument("archetype", choices=sorted(ARCHETYPES))
+    p.add_argument("--species", type=_species, default=0, help="number or any name (hashed)")
+    p.add_argument("--size", type=float, default=0.5, help="0 tiny .. 1 huge")
+    p.add_argument("--aggression", type=float, default=0.3, help="0 calm .. 1 furious")
+    p.add_argument("--individual", type=int, default=0)
+    p.add_argument("--variation", type=float, default=0.15)
+    p.add_argument("--gene", action="append", default=[], metavar="NAME=VALUE", help="pin a gene (0..1)")
+    p.add_argument("--call", choices=list(CALLS), default="idle")
+    p.add_argument("--take", type=int, default=0)
+
+
+def _creature(a) -> Creature:
+    genes = {}
+    for g in a.gene:
+        name, _, value = g.partition("=")
+        genes[name] = float(value)
+    return Creature(a.archetype, species=a.species, size=a.size, aggression=a.aggression,
+                    individual=a.individual, variation=a.variation, genes=genes)
+
+
+def _write(audio, path, sr, png=False):
+    write_wav(path, audio, sr)
+    print(f"{path}  ({len(audio) / sr:.2f}s)")
+    if png:
+        from .plot import spectrogram  # optional dependency: pip install creaturesynth[plot]
+        spectrogram(audio, sr, Path(path).with_suffix(".png"))
+
+
+def cmd_list(a):
+    print("archetypes:")
+    for name in ARCHETYPES:
+        print(f"  {name:10s} {DESCRIPTIONS[name]}")
+    print("calls:", ", ".join(CALLS))
+
+
+def cmd_render(a):
+    voice = _creature(a).voice(a.call, a.take)
+    if a.spec:
+        Path(a.spec).write_text(voice.to_json(indent=1))
+    _write(render(voice, a.sr), a.output or f"{a.archetype}_{a.call}.wav", a.sr, a.png)
+
+
+def cmd_spec(a):
+    text = _creature(a).voice(a.call, a.take).to_json(indent=1)
+    if a.output:
+        Path(a.output).write_text(text)
+    else:
+        print(text)
+
+
+def cmd_from_spec(a):
+    voice = Voice.from_json(Path(a.spec).read_text())
+    _write(render(voice, a.sr), a.output or Path(a.spec).with_suffix(".wav"), a.sr, a.png)
+
+
+def cmd_bake(a):
+    from .bake import bake, load_bestiary
+    creatures, settings = load_bestiary(a.bestiary)
+    calls = a.calls.split(",") if a.calls else settings.get("calls")
+    takes = a.takes or settings.get("takes", 4)
+    sr = a.sr or settings.get("sample_rate", DEFAULT_SR)
+    manifest = bake(creatures, a.output, calls, takes, sr, specs=not a.no_specs, workers=a.workers)
+    n = sum(len(t) for c in manifest["creatures"].values() for t in c["calls"].values())
+    print(f"{n} sounds for {len(creatures)} creatures -> {a.output}/manifest.json")
+
+
+def cmd_zoo(a):
+    from .bake import bake
+    creatures = {}
+    for i in range(a.count):
+        c = Creature.random(a.seed * 100_003 + i, a.archetype)
+        creatures[f"{i:03d}_{c.archetype}"] = c
+    bake(creatures, a.output, a.calls.split(","), a.takes, a.sr or DEFAULT_SR, workers=a.workers)
+    print(f"{len(creatures)} random creatures -> {a.output}/manifest.json")
+
+
+def cmd_gen1(a):
+    sr = a.sr or DEFAULT_SR
+    species = load_gen1()["species"]
+    targets = range(1, len(species) + 1) if a.name == "all" else [a.name]
+    out = Path(a.output)
+    for t in targets:
+        voice = gen1_voice(t, hardware_noise=not a.legacy_noise)
+        name = voice.meta["name"].lower()
+        _write(render(voice, sr), out / f"{name}.wav" if a.name == "all" or out.suffix != ".wav" else out, sr)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="creaturesynth", description="Procedural creature voices for games.")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("list", help="archetypes and calls").set_defaults(fn=cmd_list)
+
+    p = sub.add_parser("render", help="render one creature call to WAV")
+    _creature_args(p)
+    p.add_argument("-o", "--output")
+    p.add_argument("--spec", help="also save the voice spec (JSON)")
+    p.add_argument("--png", action="store_true", help="also save a spectrogram (needs matplotlib)")
+    p.add_argument("--sr", type=int, default=DEFAULT_SR)
+    p.set_defaults(fn=cmd_render)
+
+    p = sub.add_parser("spec", help="print a creature call's voice spec (JSON) for engine runtimes")
+    _creature_args(p)
+    p.add_argument("-o", "--output")
+    p.set_defaults(fn=cmd_spec)
+
+    p = sub.add_parser("from-spec", help="render a voice spec (JSON) to WAV")
+    p.add_argument("spec")
+    p.add_argument("-o", "--output")
+    p.add_argument("--png", action="store_true")
+    p.add_argument("--sr", type=int, default=DEFAULT_SR)
+    p.set_defaults(fn=cmd_from_spec)
+
+    p = sub.add_parser("bake", help="bestiary JSON -> WAV packs + manifest")
+    p.add_argument("bestiary")
+    p.add_argument("-o", "--output", default="baked")
+    p.add_argument("--calls", help="comma-separated (default: bestiary or all)")
+    p.add_argument("--takes", type=int)
+    p.add_argument("--sr", type=int)
+    p.add_argument("--workers", type=int)
+    p.add_argument("--no-specs", action="store_true", help="skip the per-sound JSON specs")
+    p.set_defaults(fn=cmd_bake)
+
+    p = sub.add_parser("zoo", help="bake N brand-new random creatures")
+    p.add_argument("-n", "--count", type=int, default=20)
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--archetype", choices=sorted(ARCHETYPES))
+    p.add_argument("--calls", default="idle,attack")
+    p.add_argument("--takes", type=int, default=1)
+    p.add_argument("--sr", type=int)
+    p.add_argument("--workers", type=int)
+    p.add_argument("-o", "--output", default="zoo")
+    p.set_defaults(fn=cmd_zoo)
+
+    p = sub.add_parser("gen1", help="reproduce a Gen 1 cry (name, Pokedex number or 'all')")
+    p.add_argument("name")
+    p.add_argument("-o", "--output", default="gen1")
+    p.add_argument("--sr", type=int)
+    p.add_argument("--legacy-noise", action="store_true", help="old web app's 7-bit noise (bug-compatible)")
+    p.set_defaults(fn=cmd_gen1)
+
+    a = parser.parse_args(argv)
+    try:
+        a.fn(a)
+    except (ValueError, FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
