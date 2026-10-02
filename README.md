@@ -209,6 +209,45 @@ Cada evento é um ponto de escuta:
 
 O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e ajustar a estrutura, sempre conferindo no juiz. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md).
 
+## Música e composição
+
+Três peças, uma sobre a outra:
+- **`Score`** (`creaturesynth.score`): uma linha do tempo em compassos e segundos. Põe notas e sons prontos (efeitos, criaturas, falas) em camadas, com volume, posição no estéreo e um eco (sala) compartilhado. Renderiza em estéreo, e `render(loop=...)` devolve um loop sem emenda.
+- **Instrumentos** (`creaturesynth.instruments`): 34 instrumentos medidos em notas gravadas, com os números de cada um no código:
+  - cordas pinçadas: harpa, violão, alaúde, pizzicato;
+  - teclados de percussão: glockenspiel, marimba, xilofone, celesta, caixinha de música;
+  - sinos tubulares;
+  - tambores: tímpanos, tambores de mão e de tronco, bumbo, caixa;
+  - metais de percussão: triângulo, prato, gongo, pandeiro, chocalho;
+  - sustentados: violinos, violoncelos, flauta, trompa, trompete, coro;
+  - chiptune: pulsos, baixo e ruídos de console.
+- **`Cue`** (`creaturesynth.music`): músicas compostas a partir de uma semente.
+  - Jingles: `victory`, `levelup`, `quest`, `gameover`.
+  - Loops: `town`, `explore`, `tavern`, `dungeon`, `battle`.
+  - Estilos: `orchestral` e `chip` (8-bit).
+  - A semente escolhe tom, progressão, ritmos e motivo: a mesma semente é sempre a mesma música, e cada semente é outra.
+
+```python
+from creaturesynth import Sfx, write_wav
+from creaturesynth.music import Cue
+from creaturesynth.score import Score, chord
+
+write_wav("vitoria.wav", Cue("victory", seed=3).render(), 48000)            # estéreo
+taverna = Cue("tavern", seed=7)
+write_wav("taverna_loop.wav", taverna.render(), 48000)                      # exatamente taverna.length segundos
+write_wav("batalha_8bit.wav", Cue("battle", style="chip", seed=2).render(), 48000)
+
+cena = Score(bpm=96)
+cena.track("harpa", pan=-0.3, send=0.3).play("harp", [("A3", 0, 1), ("C4", 1, 1), ("E4", 2, 2)])
+cena.track("cordas", send=0.4).play("strings", [(chord("Am", 3), 0, 4), (chord("F", 3), 4, 4)])
+cena.add(Sfx("blade", "steel").render("clash"), at=cena.beats(4), pan=0.5, send=0.2)
+write_wav("cena.wav", cena.render(), 48000)
+```
+
+Notas são `(nota, tempo, duração[, intensidade])`. A nota pode ser um nome (`"C#5"`), um número MIDI ou uma lista (um acorde). A intensidade muda o timbre, não só o volume: o trompete forte abre os agudos, e uma batida suave é mais escura.
+
+As medidas vêm de notas soltas da orquestra [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) (CC0) e de notas de violão CC0 do Freesound. Elas foram usadas só para medir e não estão no repositório. Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md#música-e-composição).
+
 ## Calibração com CLAP
 
 O [CLAP](https://huggingface.co/laion/clap-htsat-unfused) é um modelo que põe som e texto no mesmo espaço: dá para perguntar "isto soa como um gato miando?". O creaturesynth usa dois modelos: um para otimizar (`laion/clap-htsat-unfused`) e outro, que nunca é usado na otimização, como juiz (`laion/larger_clap_general`). Assim o ajuste não "decora" o gosto de um modelo só.
@@ -336,5 +375,7 @@ O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som 
 ## Créditos
 
 A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/creaturesynth/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
+
+Os instrumentos foram medidos nas notas da [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE), da Versilian Studios (CC0). As gravações serviram só para medir e não acompanham o pacote.
 
 O motor de gritos da 1ª geração é baseado no [sintetizador original de dotsarecool](http://dotsarecool.com/rgme/tech/gen1cries.html) ([vídeo](https://www.youtube.com/watch?v=gDLpbFXnpeY)) e no [port em TypeScript de ardean](https://github.com/ardean/pokemon-gen1-cry-synthesizer), de onde este repositório foi forkado.

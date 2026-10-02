@@ -36,8 +36,11 @@ def render_modal(m: Modal, sr: int, k: int) -> np.ndarray:
     n = max(int(m.dur * sr), 16)
     exc = np.zeros(n)
     for i, (t, gain, length) in enumerate(m.hits):
-        a, L = int(t * sr), max(int(length * sr), 2)
+        a, L = int(t * sr), int(length * sr)
         if a >= n:
+            continue
+        if L < 3:              # an ideal strike: a unit impulse, every mode excited at its own gain
+            exc[a] += gain
             continue
         burst = rng.noise(rng.key(k, "hit", i), L) * np.hanning(L) * gain
         exc[a:a + L] += burst[: n - a]
@@ -122,7 +125,8 @@ def render_scatter(s: Scatter, sr: int, k: int) -> np.ndarray:
             continue
         tt = np.arange(L) / sr
         env = np.exp(-tt / d)
-        if s.event == "pop":
+        if s.event == "pop":         # (at low sample rates a band past Nyquist folds down to just under it)
+            f = min(f, 0.29 * sr)
             ev = lfilter(*butter(2, [f / 1.5, min(f * 1.5, 0.45 * sr)], btype="band", fs=sr),
                          rng.noise(rng.key(k, "ev", i), L)) * env
         elif s.event == "drop":      # a bubble: pitch rises as it shrinks

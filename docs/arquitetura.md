@@ -36,6 +36,9 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `clap.py`, `designer.py`, `analysis.py` | calibração: CLAP (texto ↔ som), busca evolutiva (`design`, `match`), medidas de gravações |
 | `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `magic.py`, `ambience.py` |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
+| `score.py` | composição: `Score` (faixas, sons posicionados, pan, sala estéreo compartilhada, loops), nomes de notas, acordes e escalas |
+| `instruments.py` | 34 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
+| `music.py` | músicas por semente: `Cue` (jingles e loops, orquestra ou chip) |
 
 ## Determinismo
 
@@ -383,6 +386,76 @@ Os loops têm 16 s, e o CLAP recorta aleatoriamente áudios com mais de 10 s, en
 - **Quando o juiz confirma, adotamos:** rangido do arco (do 22º para 6º–9º lugar no juiz) e vento (do 9º–10º para 3º–4º).
 - **Quando o otimizador gosta e o juiz não, descartamos.** No choque de espadas e na queda da espada, a busca levou o otimizador ao 2º–5º lugar, mas o juiz ficou em 20º–40º. Os dois modelos discordam sobre impactos metálicos, que eles separam mal ("espadas se chocando" × "espada acertando armadura").
 - **Passos:** a busca sobre sequências de caminhada levou o cascalho ao 1º lugar no otimizador, mas o juiz ficou em 8º–10º; pedra, madeira e grama não chegaram ao top 10. A estrutura encontrada está em `physical.STEPS`. Nossos passos ainda soam como impactos ("bola quicando", "flecha na madeira").
+
+## Música e composição
+
+**`Score`.**
+- Cada faixa é uma `Voice`: suas notas são camadas do spec renderizadas juntas e sem eco.
+- O `Score` põe cada faixa e cada som pronto no estéreo com a lei de potência constante (centro a −3 dB em cada lado).
+- Uma parte de cada um (`send`) vai para uma sala compartilhada: duas caudas de ruído decorrelacionadas, uma por ouvido, escurecidas acima de 5 kHz, com energia unitária e 12 ms de silêncio antes das primeiras reflexões.
+- `render(loop=...)` corta no comprimento exato e soma o que soa além dele (notas e cauda da sala) de volta no começo: o loop repete sem emenda.
+
+**Instrumentos: medidos em notas soltas da VSCO-2 CE** (CC0, só para análise). Para cada nota gravada:
+- os parciais como razões da nota, com nível e T60 (ajuste da queda em dB do pico até −30 dB);
+- o tempo até −20 e −40 dB.
+
+Para os sustentados:
+- os 8 primeiros harmônicos na parte estável;
+- vibrato (taxa e profundidade);
+- tempo de ataque.
+
+O som nosso é medido do mesmo jeito.
+
+*Barras e sinos (`Modal`).* Cada um ganhou só os modos medidos.
+- **Glockenspiel:** barra livre 1 : 2,9 : 5,5 : 9,0 (as razões teóricas são 1 : 2,76 : 5,40 : 8,93). A nota soa 9 s em sol5 e ~2 s em dó8; os parciais morrem em menos de 1 s. A versão antiga (`ui.chime`) soava só ~1 s.
+- **Marimba:** afinada 1 : 4 : 10. Soa 8,6 s em dó3 e 0,5 s em dó7. O décimo parcial é o mais forte no ataque das notas graves, e a baqueta de lã corta acima de ~2 kHz.
+- **Xilofone:** 1 : 3.
+- **Sinos tubulares:** modos de viga (1,22 : 2 : 2,93 : 4,06 : 5,31…). A nota ouvida fica uma oitava abaixo dos modos 4–6, que estão em 2 : 3 : 4.
+
+Para que cada modo comece exatamente no seu ganho, um contato menor que 3 amostras virou um impulso ideal (`Modal.hits`).
+
+*Cordas pinçadas.* Parciais harmônicos com queda dupla: uma parte rápida e um som residual 14 dB abaixo (o outro plano de vibração da corda), que mantém o grave soando.
+- **Harpa:** 1/√h, perdendo os agudos acima de ~500 Hz. A fundamental soa 15 s em lá2 e ~1,5 s em lá6.
+- **Violão:** harmônicos quase iguais até o 10º, com entalhes pela posição do dedo; −20 dB em ~0,3 s.
+- **Alaúde:** pares de cordas (ordens) desafinados 2–4 cents.
+
+*Percussão*, com as medidas e o que o nosso dá:
+
+| instrumento | gravado | nosso |
+|---|---|---|
+| tímpano: modo afinado com 1,5, 1,98 e 2,44 por cima | −20 dB em 0,17–0,22 s | 0,10–0,26 s |
+| tambores de mão | −20 dB em 0,15–0,27 s | 0,16–0,18 s |
+| bumbo de concerto | 63–125 Hz, −20 dB em ~0,09 s | 0,105 s |
+| caixa com esteira | pico em 250 Hz, plano até 4 kHz, −20 dB em 65–75 ms | 85 ms |
+| prato | 2–8 kHz, −20 dB em 0,5–0,6 s, −40 em ~2 s | 0,6 s e 1,7 s |
+| pandeiro | 4–12 kHz, −20 dB em 0,2–0,27 s | 0,2 s |
+
+*Sustentados.* Uma fonte glotal passa pelas ressonâncias do corpo. Essas ressonâncias foram ajustadas por análise-por-síntese para que os 8 primeiros harmônicos das nossas notas batam com os gravados em toda a extensão. Os limites são físicos: 150–8000 Hz, largura ≥ 150 Hz, ganho ≤ 3. Sem limites, o otimizador inventava ressonâncias de 25 Hz que só serviam para as notas medidas. Erro médio por harmônico:
+
+| instrumento | erro | outras medidas |
+|---|---|---|
+| violinos | 1,8 dB | naipe de 3 vozes a ±8 cents, cada uma com seu vibrato (~5 Hz) |
+| violoncelos | 3,8 dB | |
+| flauta | 5,2 dB | quase pura no agudo, rica no grave, vibrato 5 Hz ±7 cents |
+| trompa | 6,3 dB | |
+| trompete suave | 2,8 dB | |
+| trompete forte | 4,3 dB | |
+
+No trompete, o brilho segue a intensidade, interpolando entre os dois ajustes: uma ressonância perto de 670 Hz quando suave, abrindo para 1,2 e 2 kHz quando forte.
+
+Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um filtro só por formante.
+
+**Composição (`Cue`).**
+- A semente escolhe tom (sol3 a fá♯4) e modo, a progressão (I–IV–V–I, i–VI–VII–i…), os ritmos e o motivo.
+- A melodia segue regras simples:
+  - notas do acorde nos tempos fortes, perto da nota anterior e sem repetir;
+  - passos nos fracos, subindo no começo da frase e descendo no fim, rebatendo nas bordas da extensão;
+  - o ritmo de abertura volta a cada dois compassos;
+  - toda frase de 4 compassos termina numa nota longa, e a última na tônica;
+  - sobre a dominante, em tom menor, a sétima sobe (menor harmônica).
+- Os acordes do acompanhamento mudam com o menor movimento possível de voz.
+- O arranjo é escrito em papéis (melodia, metais, cordas, harpa, baixo, tímpano, caixa…). O estilo transforma cada papel num instrumento medido ou num canal de console (pulsos com `crush`, baixo senoidal, ruído).
+- Os jingles deixam o último acorde soar 3 s e somem em 1,5 s; os loops têm comprimento exato em compassos.
 
 ## Calibração com CLAP
 

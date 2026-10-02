@@ -86,6 +86,7 @@ class Modal:
     dur: float                        # seconds
     modes: list[tuple[float, float, float]]                    # Hz, T60 decay seconds, gain
     hits: list[tuple[float, float, float]] = field(default_factory=lambda: [(0.0, 1.0, 0.001)])  # s, gain, contact s
+    # (a contact under 3 samples is an ideal impulse: each mode starts at exactly its gain)
     scrape: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)  # start s, dur s, gain, judder Hz
     hardness: float = 8000.0          # excitation low-pass, Hz: soft (mallet, flesh) .. hard (steel on steel)
     click: float = 0.0                # the contact noise itself, mixed in

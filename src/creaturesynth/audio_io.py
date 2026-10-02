@@ -10,10 +10,11 @@ def to_pcm16(audio: np.ndarray) -> bytes:
 
 
 def write_wav(path: str | Path, audio: np.ndarray, sr: int) -> Path:
+    """Mono samples, or stereo as shape (n, 2) (a Score's render), to a 16-bit WAV."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(path), "wb") as w:
-        w.setnchannels(1)
+        w.setnchannels(1 if audio.ndim == 1 else audio.shape[1])
         w.setsampwidth(2)
         w.setframerate(sr)
         w.writeframes(to_pcm16(audio))

@@ -115,9 +115,14 @@ def _formants(x: np.ndarray, s: Syllable, sr: int) -> np.ndarray:
     if not s.formants:
         return x
     n = len(x)
+    out = np.zeros(n)
+    if len({m for _, m in s.mouth}) == 1:   # a still mouth (an instrument's body): one fixed filter per formant
+        m = s.mouth[0][1]
+        for hz, bw, gain in s.formants:
+            out += gain * lfilter(*bandpass_coeffs(hz * m, bw * m, sr), x)
+        return out
     blocks = (n + BLOCK - 1) // BLOCK
     scale = curve(s.mouth, blocks, log=True)
-    out = np.zeros(n)
     for hz, bw, gain in s.formants:  # constant-Q as the mouth moves
         out += gain * time_varying(x, (bandpass_coeffs(hz * m, bw * m, sr) for m in scale), BLOCK)
     return out
