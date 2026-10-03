@@ -2,7 +2,7 @@
 
 Áudio procedural para jogos: **criaturas**, **fala humana** (português e inglês) e **efeitos sonoros** (armas, passos, explosões, magia, ambientes). Para criaturas, você descreve **quem** chama (espécie, tamanho, agressividade) e **por quê** (idle, alerta, ataque, dor, morte). Para pessoas, você escolhe uma voz e escreve o texto. Para efeitos, você escolhe o objeto (uma espada de aço, uma bola de fogo, uma tempestade) e o evento (golpe, choque, impacto, loop). A mesma entrada sempre gera o mesmo som, e cada indivíduo e cada repetição varia um pouco.
 
-Nasceu como `creaturesynth`, um fork do [sintetizador de gritos da 1ª geração de Pokémon](https://github.com/ardean/pokemon-gen1-cry-synthesizer). A ideia do jogo, que tira 151 gritos de 38 moldes mais tom e duração, virou o modelo geral aqui: **espécie = genes estáveis; indivíduo = pequenas variações; traços = evolução**. O motor original continua disponível como arquétipo `chip` e como reprodução fiel dos 151 gritos.
+Começou como `creaturesynth`, a partir do [sintetizador de gritos da 1ª geração de Pokémon](https://github.com/ardean/pokemon-gen1-cry-synthesizer) de ardean. A ideia do jogo, que tira 151 gritos de 38 moldes mais tom e duração, virou o modelo geral aqui: **espécie = genes estáveis; indivíduo = pequenas variações; traços = evolução**. O motor original continua disponível como arquétipo `chip` e como reprodução fiel dos 151 gritos.
 
 ```python
 from tare.tools.tune import Creature, write_wav
@@ -463,4 +463,4 @@ As interjeições partem de gravações CC0 do OpenGameArt ("Voice Clip Pack - M
 
 Os instrumentos foram medidos nas notas da [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE), da Versilian Studios (CC0). As gravações serviram só para medir e não acompanham o pacote.
 
-O motor de gritos da 1ª geração é baseado no [sintetizador original de dotsarecool](http://dotsarecool.com/rgme/tech/gen1cries.html) ([vídeo](https://www.youtube.com/watch?v=gDLpbFXnpeY)) e no [port em TypeScript de ardean](https://github.com/ardean/pokemon-gen1-cry-synthesizer), de onde este repositório foi forkado.
+O motor de gritos da 1ª geração é baseado no [sintetizador original de dotsarecool](http://dotsarecool.com/rgme/tech/gen1cries.html) ([vídeo](https://www.youtube.com/watch?v=gDLpbFXnpeY)) e no [port em TypeScript de ardean](https://github.com/ardean/pokemon-gen1-cry-synthesizer), de onde este projeto começou (o histórico do git ainda guarda os commits dele).
