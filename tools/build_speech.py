@@ -74,7 +74,7 @@ def render(lang: str):
     for name, (voice, _tract) in VOICES[lang].items():
         old_items, old_audio = [], {}
         if (CACHE / f"speech_{lang}_{name}.json").exists():
-            old_items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
+            old_items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text(encoding="utf-8"))
             old_audio = dict(np.load(CACHE / f"speech_{lang}_{name}.npz"))
         cached = {}
         for it in old_items:
@@ -91,7 +91,8 @@ def render(lang: str):
                 audio[key] = y
                 items.append({"key": key, "text": text, "phonemes": it["phonemes"], "dur": it["dur"]})
         np.savez_compressed(CACHE / f"speech_{lang}_{name}.npz", **audio)
-        (CACHE / f"speech_{lang}_{name}.json").write_text(json.dumps(items, ensure_ascii=False, indent=1))
+        (CACHE / f"speech_{lang}_{name}.json").write_text(json.dumps(items, ensure_ascii=False, indent=1),
+                                                          encoding="utf-8")
         print(f"{lang}/{name}: {len(items)} utterances, {sum(len(a) for a in audio.values()) / KOKORO_SR / 60:.1f} min")
 
 
@@ -277,7 +278,7 @@ def refine(lab, env, f0, reach=3):
 def build(lang: str):
     import pyworld as pw
     for name, (voice, tract) in VOICES[lang].items():
-        items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
+        items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text(encoding="utf-8"))
         audio = np.load(CACHE / f"speech_{lang}_{name}.npz")
         f0s, envs, aps, phones, base, shifts = [], [], [], [], 0, []
         for u, it in enumerate(items):
@@ -299,7 +300,7 @@ def build(lang: str):
                 "pitch": round(float(np.median(voiced[voiced > 0])), 1), "env_delta": True}
         (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(
             {"durations": model, "intonation": intonation(lang, items, phones, voiced), "phones": phones},
-            separators=(",", ":")))
+            separators=(",", ":")), encoding="utf-8")
         env = np.clip(np.round((np.concatenate(envs) - ENV_FLOOR) * 2), 0, 255).astype(np.uint8)
         env = np.diff(env, axis=0, prepend=np.zeros((1, env.shape[1]), np.uint8))   # frame-to-frame, mod 256
         out = OUT / f"bank_{lang}_{name}.npz"
@@ -348,7 +349,7 @@ def relabel(lang: str):
     from tare.tools.tune.speech.concat import Bank
     for name in VOICES[lang]:
         b = Bank(OUT / f"bank_{lang}_{name}.npz")
-        items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
+        items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text(encoding="utf-8"))
         spans: dict[int, list[int]] = {}
         for p in b.ph:                                       # the labels tile each sentence
             spans.setdefault(p[4], [p[1], p[2]])[1] = p[2]
@@ -360,7 +361,7 @@ def relabel(lang: str):
             phones += [[sym, a0 + a, a0 + e, st, u, flags] for sym, a, e, st, flags in lab]
         models = {"durations": fit_durations(phones), "intonation": intonation(lang, items, phones, b.f0),
                   "phones": phones}
-        (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(models, separators=(",", ":")))
+        (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(models, separators=(",", ":")), encoding="utf-8")
         print(f"{lang}/{name}: labels moved {np.median(shifts) * FRAME * 1000:.0f} ms (median), {len(phones)} phones, "
               f"duration model r = {models['durations']['fit'][0]}, intonation r = {models['intonation']['fit']}")
 

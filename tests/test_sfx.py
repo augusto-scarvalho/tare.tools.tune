@@ -114,6 +114,6 @@ def test_cli_sfx(tmp_path, capsys):
     out, spec = tmp_path / "hit.wav", tmp_path / "hit.json"
     assert main(["sfx", "blunt", "iron", "--event", "hit_metal", "--species", "mace", "-o", str(out),
                  "--spec", str(spec), "--sr", str(SR)]) == 0
-    assert out.exists() and Voice.from_json(spec.read_text()).modal
+    assert out.exists() and Voice.from_json(spec.read_text(encoding="utf-8")).modal
     assert main(["sounds"]) == 0 and "ambience" in capsys.readouterr().out
     assert main(["sfx", "blade", "plasma"]) == 1

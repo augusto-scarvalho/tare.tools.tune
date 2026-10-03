@@ -69,7 +69,7 @@ def render(voices=("pm_alex", "pf_dora")):
                 items.append({"key": key, "voice": voice, "text": text, "phonemes": r.phonemes,
                               "dur": [int(d) for d in r.pred_dur.tolist()]})
     np.savez_compressed(OUT / "corpus.npz", **audio)
-    (OUT / "corpus.json").write_text(json.dumps(items, ensure_ascii=False, indent=1))
+    (OUT / "corpus.json").write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{len(items)} utterances, {sum(len(a) for a in audio.values()) / 24000 / 60:.1f} min")
 
 
@@ -149,7 +149,7 @@ def spectral_peak(x, sr=SR):
 
 
 def measure(corpus=OUT / "corpus"):
-    items = json.load(open(f"{corpus}.json"))
+    items = json.load(open(f"{corpus}.json", encoding="utf-8"))
     audio = np.load(f"{corpus}.npz")
     stats = defaultdict(lambda: defaultdict(list))
     for it in items:
@@ -201,7 +201,7 @@ def measure(corpus=OUT / "corpus"):
                 row[key] = round(float(np.median(vals)), 1)
                 row[f"n_{key}"] = len(vals)
         out.setdefault(voice, {})[sym] = row
-    json.dump(out, open(f"{corpus}_stats.json", "w"), indent=1, ensure_ascii=False)
+    json.dump(out, open(f"{corpus}_stats.json", "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     return out
 
 

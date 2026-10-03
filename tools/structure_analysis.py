@@ -37,7 +37,7 @@ BANDS = [(60, 300), (300, 800), (800, 1500), (1500, 2500), (2500, 3500), (3500, 
 # --- corpus and features ---------------------------------------------------------------------------------------
 
 def corpus(path="teacher/corpus", held_out=True):
-    items = json.loads(Path(f"{path}.json").read_text())
+    items = json.loads(Path(f"{path}.json").read_text(encoding="utf-8"))
     audio = np.load(f"{path}.npz")
     keep = []
     for m in items:

@@ -174,7 +174,7 @@ class Bank:
         d = np.load(path)
         self.meta = json.loads(bytes(d["meta"]).decode())
         side = path.with_suffix(".json")            # the labels and the duration and intonation models, redone
-        side = json.loads(side.read_text()) if side.exists() else {}   # without touching the frames
+        side = json.loads(side.read_text(encoding="utf-8")) if side.exists() else {}   # without touching the frames
         phones = side.pop("phones", None)
         self.meta.update(side)
         self.name = f"{self.meta['lang']}/{self.meta['name']}"
@@ -255,7 +255,7 @@ def prosody(lang: str) -> dict:
     To try it, point TARE_TOOLS_TUNE_PROSODY at the folder with the model (the tool writes it to real/)."""
     folder = os.environ.get("TARE_TOOLS_TUNE_PROSODY")
     path = Path(folder) / f"prosody_{lang}.json" if folder else DATA / f"prosody_{lang}.json"
-    return json.loads(path.read_text()) if path.exists() else {}
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def banks(lang: str | None = None) -> list[str]:

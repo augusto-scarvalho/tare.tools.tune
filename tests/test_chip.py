@@ -17,7 +17,7 @@ from tare.tools.tune import render
 from tare.tools.tune.chip import FRAME, channels, gen1_program, gen1_voice, load_gen1, program_duration
 
 FIXTURES = Path(__file__).parent / "fixtures" / "gen1"
-REFERENCE = json.loads((FIXTURES / "ts_reference.json").read_text())["cries"]
+REFERENCE = json.loads((FIXTURES / "ts_reference.json").read_text(encoding="utf-8"))["cries"]
 
 
 def as_int8(channel: np.ndarray) -> np.ndarray:

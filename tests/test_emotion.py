@@ -121,7 +121,7 @@ def test_real_speech_intonation_is_an_opt_in_experiment(tmp_path, monkeypatch):
     sp = Speaker(pitch=120, engine="natural")
     default = sp.spoken("Você comprou a espada?", "pt").f0
     model = {"intonation": concat.bank("pt/alex").meta["intonation"], "kinds": {"?": 1000, ".": 1000}}
-    (tmp_path / "prosody_pt.json").write_text(json.dumps(model))
+    (tmp_path / "prosody_pt.json").write_text(json.dumps(model), encoding="utf-8")
     monkeypatch.setenv("TARE_TOOLS_TUNE_PROSODY", str(tmp_path))
     concat.prosody.cache_clear()
     try:

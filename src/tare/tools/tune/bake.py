@@ -120,7 +120,7 @@ def sound_from_entry(name: str, entry: Mapping) -> tuple[Sfx, list[str]]:
 def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> tuple[dict[str, Creature], dict]:
     """Returns (creatures by name, settings). `natural` (default: the file's "natural_voices", else
     true) decides if "main" speakers get natural voices."""
-    data = source if isinstance(source, Mapping) else json.loads(Path(source).read_text())
+    data = source if isinstance(source, Mapping) else json.loads(Path(source).read_text(encoding="utf-8"))
     entries = data.get("creatures", {})
     creatures = {name: creature_from_entry(name, e, entries) for name, e in entries.items()}
     settings = {k: data[k] for k in ("sample_rate", "takes", "calls") if k in data}
@@ -144,7 +144,7 @@ def _bake_one(job):
     entry = {"file": f"{stem}.wav", "duration": round(len(audio) / sr, 4),
              "peak": round(float(np.max(np.abs(audio))), 4)}
     if specs:
-        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(indent=1))
+        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(indent=1), encoding="utf-8")
         entry["spec"] = f"{stem}.json"
     return name, call, take, entry
 
@@ -160,7 +160,7 @@ def _bake_sound(job):
     if voice.loop:
         entry["loop"] = True
     if specs:
-        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(indent=1))
+        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(indent=1), encoding="utf-8")
         entry["spec"] = f"{stem}.json"
     return name, event, take, entry
 
@@ -173,7 +173,7 @@ def _bake_line(job):
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
     entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4)}
     if specs and voice:
-        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json())
+        (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(), encoding="utf-8")
         entry["spec"] = f"{stem}.json"
     return name, line_id, entry
 
@@ -228,5 +228,5 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
         for name, event, _take, entry in sorted(sound_results, key=lambda r: r[:3]):
             manifest["sounds"][name]["events"][event].append(entry)
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / MANIFEST).write_text(json.dumps(manifest, indent=1))
+    (out_dir / MANIFEST).write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return manifest

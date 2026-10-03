@@ -186,7 +186,7 @@ def load_gen1(path: str | None = None) -> dict:
         raise FileNotFoundError(
             f"Gen 1 cry data not found at {p}. It lives in the repository (data/gen1/cries.json); "
             "point TARE_TOOLS_TUNE_GEN1_DATA at it when running from an installed package.")
-    return json.loads(p.read_text())
+    return json.loads(p.read_text(encoding="utf-8"))
 
 
 def gen1_species(name_or_number: str | int, path: str | None = None) -> dict:

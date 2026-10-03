@@ -67,7 +67,7 @@ def cmd_say(a):
         print(who.speaker.phonemes(a.text, a.lang))
     voice = who.voice(a.text, a.lang)
     if a.spec:
-        Path(a.spec).write_text(voice.to_json())
+        Path(a.spec).write_text(voice.to_json(), encoding="utf-8")
     _write(render(voice, a.sr), a.output or "fala.wav", a.sr, a.png)
 
 
@@ -89,7 +89,7 @@ def _save_designed(creature, score, a):
     entry = json.dumps({k: v for k, v in creature.to_dict().items() if k not in ("name", "individual")})
     print(f"bestiary entry: {entry}")
     if a.output:
-        Path(a.output).write_text(json.dumps(creature.to_dict(), indent=1))
+        Path(a.output).write_text(json.dumps(creature.to_dict(), indent=1), encoding="utf-8")
     if a.wav:
         _write(creature.render(a.call), a.wav, DEFAULT_SR)
 
@@ -130,20 +130,20 @@ def cmd_list(a):
 def cmd_render(a):
     voice = _creature(a).voice(a.call, a.take)
     if a.spec:
-        Path(a.spec).write_text(voice.to_json(indent=1))
+        Path(a.spec).write_text(voice.to_json(indent=1), encoding="utf-8")
     _write(render(voice, a.sr), a.output or f"{a.archetype}_{a.call}.wav", a.sr, a.png)
 
 
 def cmd_spec(a):
     text = _creature(a).voice(a.call, a.take).to_json(indent=1)
     if a.output:
-        Path(a.output).write_text(text)
+        Path(a.output).write_text(text, encoding="utf-8")
     else:
         print(text)
 
 
 def cmd_from_spec(a):
-    voice = Voice.from_json(Path(a.spec).read_text())
+    voice = Voice.from_json(Path(a.spec).read_text(encoding="utf-8"))
     _write(render(voice, a.sr), a.output or Path(a.spec).with_suffix(".wav"), a.sr, a.png)
 
 
@@ -174,7 +174,7 @@ def cmd_sfx(a):
     event = a.event or sx.events[0]
     voice = sx.voice(event, a.take)
     if a.spec:
-        Path(a.spec).write_text(voice.to_json(indent=1))
+        Path(a.spec).write_text(voice.to_json(indent=1), encoding="utf-8")
     out = a.output or f"{a.kind}_{sx.style}_{event}.wav"
     _write(render(voice, a.sr), out, a.sr, a.png)
 

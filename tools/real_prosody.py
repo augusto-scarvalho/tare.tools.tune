@@ -92,7 +92,7 @@ def fetch():
                 x, sr = sf.read(io.BytesIO(z.read("TTS-Portuguese-Corpus/" + r[0])), dtype="float32")
                 _write16(CACHE / f"tts/wav/{key}.wav", x, sr)
             meta.append({"key": key, "text": r[-1].strip(), "speaker": "tts"})
-    (CACHE / "tts/meta.json").write_text(json.dumps(meta, ensure_ascii=False))
+    (CACHE / "tts/meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
     zpath.unlink()
 
     (CACHE / "cml/wav").mkdir(parents=True, exist_ok=True)
@@ -115,7 +115,7 @@ def fetch():
                 meta.append({"key": key, "text": text, "speaker": str(spk)})
         path.unlink()
         print(name, len(meta), flush=True)
-    (CACHE / "cml/meta.json").write_text(json.dumps(meta, ensure_ascii=False))
+    (CACHE / "cml/meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
 
 
 # -- align ------------------------------------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ def prepare(corpus: str):
     base = CACHE / corpus
     shutil.rmtree(base / "mfa", ignore_errors=True)
     lexicon, items = [], {}
-    for m in json.loads((base / "meta.json").read_text()):
+    for m in json.loads((base / "meta.json").read_text(encoding="utf-8")):
         try:
             phrases = g2p_pt.text_to_phrases(m["text"])
             seq = sequence(phrases, "pt")[2]
@@ -158,11 +158,11 @@ def prepare(corpus: str):
         folder = base / "mfa/corpus" / m["speaker"]
         folder.mkdir(parents=True, exist_ok=True)
         os.symlink(base / f"wav/{m['key']}.wav", folder / f"{m['key']}.wav")
-        (folder / f"{m['key']}.lab").write_text(" ".join(tokens))
+        (folder / f"{m['key']}.lab").write_text(" ".join(tokens), encoding="utf-8")
         items[m["key"]] = {"text": m["text"], "speaker": m["speaker"], "seq": [[s[0], s[2], s[3]] for s in seq],
                            "kinds": [[p.kind, p.wh] for p in phrases]}
-    (base / "mfa/dict.txt").write_text("\n".join(lexicon) + "\n")
-    (base / "items.json").write_text(json.dumps(items, ensure_ascii=False))
+    (base / "mfa/dict.txt").write_text("\n".join(lexicon) + "\n", encoding="utf-8")
+    (base / "items.json").write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
 
 
 def _pitch(path):
@@ -194,7 +194,7 @@ def _goodness(root: Path) -> dict[str, tuple[str, float]]:
     who = {u: (f, s) for u, f, s in con.execute("select u.id, f.name, s.name from utterance u "
                                                 "join file f on u.file_id=f.id join speaker s on u.speaker_id=s.id")}
     total, length = collections.Counter(), collections.Counter()
-    for r in csv.DictReader(open(root / "corpus/alignment/phone_intervals.csv")):
+    for r in csv.DictReader(open(root / "corpus/alignment/phone_intervals.csv", encoding="utf-8")):
         if r["phone_goodness"]:
             d = float(r["end"]) - float(r["begin"])
             total[int(r["utterance_id"])] += float(r["phone_goodness"]) * d
@@ -212,13 +212,13 @@ def dialect():
         path = CACHE / f"{name}.dict"
         if not path.exists():
             subprocess.run(["curl", "-sSL", "--retry", "4", "-o", str(path), url], check=True)
-        words[name] = {line.split("\t")[0]: line for line in path.read_text().splitlines()}
+        words[name] = {line.split("\t")[0]: line for line in path.read_text(encoding="utf-8").splitlines()}
     common = words["br"].keys() & words["pt"].keys()
     for name in words:
         (base / f"{name}.dict").parent.mkdir(parents=True, exist_ok=True)
-        (base / f"{name}.dict").write_text("\n".join(words[name][w] for w in sorted(common)) + "\n")
+        (base / f"{name}.dict").write_text("\n".join(words[name][w] for w in sorted(common)) + "\n", encoding="utf-8")
     for corpus in ("tts", "cml"):
-        items = json.loads((CACHE / corpus / "items.json").read_text())
+        items = json.loads((CACHE / corpus / "items.json").read_text(encoding="utf-8"))
         by = collections.defaultdict(list)
         for k, it in sorted(items.items()):
             by[it["speaker"]].append(k)
@@ -228,7 +228,7 @@ def dialect():
             folder.mkdir(parents=True)
             for k in keys[:30]:
                 os.symlink((CACHE / corpus / f"wav/{k}.wav").resolve(), folder / f"{k}.wav")
-                (folder / f"{k}.lab").write_text(re.sub(r"[^\w\s'-]", " ", items[k]["text"].lower()))
+                (folder / f"{k}.lab").write_text(re.sub(r"[^\w\s'-]", " ", items[k]["text"].lower()), encoding="utf-8")
     fits = {}
     for name in words:
         _mfa(base / "corpus", base / f"{name}.dict", base / f"out_{name}", base / f"root_{name}")
@@ -238,7 +238,8 @@ def dialect():
         if f in fits["pt"]:
             diff[spk.replace("_", ":", 1)].append(g - fits["pt"][f][1])
     (CACHE / "dialect.json").write_text(json.dumps(
-        {s: [float(np.mean(v)), float(np.std(v) / np.sqrt(len(v)))] for s, v in diff.items() if len(v) >= 6}))
+        {s: [float(np.mean(v)), float(np.std(v) / np.sqrt(len(v)))] for s, v in diff.items() if len(v) >= 6}),
+        encoding="utf-8")
 
 
 def align():
@@ -315,10 +316,10 @@ def targets(item, times, f0) -> dict[int, tuple[float, float]]:
 def load():
     """[(speaker, item, nucleus rows, where, targets)] of every aligned sentence from a Brazilian reader: one the
     Brazilian dictionary fits at least as well as the European one (within 0.02, and not clearly worse)."""
-    fits, out = json.loads((CACHE / "dialect.json").read_text()), []
+    fits, out = json.loads((CACHE / "dialect.json").read_text(encoding="utf-8")), []
     for corpus in ("tts", "cml"):
         base = CACHE / corpus
-        items = json.loads((base / "items.json").read_text())
+        items = json.loads((base / "items.json").read_text(encoding="utf-8"))
         f0s = np.load(base / "f0.npz")
         aligned = {}
         for path in glob.glob(str(base / "mfa/out/**/*.TextGrid"), recursive=True):
@@ -398,7 +399,8 @@ def fit():
     kinds = collections.Counter(_group(r).split(":")[0] for r in rows)
     OUT.write_text(json.dumps({"intonation": model, "kinds": dict(kinds), "speakers": len(speakers),
                                "sentences": len(data), "nuclei": len(ys),
-                               "sources": ["TTS-Portuguese Corpus (CC BY 4.0)", "CML-TTS Portuguese (CC BY 4.0)"]}))
+                               "sources": ["TTS-Portuguese Corpus (CC BY 4.0)", "CML-TTS Portuguese (CC BY 4.0)"]}),
+                   encoding="utf-8")
     print(f"-> {OUT}")
 
 

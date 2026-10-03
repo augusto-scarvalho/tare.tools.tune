@@ -36,7 +36,7 @@ def test_bestiary_errors():
 def test_bake_writes_packs_and_manifest(tmp_path):
     creatures = {"wolf": Creature("mammal", 7), "bot": Creature("robot", 2)}
     manifest = bake(creatures, tmp_path, calls=["idle", "hurt"], takes=2, sr=SR, workers=2)
-    on_disk = json.loads((tmp_path / "manifest.json").read_text())
+    on_disk = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert on_disk == manifest and on_disk["sample_rate"] == SR
     for name in creatures:
         for call in ("idle", "hurt"):
