@@ -31,6 +31,11 @@ def test_bank_labels_sit_on_the_sounds():
         def mean(feature, syms, b=b):
             return np.mean([feature[p[1]:p[2]].mean() for p in b.ph if p[0] in syms and p[2] > p[1]])
         assert mean(hiss, {"s", "S"}) > 8 and mean(level, {"a", "E", "O"}) - mean(level, {"p", "t", "k"}) > 20
+        # the teacher gives its stress marks time (the stressed vowel's start): never a pause inside a word, and
+        # a pause inside a sentence is a silence, not a comma read through
+        inner = [k for k in range(1, len(b.ph) - 1) if b.ph[k][0] == "_" and b.ph[k - 1][4] == b.ph[k + 1][4]]
+        assert all(b.ph[k - 1][5] & 2 or b.ph[k + 1][5] & 1 for k in inner)
+        assert np.mean([b.ph_voiced[k] for k in inner]) < 0.3
 
 
 def test_natural_voice_is_a_portable_deterministic_spec():
@@ -97,7 +102,7 @@ def test_duration_model_learns_stress_and_final_lengthening():
 
 def test_selection_prefers_contiguous_pieces():
     b = bank("pt/alex")
-    utt = [p for p in b.ph if p[4] == 52]   # every vowel voiced, no pause inside (those are taken from elsewhere)
+    utt = [p for p in b.ph if p[4] == 3]
     seq = [[p[0], (p[2] - p[1]) * 0.005, p[3], p[5]] for p in utt]
     units = select(b, seq)
     joins = sum(units[i - 1][1] != units[i][0] for i in range(1, len(units)))

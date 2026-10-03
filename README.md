@@ -433,6 +433,7 @@ python tools/intelligibility.py -v    # a fala, transcrita pelo Whisper (taxa de
 pip install -e ".[teacher]"                    # Kokoro, soundfile e pyworld: só para as ferramentas
 python tools/build_speech.py render pt        # o professor lê o corpus (cache em teacher/)
 python tools/build_speech.py build pt         # análise -> bancos de voz em src/tare/tools/tune/speech/data
+python tools/build_speech.py label pt         # refaz os rótulos e os modelos dos bancos, sem nova análise
 python tools/teacher_calibration.py render    # fala natural do Kokoro como "professor" do português
 python tools/teacher_calibration.py measure   # formantes, durações e fricativas medidos por fonema
 python tools/structure_analysis.py compare    # espectros quadro a quadro contra o professor, por classe de fonema

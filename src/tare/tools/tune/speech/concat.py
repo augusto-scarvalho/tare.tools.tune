@@ -172,9 +172,10 @@ class Bank:
     def __init__(self, path: Path):
         d = np.load(path)
         self.meta = json.loads(bytes(d["meta"]).decode())
-        models = path.with_suffix(".json")          # duration and intonation models, refitted without the frames
-        if models.exists():
-            self.meta.update(json.loads(models.read_text()))
+        side = path.with_suffix(".json")            # the labels and the duration and intonation models, redone
+        side = json.loads(side.read_text()) if side.exists() else {}   # without touching the frames
+        phones = side.pop("phones", None)
+        self.meta.update(side)
         self.name = f"{self.meta['lang']}/{self.meta['name']}"
         self.tract, self.pitch = self.meta["tract"], self.meta["pitch"]
         self.f0 = d["f0"].astype(np.float64)
@@ -183,7 +184,7 @@ class Bank:
             env = np.cumsum(env, axis=0, dtype=np.uint8)
         self._env8 = env                               # kept as stored (0.5 dB steps); rows are decoded on demand
         self.ap = d["ap"].astype(np.float32) / 255
-        self.ph = json.loads(bytes(d["phones"]).decode())
+        self.ph = phones or json.loads(bytes(d["phones"]).decode())    # older banks keep theirs with the frames
         self.by_sym: dict[str, list[int]] = {}
         for k, p in enumerate(self.ph):
             self.by_sym.setdefault(p[0], []).append(k)

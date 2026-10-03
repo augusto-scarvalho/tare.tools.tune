@@ -2,13 +2,15 @@
 
 A teacher voice reads a corpus once, here, offline: Kokoro-82M (Apache-2.0), a neural text-to-speech model. Each
 recording is analysed with the WORLD vocoder into 5 ms frames (pitch, a 32-band spectral envelope, aperiodicity)
-and labelled phone by phone from the teacher's own alignment, mapped to our phone symbols. Only these numbers ship.
+and labelled phone by phone from the teacher's own alignment, mapped to our phone symbols (the labels and
+the duration and intonation models go next to the frames, in bank_<lang>_<voice>.json). Only these numbers ship.
 In a game nothing neural runs: tare.tools.tune.speech.concat picks pieces of the bank for a new sentence, stretches
 them to our timing, lays our intonation on them and our vocoder rebuilds the sound, deterministically.
 
     pip install kokoro soundfile pyworld          # development only
     python tools/build_speech.py render pt        # the teacher reads the corpus (cached in teacher/)
     python tools/build_speech.py build pt         # analyse -> the banks
+    python tools/build_speech.py label pt         # label them again and refit the models (no new analysis)
 """
 import json
 import os
@@ -24,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from corpus_pt import EXTRA_PT, sentences  # noqa: E402
 from teacher_calibration import CORPUS  # noqa: E402
 
-from tare.tools.tune.speech.concat import FRAME, fit_durations, fit_intonation, nucleus_features  # noqa: E402
+from tare.tools.tune.speech.concat import FRAME, SONORANT, fit_durations, fit_intonation, nucleus_features  # noqa: E402
 from tare.tools.tune.speech.vocoder import ENV_FLOOR, band_freqs, encode  # noqa: E402
 
 CACHE = ROOT / "teacher"
@@ -109,7 +111,7 @@ def labels(phonemes: str, dur: list[int], n_frames: int) -> list[tuple]:
     """[(symbol, first frame, end frame, stress, flags)] covering the utterance; flags: 1 word-initial,
     2 word-final; pauses are "_"."""
     edges = np.cumsum([0] + dur) * HOP / KOKORO_SR / FRAME          # token i spans edges[i+1]..edges[i+2]
-    toks, i, n, stress, edge = [], 0, len(phonemes), 0, True
+    toks, i, n, stress, edge, onset = [], 0, len(phonemes), 0, True, None
 
     def add(t):
         nonlocal edge
@@ -127,10 +129,16 @@ def labels(phonemes: str, dur: list[int], n_frames: int) -> list[tuple]:
     while i < n:
         ch = phonemes[i]
         if ch in (PRIMARY, SECONDARY):
+            # the teacher gives the stress mark time of its own (14% of its speech): the start of the stressed vowel
+            # (aligning it so outscores giving it to the consonant before, 42.9 to 33.1; dropped, the gap became a
+            # pause inside the word whenever it reached 100 ms)
             stress = 2 if ch == PRIMARY else 1
+            onset = edges[i + 1] if onset is None else onset
             i += 1
             continue
         s, e = edges[i + 1], edges[i + 2]
+        if onset is not None:
+            s, onset = onset, None
         nasal = i + 1 < n and phonemes[i + 1] == TILDE
         if nasal:
             e = edges[i + 3]
@@ -221,6 +229,37 @@ def realign(lab, env, search=range(-20, 5)):
     return [tuple(x) for x in out if x[2] > x[1]], d
 
 
+def pauses(lab, env, f0, quiet=30.0):
+    """Pauses where the teacher made them. One inside a sentence where its voice goes on is no pause (it reads
+    through most commas and long spaces): its time goes to the phones on either side. And the silence a vowel or
+    another sonorant starts with after a pause (on 3 in 4 of them, 39 ms on average, about 67 dB below its voice)
+    belongs to the pause; the breathy end before one (8 dB below) stays with the phone."""
+    bf = band_freqs(env.shape[1])
+    level = env[:, (bf > 200) & (bf < 4000)].mean(1)
+    voiced = f0 > 0
+    lab = [list(x) for x in lab]
+    out = [lab[0]]
+    for k in range(1, len(lab)):
+        sym, a, e = lab[k][:3]
+        if sym == "_" and k < len(lab) - 1 and voiced[a:e].mean() > 0.5:
+            out[-1][2] = lab[k + 1][1] = (a + e) // 2
+            continue
+        out.append(lab[k])
+    for k in range(1, len(out)):
+        sym, a, e = out[k][:3]
+        if out[k - 1][0] != "_" or sym not in SONORANT or not voiced[a:e].any():
+            continue
+        loud = level[a:e] >= np.median(level[a:e][voiced[a:e]]) - quiet
+        out[k - 1][2] = out[k][1] = a + min(int(np.argmax(loud)), (e - a) // 2)
+    return [tuple(x) for x in out if x[2] > x[1]]
+
+
+def label(it: dict, env: np.ndarray, f0: np.ndarray) -> tuple[list[tuple], int]:
+    """One sentence of the teacher: our phones over its frames, and how far they moved from its duration grid."""
+    lab, shift = realign(labels(it["phonemes"], it["dur"], len(f0)), env)
+    return pauses(refine(lab, env, f0), env, f0), shift
+
+
 def refine(lab, env, f0, reach=3):
     """Move each boundary (the teacher's 25 ms grid) to the biggest spectral change within +-reach frames."""
     lab = [list(x) for x in lab]
@@ -246,9 +285,9 @@ def build(lang: str):
             f0, t = pw.harvest(x, KOKORO_SR, f0_floor=60, f0_ceil=600, frame_period=FRAME * 1000)
             f, env, ap = encode(f0, pw.cheaptrick(x, f0, t, KOKORO_SR), pw.d4c(x, f0, t, KOKORO_SR), KOKORO_SR,
                                 BANDS)
-            lab, shift = realign(labels(it["phonemes"], it["dur"], len(f)), env)
+            lab, shift = label(it, env, f)
             shifts.append(shift)
-            for sym, a, b, st, flags in refine(lab, env, f):
+            for sym, a, b, st, flags in lab:
                 phones.append([sym, base + a, base + min(b, len(f)), st, u, flags])
             f0s.append(f)
             envs.append(env)
@@ -259,13 +298,13 @@ def build(lang: str):
         meta = {"lang": lang, "name": name, "teacher": f"Kokoro-82M {voice} (Apache-2.0)", "tract": tract,
                 "pitch": round(float(np.median(voiced[voiced > 0])), 1), "env_delta": True}
         (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(
-            {"durations": model, "intonation": intonation(lang, items, phones, voiced)}))
+            {"durations": model, "intonation": intonation(lang, items, phones, voiced), "phones": phones},
+            separators=(",", ":")))
         env = np.clip(np.round((np.concatenate(envs) - ENV_FLOOR) * 2), 0, 255).astype(np.uint8)
         env = np.diff(env, axis=0, prepend=np.zeros((1, env.shape[1]), np.uint8))   # frame-to-frame, mod 256
         out = OUT / f"bank_{lang}_{name}.npz"
         np.savez_compressed(out, f0=voiced.astype(np.float16), env=env,
                             ap=np.round(np.concatenate(aps) * 255).astype(np.uint8),
-                            phones=np.frombuffer(json.dumps(phones).encode(), dtype=np.uint8),
                             meta=np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8))
         print(f"{lang}/{name}: labels moved {np.median(shifts) * FRAME * 1000:.0f} ms (median), "
               f"{len(phones)} phones, {base * FRAME / 60:.1f} min, duration model r = {model['fit'][0]}, "
@@ -303,20 +342,29 @@ def intonation(lang: str, items: list[dict], phones: list, f0: np.ndarray) -> di
     return fit_intonation(rows, np.array(targets))
 
 
-def fit(lang: str):
-    """Refit the duration and intonation models of the banks (bank_<lang>_<voice>.json, next to the frames), without
-    analysing the recordings again or rewriting the banks."""
+def relabel(lang: str):
+    """Label the banks again and refit their models (bank_<lang>_<voice>.json), over the frames the banks already
+    hold: no new analysis, and the frames are not rewritten."""
+    from tare.tools.tune.speech.concat import Bank
     for name in VOICES[lang]:
-        d = np.load(OUT / f"bank_{lang}_{name}.npz")
-        phones = json.loads(bytes(d["phones"]).decode())
+        b = Bank(OUT / f"bank_{lang}_{name}.npz")
         items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
-        models = {"durations": fit_durations(phones),
-                  "intonation": intonation(lang, items, phones, d["f0"].astype(np.float64))}
-        (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(models))
-        print(f"{lang}/{name}: duration model r = {models['durations']['fit'][0]}, "
-              f"intonation r = {models['intonation']['fit']}")
+        spans: dict[int, list[int]] = {}
+        for p in b.ph:                                       # the labels tile each sentence
+            spans.setdefault(p[4], [p[1], p[2]])[1] = p[2]
+        phones, shifts = [], []
+        for u, it in enumerate(items):
+            a0, a1 = spans[u]
+            lab, shift = label(it, b.rows(np.arange(a0, a1)), b.f0[a0:a1])
+            shifts.append(shift)
+            phones += [[sym, a0 + a, a0 + e, st, u, flags] for sym, a, e, st, flags in lab]
+        models = {"durations": fit_durations(phones), "intonation": intonation(lang, items, phones, b.f0),
+                  "phones": phones}
+        (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(models, separators=(",", ":")))
+        print(f"{lang}/{name}: labels moved {np.median(shifts) * FRAME * 1000:.0f} ms (median), {len(phones)} phones, "
+              f"duration model r = {models['durations']['fit'][0]}, intonation r = {models['intonation']['fit']}")
 
 
 if __name__ == "__main__":
     cmd, lang = sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "pt"
-    {"render": render, "build": build, "fit": fit}[cmd](lang)
+    {"render": render, "build": build, "label": relabel}[cmd](lang)
