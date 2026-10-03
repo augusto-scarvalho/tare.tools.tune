@@ -136,8 +136,8 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
 | Vitória, nível, missão, derrota, cidade, exploração, taverna, masmorra, batalha, 6 loops de "cor" | todos | tem: `Cue` | B |
-| Várias batalhas (normal, tensa, chefe, final), preparação, briefing no mapa, mapa-múndi, cenas (tristeza, intriga, triunfo, comédia), recrutamento | todos | falta | B |
-| O estilo: orquestra marcial e medieval (metais, cordas, caixa clara, modos), como Sakimoto (FFT, FFTA, TO, UO) e Senju (TS) | todos | parcial: estilo `orchestral` | B |
+| Várias batalhas (normal, tensa, chefe, final), preparação, briefing no mapa, mapa-múndi, cenas (tristeza, intriga, triunfo, comédia), recrutamento | todos | medido no FFTA2: `Cue` skirmish, tense, boss, final, prepare, briefing, worldmap, sorrow, intrigue, triumph, comedy, recruit | B |
+| O estilo: orquestra marcial e medieval (metais, cordas, caixa clara, modos), como Sakimoto (FFT, FFTA, TO, UO) e Senju (TS) | todos | medido no FFTA2: os cues de tactics (`music_tactics.py`) | B |
 
 ## 11. Mecânicas de cada jogo
 

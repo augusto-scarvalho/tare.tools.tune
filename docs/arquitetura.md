@@ -34,11 +34,12 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `cli.py` | linha de comando |
 | `speech/` | fala humana: `g2p_pt.py` e `g2p_en.py` (texto → fonemas), `phonetics.py` (alvos, coarticulação, entonação), `klatt.py` (síntese), `babble.py` (balbucio), `casting.py` (qual motor fala), `concat.py` (motor natural: bancos de voz), `vocoder.py` (síntese a partir de quadros medidos), `emote.py` (interjeições), `Speaker` |
 | `clap.py`, `designer.py`, `analysis.py` | calibração: CLAP (texto ↔ som), busca evolutiva (`design`, `match`), medidas de gravações |
-| `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `magic.py`, `ambience.py` |
+| `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `arms.py`, `magic.py`, `status.py`, `ui.py`, `home.py` (o dia a dia), `mounts.py` (cavalaria, asas, marcha, teleporte), `ambience.py` e `places.py` (os lugares) |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
 | `score.py` | composição: `Score` (faixas, sons posicionados, pan, sala estéreo compartilhada, loops), nomes de notas, acordes e escalas |
 | `instruments.py` | 38 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
 | `music.py` | músicas por semente: `Cue` (jingles e loops, orquestra ou chip) |
+| `music_tactics.py` | os cues de tactics: batalhas, preparação, mapa, cenas, recrutamento |
 
 ## Determinismo
 
@@ -550,6 +551,20 @@ Os loops têm 16 s, e o CLAP recorta aleatoriamente áudios com mais de 10 s, en
 - **Passos:** a busca sobre sequências de caminhada levou o cascalho ao 1º lugar no otimizador, mas o juiz ficou em 8º–10º; pedra, madeira e grama não chegaram ao top 10. A estrutura encontrada está em `physical.STEPS`. Nossos passos ainda soam como impactos ("bola quicando", "flecha na madeira").
 
 ## Música e composição
+
+**Música de tactics (`music_tactics.py`), medida nas 37 sequências de música do *FFTA2*** (cópia do usuário; a música do DS é partitura, então dá para ler as notas). Só números, nenhuma melodia:
+
+| medido | no FFTA2 | nos nossos cues |
+|---|---|---|
+| andamento | batalhas 125–170 bpm; cenas lentas 50–80; o mapa 100–150 | `skirmish` 136–162, `boss` 152–174, `tense` 104–122, `final` 120–140; `sorrow` 56–68, `intrigue` 72–88; `worldmap` 104–124 |
+| modo | batalhas em dórico, menor harmônico, frígio, mixolídio ou menor (quase nunca maior puro); cenas lentas em menor, frígio, menor harmônico ou lídio; viagens em lídio e mixolídio | o mesmo, sorteado pela semente |
+| densidade | até 16 trilhas, 6–17 notas por tempo | batalhas 6–10,5; cenas 2–6 |
+| o baixo | muito grave: a média entre si0 e lá2 (MIDI 30–45) | 35–45 |
+| a melodia | anda por graus, mas salta (4ª ou mais) em 10–30% das notas, mais da metade nas mais sombrias | `skirmish` ~25%, `boss` ~42%, `final` ~19% |
+| os loops | longos: 60–270 tempos | 64–128 tempos |
+
+Os ingredientes do estilo: cordas num ostinato em semicolcheias sobre a fundamental, a 5ª, a oitava e a nota do modo (a 6ª menor do eólio e do frígio, a 6ª maior do dórico); a caixa clara em figura de marcha, com rufo crescendo para cada frase; tímpanos e um baixo bem grave; trompas segurando a harmonia; o tema nos metais e depois na flauta. O chefe põe o coro cantando os acordes e um baixo descendo por meio tom; a batalha final sobe um tom inteiro na segunda metade.
+
 
 **`Score`.**
 - Cada faixa é uma `Voice`: suas notas são camadas do spec renderizadas juntas e sem eco.

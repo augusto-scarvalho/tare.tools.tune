@@ -78,3 +78,33 @@ def test_planing_keeps_the_shape():
     v = open_voicing(60, (0, "maj9"))
     w = planed(v, 60, 62)
     assert np.diff(v).tolist() == np.diff(w).tolist() and {(n - 62) % 12 for n in w} <= {0, 2, 4, 7, 11}
+
+
+def test_tactics_cues_keep_to_ffta2(monkeypatch):
+    from tare.tools.tune import score
+    from tare.tools.tune.music_tactics import TACTICS_CUES
+    played = []
+    real = score.Track.play
+
+    def play(self, instrument, notes, *a, **k):
+        notes = list(notes)
+        played.append((self.name, notes))
+        return real(self, instrument, notes, *a, **k)
+
+    monkeypatch.setattr(score.Track, "play", play)
+    for kind in TACTICS_CUES:
+        played.clear()
+        c = Cue(kind, seed=3, sr=SR)
+        bpm, beats = c.score.bpm, (c.loop or c.end) * c.score.bpm / 60
+        if kind in ("skirmish", "boss"):
+            assert 125 <= bpm <= 175 and beats >= 60                  # FFTA2: battles at 125-170, long loops
+        if kind in ("sorrow", "intrigue"):
+            assert bpm <= 90
+        bass = [n for role, ns in played if role in ("low_strings", "bass") for n, *_ in ns if isinstance(n, int)]
+        if bass and c.loop:
+            assert 30 <= np.mean(bass) <= 46                           # FFTA2: the bass's mean between B0 and A2
+        if kind == "boss":
+            tune = sorted((b, n) for role, ns in played if role == "brass" for n, b, *_ in ns)
+            leaps = np.mean([abs(y[1] - x[1]) >= 5 for x, y in zip(tune, tune[1:], strict=False) if y[0] > x[0]])
+            assert leaps > 0.25                                        # the darkest tunes leap the most
+    assert Cue("recruit", seed=1, sr=SR).end > 0                       # a jingle, not a loop
