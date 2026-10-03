@@ -18,9 +18,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
       - run: ruff check .
-      - name: native core (the vocoder for Godot), its constants still those of the Python reference
-        run: |
-          python tools/build_native.py tables
-          git diff --exit-code native/src/tables.hpp
-          python tools/build_native.py build
+      - name: native core (the vocoder for Godot), compared with the Python reference by tests/test_native.py
+        run: python tools/build_native.py build
       - run: pytest -q
