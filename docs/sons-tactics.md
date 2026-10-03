@@ -18,6 +18,8 @@ Siglas: FFT, FFTA (inclui o FFTA2), TO (Tactics Ogre), UO (Unicorn Overlord), TS
 
 **Época.** Todo som pode sair em três épocas (`Sfx(..., era=...)`), medidas nos próprios jogos: `hd` (TS, OT), `16bit` (TO, FFTA2) e o desenho como está. O 8 bits é o estilo `retro`.
 
+**Botões.** Dentro de cada som, `knobs` variam registro, andamento, duração, anel, brilho, cintilância e o tom do jogo (`tare.tools.tune sounds --knobs`).
+
 ## 1. Grade e menus
 
 O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno, então precisa de variações discretas que não cansem. Os quatro timbres de `ui` (fantasy, crystal, wood, retro) foram aprovados de ouvido e ficam à escolha de quem monta o jogo.

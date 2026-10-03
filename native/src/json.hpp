@@ -41,6 +41,36 @@ struct Json {
         return v && v->kind == ARR ? v->arr : none;
     }
 
+    Json *find(std::string_view key) {
+        for (auto &[k, v] : obj)
+            if (k == key) return &v;
+        return nullptr;
+    }
+    void put(std::string_view key, Json value) {   // add or replace a field of an object
+        if (Json *v = find(key))
+            *v = std::move(value);
+        else
+            obj.emplace_back(std::string(key), std::move(value));
+    }
+    static Json of(double v) {
+        Json j;
+        j.kind = NUM;
+        j.num = v;
+        return j;
+    }
+    static Json of(const std::vector<double> &values) {
+        Json j;
+        j.kind = ARR;
+        for (double v : values) j.arr.push_back(of(v));
+        return j;
+    }
+    static Json of(const std::vector<std::vector<double>> &rows) {
+        Json j;
+        j.kind = ARR;
+        for (const auto &r : rows) j.arr.push_back(of(r));
+        return j;
+    }
+
     static Json parse(std::string_view text) {
         std::size_t i = 0;
         Json out = value(text, i);

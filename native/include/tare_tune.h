@@ -45,12 +45,15 @@ TT_API int32_t tt_render_spoken(const tt_bank *bank, const double *pieces, int32
                                 int32_t *n_out);
 
 /* A whole voice spec, as Voice.to_json() writes it: render.render(voice, sample_rate), float samples peaking at
- * -1 dBFS x gain. Spoken layers find their voice bank by name in `names` (n_banks of them, with `banks`).
+ * -1 dBFS x gain. `knobs` (NULL or "" for none) is a JSON object that turns the general knobs of sfx/knobs.py over
+ * the spec first, as Python would: {"register": -1, "tempo": 1.5} (register, tempo, length, ring, brightness,
+ * sparkle). Spoken layers find their voice bank by name in `names` (n_banks of them, with `banks`).
  * Returns 0 and a buffer of *n_out samples to release with tt_free; otherwise tt_last_error() says why:
  * 1 a bad argument or spec, 2 out of memory, 4 a layer this core does not render yet (chip programs, formant speech,
  * vocoded clips), 5 a spoken layer whose bank was not given. */
-TT_API int32_t tt_render_voice(const char *json, const tt_bank *const *banks, const char *const *names,
-                               int32_t n_banks, int32_t sample_rate, float **out, int32_t *n_out);
+TT_API int32_t tt_render_voice(const char *json, const char *knobs, const tt_bank *const *banks,
+                               const char *const *names, int32_t n_banks, int32_t sample_rate, float **out,
+                               int32_t *n_out);
 
 /* Why the last tt_render_voice on this thread failed ("" if it did not). */
 TT_API const char *tt_last_error(void);

@@ -33,7 +33,8 @@ public:
 };
 
 // Renders voice specs from tare.tools.tune (Voice.to_json(): the JSON text, or parsed), with the banks it was given
-// for the spoken layers: any sound of the project, the same samples the Python renderer makes.
+// for the spoken layers: any sound of the project, the same samples the Python renderer makes. `knobs` turns the
+// general knobs over it on the way ({"register": -1, "tempo": 1.5}...), as Python's Sfx(knobs=...) would.
 class TareSound : public RefCounted {
     GDCLASS(TareSound, RefCounted)
 
@@ -44,8 +45,8 @@ protected:
 
 public:
     void add_bank(const Ref<TareVoiceBank> &bank);
-    PackedFloat32Array render_samples(const Variant &spec, int64_t sample_rate) const;
-    Ref<AudioStreamWAV> render(const Variant &spec, int64_t sample_rate) const;
+    PackedFloat32Array render_samples(const Variant &spec, int64_t sample_rate, const Dictionary &knobs) const;
+    Ref<AudioStreamWAV> render(const Variant &spec, int64_t sample_rate, const Dictionary &knobs) const;
 };
 
 }  // namespace godot

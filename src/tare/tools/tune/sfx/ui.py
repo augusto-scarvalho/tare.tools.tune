@@ -28,7 +28,7 @@ from .. import rng
 from ..instruments import INSTRUMENTS, glockenspiel, marimba
 from ..score import Note
 from ..spec import Modal, Noise, Scatter, Syllable
-from . import Fx, bell_curve, decay_curve, recipe
+from . import KEY, Fx, bell_curve, decay_curve, recipe
 from .physical import burst, paper, splits
 
 BAR = (1.0, 2.756, 5.404, 8.933)   # a free bar's modes: glockenspiel, celesta
@@ -131,11 +131,12 @@ RESULTS = ("critical", "miss", "damage", "heal", "mp", "ko", "revive")
 
 
 def key_of(fx: Fx) -> int:
-    """Each game its own key, near C5 (the same for every recipe of one species)."""
-    return 72 + int(round(6 * (fx.g.base("key") - 0.5)))
+    """Each game its own key, near C5 (the same for every recipe of one species), unless the key knob sets it."""
+    key = fx.knob("key")
+    return int(round(key)) if key is not None else 72 + int(round(6 * (fx.g.base("key") - 0.5)))
 
 
-@recipe("ui", MENU + TACTICS + RESULTS, ("fantasy", "retro", "crystal", "wood"))
+@recipe("ui", MENU + TACTICS + RESULTS, ("fantasy", "retro", "crystal", "wood"), knobs=KEY)
 def ui(fx: Fx):
     """Interface: menus, a tactics grid (cursor, hover, select, confirm, cancel, range, text), its battles' rhythm
     (turns, battle start, ability learned) and what each blow did (critical, miss, damage, heal, mp, ko, revive);

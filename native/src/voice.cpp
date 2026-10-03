@@ -596,6 +596,156 @@ Vec fold_loop(const Vec &x, long long xfade, long long length) {
     return out;
 }
 
+// -- knobs (sfx/knobs.py) -------------------------------------------------------------------------------------------
+
+// The general knobs over a ready spec, as Python turns them over a designed one: same order, same arithmetic.
+struct KnobInfo {
+    const char *name;
+    double fallback, lo, hi;
+};
+constexpr KnobInfo KNOBS[] = {{"register", 0, -2, 2}, {"tempo", 1, 0.25, 4}, {"length", 1, 0.25, 4},
+                              {"ring", 1, 0.1, 4},    {"brightness", 0, -1, 1}, {"sparkle", 1, 0, 3}};
+
+void scale_rows(Json &e, const char *key, const Rows &fallback, std::size_t width, std::size_t col, double k) {
+    Rows rows = Spec{e}.rows(key, fallback, width);
+    for (Vec &r : rows) r[col] = r[col] * k;
+    e.put(key, Json::of(rows));
+}
+
+void apply_knobs(Json &voice, const Json &knobs) {
+    if (knobs.kind != Json::OBJ) throw std::runtime_error("knobs are a JSON object, name -> value");
+    double v[6];
+    for (int i = 0; i < 6; ++i) v[i] = KNOBS[i].fallback;
+    for (const auto &[name, value] : knobs.obj) {
+        int i = 0;
+        while (i < 6 && name != KNOBS[i].name) ++i;
+        if (i == 6)
+            throw std::runtime_error("unknown knob " + name +
+                                     (name == "key" ? ": the key is chosen when a sound is designed; move it with "
+                                                      "register (a semitone is 1/12)"
+                                                    : "; choose from register, tempo, length, ring, brightness, sparkle"));
+        if (value.kind != Json::NUM || value.num < KNOBS[i].lo || value.num > KNOBS[i].hi)
+            throw std::runtime_error("knob " + name + " goes from " + std::to_string(KNOBS[i].lo) + " to " +
+                                     std::to_string(KNOBS[i].hi));
+        v[i] = value.num;
+    }
+    const double reg = v[0], tempo = v[1], length = v[2], ring = v[3], bright = v[4], sparkle = v[5];
+    bool idle = true;
+    for (int i = 0; i < 6; ++i) idle = idle && v[i] == KNOBS[i].fallback;
+    if (idle) return;
+    for (const char *name : {"modal", "noise", "scatter", "syllables"})
+        if (!voice.find(name)) voice.put(name, Json::of(Vec{}));
+    std::vector<Json> &modal = voice.find("modal")->arr, &noise = voice.find("noise")->arr,
+                      &scatter = voice.find("scatter")->arr, &syl = voice.find("syllables")->arr;
+    const Rows HITS{{0.0, 1.0, 0.001}};
+    const auto num = [](const Json &e, const char *key, double fallback) { return e.number(key, fallback); };
+    const auto each = [&](auto &&fn) {
+        for (Json &e : modal) fn(e, 'm');
+        for (Json &e : noise) fn(e, 'n');
+        for (Json &e : scatter) fn(e, 's');
+        for (Json &e : syl) fn(e, 'y');
+    };
+    if (sparkle != 1.0) {
+        std::vector<Json> kept;
+        for (Json &e : scatter) {
+            if (e.text("event", "pop") != "ping") {
+                kept.push_back(std::move(e));
+            } else if (sparkle > 0) {
+                e.put("gain", Json::of(num(e, "gain", 1) * sparkle));
+                kept.push_back(std::move(e));
+            }
+        }
+        scatter = std::move(kept);
+    }
+    if (reg != 0.0)
+        each([&](Json &e, char t) {
+            const double r = std::pow(2.0, reg);
+            if (t == 'm') {
+                scale_rows(e, "modes", {}, 3, 0, r);
+                e.put("hardness", Json::of(num(e, "hardness", 8000) * r));
+            } else if (t == 'y') {
+                scale_rows(e, "pitch", {}, 2, 1, r);
+            } else if (t == 'n') {
+                scale_rows(e, "freq", {}, 2, 1, r);
+            } else {
+                const Vec f = Spec{e}.tuple("freq", {1000, 4000});
+                e.put("freq", Json::of(Vec{f[0] * r, f[1] * r}));
+            }
+        });
+    if (tempo != 1.0)
+        each([&](Json &e, char t) {
+            e.put("start", Json::of(num(e, "start", 0) * tempo));
+            if (t == 'm') {
+                Rows hits = Spec{e}.rows("hits", HITS, 3);
+                if (hits.size() > 1) {   // a double knock keeps its rhythm
+                    double last = -INFINITY;
+                    for (const Vec &h : hits) last = std::max(last, h[0]);
+                    for (Vec &h : hits) h[0] = h[0] * tempo;
+                    e.put("hits", Json::of(hits));
+                    e.put("dur", Json::of(num(e, "dur", 0) + std::max(last * (tempo - 1), 0.0)));
+                }
+            }
+        });
+    if (length != 1.0)
+        each([&](Json &e, char t) {
+            const double k = length;
+            e.put("start", Json::of(num(e, "start", 0) * k));
+            e.put("dur", Json::of(num(e, "dur", 0) * k));
+            if (t == 'm') {
+                scale_rows(e, "modes", {}, 3, 1, k);
+                scale_rows(e, "hits", HITS, 3, 0, k);
+                const Vec sc = Spec{e}.tuple("scrape", {0, 0, 0, 0});
+                e.put("scrape", Json::of(Vec{sc[0] * k, sc[1] * k, sc[2], sc[3] / k}));
+                e.put("damp", Json::of(num(e, "damp", 0) * k));
+            } else if (t == 'y') {
+                e.put("attack", Json::of(num(e, "attack", 0.01) * k));
+                e.put("release", Json::of(num(e, "release", 0.05) * k));
+                const Vec vib = Spec{e}.tuple("vibrato", {0, 0}), pul = Spec{e}.tuple("pulses", {0, 0, 2}),
+                          rough = Spec{e}.tuple("rough", {0, 30});
+                e.put("vibrato", Json::of(Vec{vib[0] / k, vib[1]}));
+                e.put("pulses", Json::of(Vec{pul[0] / k, pul[1], pul[2]}));
+                e.put("rough", Json::of(Vec{rough[0], rough[1] / k}));
+            } else if (t == 'n') {
+                e.put("attack", Json::of(num(e, "attack", 0.01) * k));
+                e.put("release", Json::of(num(e, "release", 0.05) * k));
+                const Vec w = Spec{e}.tuple("wobble", {0, 0});
+                e.put("wobble", Json::of(Vec{w[0] / k, w[1]}));
+            } else {
+                scale_rows(e, "rate", {}, 2, 1, 1 / k);
+            }
+        });
+    if (ring != 1.0)
+        each([&](Json &e, char t) {
+            if (t == 'm') {
+                scale_rows(e, "modes", {}, 3, 1, ring);
+                e.put("dur", Json::of(num(e, "dur", 0) * ring));
+                e.put("damp", Json::of(num(e, "damp", 0) * ring));
+            } else if (t == 'y' && e.text("source", "glottal") == "pulse" && num(e, "dur", 0) <= 0.5) {   // a blip
+                const double dur = num(e, "dur", 0);
+                e.put("dur", Json::of(std::max(dur * ring, 0.008)));
+                e.put("release", Json::of(std::min(num(e, "release", 0.05), dur * ring / 3)));
+            }
+        });
+    if (bright > 0)
+        each([&](Json &e, char t) {
+            if (t == 'm') {
+                Rows modes = Spec{e}.rows("modes", {}, 3);
+                double low = modes.empty() ? 1.0 : INFINITY;
+                for (const Vec &m : modes) low = std::min(low, m[0]);
+                e.put("hardness", Json::of(num(e, "hardness", 8000) * std::pow(2.0, 2 * bright)));
+                for (Vec &m : modes) m[2] = m[2] * std::pow(m[0] / low, 0.5 * bright);
+                e.put("modes", Json::of(modes));
+            } else if (t == 'y') {
+                e.put("brightness", Json::of(std::min(num(e, "brightness", 0.5) + 0.5 * bright, 1.0)));
+            }
+        });
+    if (bright < 0) {
+        const double cut = 16000 * std::pow(2.0, 3 * bright), lp = voice.number("lowpass", 0);
+        voice.put("lowpass", Json::of(std::min(lp != 0 ? lp : cut, cut)));
+    }
+    if (length != 1.0 && voice.number("loop", 0) != 0) voice.put("loop", Json::of(voice.number("loop", 0) * length));
+}
+
 thread_local std::string last_error;
 
 }  // namespace
@@ -607,16 +757,17 @@ extern "C" {
 
 const char *tt_last_error(void) { return last_error.c_str(); }
 
-int32_t tt_render_voice(const char *json, const tt_bank *const *banks, const char *const *names, int32_t n_banks,
-                        int32_t sr, float **out, int32_t *n_out) {
+int32_t tt_render_voice(const char *json, const char *knobs, const tt_bank *const *banks, const char *const *names,
+                        int32_t n_banks, int32_t sr, float **out, int32_t *n_out) {
     last_error.clear();
     if (!json || !out || !n_out || sr <= 0 || n_banks < 0 || (n_banks && (!banks || !names))) {
         last_error = "bad arguments";
         return 1;
     }
     try {
-        const Json voice = Json::parse(json);
+        Json voice = Json::parse(json);
         if (voice.kind != Json::OBJ) throw std::runtime_error("a voice spec is a JSON object");
+        if (knobs && *knobs) apply_knobs(voice, Json::parse(knobs));
         const std::string format = voice.text("format", "tare.tools.tune.voice");
         if (format != "tare.tools.tune.voice" && format != "creaturesynth.voice")
             throw std::runtime_error("not a tare.tools.tune.voice document");

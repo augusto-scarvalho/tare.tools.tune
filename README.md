@@ -221,6 +221,27 @@ Sfx("blade", "steel", era="16bit").render("clash")      # tare.tools.tune sfx bl
 
 O timbre retrô de 8 bits continua sendo o estilo `retro` de `ui` e `status`.
 
+**Botões (`knobs`).** Dentro do caráter de uma receita, qualquer som varia por botões com nome, faixa e descrição, que uma pessoa ou um agente lista (`tare.tools.tune sounds --knobs`, `Sfx.knob_info()`) e combina. No padrão, o som sai exatamente como foi desenhado.
+
+| botão | faixa | o que faz |
+|---|---|---|
+| `register` | −2 a 2 oitavas | tudo mais agudo ou mais grave: notas, anéis, faixas de ruído, brilho |
+| `tempo` | 0,25 a 4× | o espaço entre as partes (as notas de um arpejo, os golpes de um rufar); cada parte mantém a duração |
+| `length` | 0,25 a 4× | o som inteiro esticado ou comprimido no tempo, sem mudar a altura |
+| `ring` | 0,1 a 4× | quanto soam as notas batidas, as barras e os sinos; quanto duram os bipes |
+| `brightness` | −1 a 1 | mais escuro (−1: agudos cortados a partir de ~2 kHz) a mais brilhante (+1: golpes mais duros, parciais altos mais fortes) |
+| `sparkle` | 0 a 3× | os brilhinhos por cima; 0 tira |
+| `key` | nota MIDI 48 a 96 | só em `ui` e `status`: o tom do jogo (72 = Dó5); no padrão, vem da espécie |
+
+```python
+Sfx("ui", "crystal", era="hd", knobs={"register": -1, "tempo": 1.5}).render("confirm")   # mais grave e mais lento
+Sfx("status", "fantasy", knobs={"sparkle": 0}).render("shell")                          # escudo mágico sem brilho
+```
+
+Na linha de comando: `tare.tools.tune sfx ui crystal --event confirm --knob register=-1 --knob tempo=1.5`. No bestiário do `bake`: `"knobs": {"register": -1}`.
+
+Os botões gerais também giram **dentro do jogo**, sobre um spec pronto, com as mesmas contas do Python: no Godot, `som.render(spec, 48000, {"register": -1, "tempo": 1.5})`. O `key` se escolhe no desenho; no jogo, o tom muda com `register` (um semitom = 1/12).
+
 Cada família usa a técnica certa para o tipo de som:
 - **Corpos batidos** (metal, madeira, pedra, vidro, sinos, corda de arco) usam **síntese modal**: um impacto ou uma raspagem faz soar um conjunto de modos. O material define os modos, o tamanho a altura e o decaimento, a força a dureza do contato.
 - **Ar e massa** (golpes no ar, rugido de fogo, vento, estrondos) usam **ruído com filtro em movimento**.
@@ -410,6 +431,8 @@ Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por ch
   ```gdscript
   var som := TareSound.new()
   $Clique.stream = som.render(FileAccess.get_file_as_string("res://sounds/confirm.json"))
+  $Grave.stream = som.render(FileAccess.get_file_as_string("res://sounds/confirm.json"), 48000,
+                             {"register": -1, "tempo": 1.5})        # os botões, girados na hora
   var banco := TareVoiceBank.new()
   banco.load("res://voices/pt_alex.tvb")
   som.add_bank(banco)

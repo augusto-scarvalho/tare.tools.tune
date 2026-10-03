@@ -69,9 +69,10 @@ Error TareVoiceBank::load(const String &path) {
 
 void TareSound::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_bank", "bank"), &TareSound::add_bank);
-    ClassDB::bind_method(D_METHOD("render_samples", "spec", "sample_rate"), &TareSound::render_samples,
-                         DEFVAL(48000));
-    ClassDB::bind_method(D_METHOD("render", "spec", "sample_rate"), &TareSound::render, DEFVAL(48000));
+    ClassDB::bind_method(D_METHOD("render_samples", "spec", "sample_rate", "knobs"), &TareSound::render_samples,
+                         DEFVAL(48000), DEFVAL(Dictionary()));
+    ClassDB::bind_method(D_METHOD("render", "spec", "sample_rate", "knobs"), &TareSound::render, DEFVAL(48000),
+                         DEFVAL(Dictionary()));
 }
 
 void TareSound::add_bank(const Ref<TareVoiceBank> &bank) {
@@ -83,10 +84,11 @@ static String spec_text(const Variant &spec) {
     return spec.get_type() == Variant::STRING ? String(spec) : JSON::stringify(spec, "", false, true);
 }
 
-PackedFloat32Array TareSound::render_samples(const Variant &spec, int64_t sample_rate) const {
+PackedFloat32Array TareSound::render_samples(const Variant &spec, int64_t sample_rate, const Dictionary &knobs) const {
     ERR_FAIL_COND_V_MSG(spec.get_type() != Variant::STRING && spec.get_type() != Variant::DICTIONARY,
                         PackedFloat32Array(), "A voice spec is its JSON text or the parsed Dictionary");
     const CharString json = spec_text(spec).utf8();
+    const CharString knob_text = knobs.is_empty() ? CharString() : JSON::stringify(knobs, "", false, true).utf8();
     std::vector<const tt_bank *> handles;
     std::vector<CharString> names;
     const Array keys = banks_.keys();
@@ -99,7 +101,8 @@ PackedFloat32Array TareSound::render_samples(const Variant &spec, int64_t sample
     for (const CharString &n : names) name_ptrs.push_back(n.get_data());
     float *out = nullptr;
     int32_t n = 0;
-    const int32_t status = tt_render_voice(json.get_data(), handles.data(), name_ptrs.data(),
+    const int32_t status = tt_render_voice(json.get_data(), knobs.is_empty() ? nullptr : knob_text.get_data(),
+                                           handles.data(), name_ptrs.data(),
                                            static_cast<int32_t>(handles.size()), static_cast<int32_t>(sample_rate),
                                            &out, &n);
     ERR_FAIL_COND_V_MSG(status != 0, PackedFloat32Array(),
@@ -111,8 +114,8 @@ PackedFloat32Array TareSound::render_samples(const Variant &spec, int64_t sample
     return samples;
 }
 
-Ref<AudioStreamWAV> TareSound::render(const Variant &spec, int64_t sample_rate) const {
-    const PackedFloat32Array samples = render_samples(spec, sample_rate);
+Ref<AudioStreamWAV> TareSound::render(const Variant &spec, int64_t sample_rate, const Dictionary &knobs) const {
+    const PackedFloat32Array samples = render_samples(spec, sample_rate, knobs);
     PackedByteArray data;
     data.resize(samples.size() * 2);
     uint8_t *w = data.ptrw();

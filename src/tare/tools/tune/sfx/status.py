@@ -28,7 +28,7 @@ Two voices: "fantasy" (bells, glass, voices, air) and "retro" (square waves). Th
 from ..archetypes import VOWELS
 from ..score import Note
 from ..spec import Noise, Scatter, Syllable
-from . import Fx, bell_curve, decay_curve, recipe
+from . import KEY, Fx, bell_curve, decay_curve, recipe
 from .magic import boom
 from .physical import burst, splits
 from .ui import blip, glass, hz, key_of, note, play, run, sparkle, tick
@@ -63,7 +63,7 @@ def ticks(fx: Fx, start, first, ratio, until, a, b) -> list:
     return out
 
 
-@recipe("status", EVENTS, ("fantasy", "retro"))
+@recipe("status", EVENTS, ("fantasy", "retro"), knobs=KEY)
 def status(fx: Fx):
     """Status effects: buff, debuff, protect, shell, haste, slow, stop, the ailments (sleep, poison, silence, blind,
     confuse, charm, berserk, doom, stone, toad, zombie, paralysis), regen, a status running out, and the cure."""

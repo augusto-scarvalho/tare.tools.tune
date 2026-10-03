@@ -14,6 +14,10 @@ work the same way.
 
 ``era`` dresses any of them as a generation of games sounded (see ERAS): "hd" as today's
 HD-2D tactics, "16bit" as the sampled sound of the PSP and DS ones, "" as designed.
+``knobs`` vary one within its character (sfx/knobs.py): register, tempo, length, ring,
+brightness, sparkle, and the game's key for the interface and status sounds.
+
+    >>> Sfx("ui", "crystal", knobs={"register": -1, "tempo": 1.5}).voice("confirm")
 """
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
@@ -24,6 +28,8 @@ from .. import rng
 from ..genome import Genome
 from ..render import DEFAULT_SR, render
 from ..spec import Modal, Noise, Scatter, Syllable, Voice
+from .knobs import KEY, KNOBS, Knob
+from .knobs import apply as apply_knobs
 
 
 @dataclass(frozen=True)
@@ -33,14 +39,17 @@ class Recipe:
     styles: tuple[str, ...]
     description: str
     loops: tuple[str, ...] = ()     # events rendered as seamless loops
+    knobs: dict = field(default_factory=dict)   # name -> Knob: the general ones and the recipe's own
 
 
 RECIPES: dict[str, Recipe] = {}
 
 
-def recipe(name: str, events: tuple[str, ...], styles: tuple[str, ...], loops: tuple[str, ...] = ()):
+def recipe(name: str, events: tuple[str, ...], styles: tuple[str, ...], loops: tuple[str, ...] = (),
+           knobs: dict | None = None):
     def register(fn):
-        RECIPES[name] = Recipe(fn, events, styles, (fn.__doc__ or "").strip().splitlines()[0], loops)
+        RECIPES[name] = Recipe(fn, events, styles, (fn.__doc__ or "").strip().splitlines()[0], loops,
+                               {**KNOBS, **(knobs or {})})
         return fn
     return register
 
@@ -81,6 +90,10 @@ class Fx:
         self.style = sfx.style
         self.g = Genome(sfx.species, 0, 0.0, take, sfx.take_variation, dict(sfx.genes))
         self.size, self.power = sfx.size, sfx.power
+
+    def knob(self, name: str) -> float | None:
+        """A knob's value: the Sfx's own, else the recipe's default (None: the recipe decides)."""
+        return dict(self.sfx.knobs).get(name, RECIPES[self.sfx.kind].knobs[name].default)
 
     def rand(self, name: str) -> float:
         """Fresh randomness for every take (strike position, timing), independent of the species."""
@@ -162,6 +175,7 @@ class Sfx:
     genes: tuple[tuple[str, float], ...] = field(default=())
     name: str = ""
     era: str = ""                   # "", "hd" or "16bit" (ERAS)
+    knobs: tuple[tuple[str, float], ...] = field(default=())    # name -> value (see knob_info)
 
     def __post_init__(self):
         if self.kind not in RECIPES:
@@ -173,6 +187,14 @@ class Sfx:
             raise ValueError(f"{self.kind} has no style {self.style!r}; choose from {', '.join(r.styles)}")
         if self.era not in ERAS:
             raise ValueError(f"unknown era {self.era!r}; choose from {', '.join(repr(e) for e in ERAS)}")
+        knobs = dict(self.knobs.items() if isinstance(self.knobs, dict) else self.knobs)
+        for name, value in knobs.items():
+            k = r.knobs.get(name)
+            if k is None:
+                raise ValueError(f"{self.kind} has no knob {name!r}; choose from {', '.join(r.knobs)}")
+            if not k.lo <= float(value) <= k.hi:
+                raise ValueError(f"knob {name!r} goes from {k.lo:g} to {k.hi:g} ({k.unit}), not {value}")
+        object.__setattr__(self, "knobs", tuple(sorted((n, float(v)) for n, v in knobs.items())))
         genes = self.genes.items() if isinstance(self.genes, dict) else self.genes
         object.__setattr__(self, "genes", tuple(sorted(tuple(kv) for kv in genes)))
 
@@ -187,7 +209,7 @@ class Sfx:
         event = event or r.events[0]
         if event not in r.events:
             raise ValueError(f"{self.kind} has no event {event!r}; choose from {', '.join(r.events)}")
-        v = ERAS[self.era](r.design(Fx(self, event, take)))
+        v = ERAS[self.era](apply_knobs(r.design(Fx(self, event, take)), dict(self.knobs)))
         v.seed = rng.seed32(self.kind, self.style, self.species, take, event)
         v.meta.update({"kind": self.kind, "style": self.style, "event": event, "species": self.species,
                        "take": take, "size": self.size, "power": self.power})
@@ -195,7 +217,13 @@ class Sfx:
             v.meta["name"] = self.name
         if self.era:
             v.meta["era"] = self.era
+        if self.knobs:
+            v.meta["knobs"] = dict(self.knobs)
         return v
+
+    def knob_info(self) -> dict[str, Knob]:
+        """This sound's knobs: default, range, unit and what each does."""
+        return dict(RECIPES[self.kind].knobs)
 
     def render(self, event: str | None = None, take: int = 0, sr: int = DEFAULT_SR) -> np.ndarray:
         return render(self.voice(event, take), sr)
@@ -206,6 +234,7 @@ class Sfx:
     def to_dict(self) -> dict:
         d = asdict(self)
         d["genes"] = dict(self.genes)
+        d["knobs"] = dict(self.knobs)
         return d
 
     @classmethod
@@ -237,5 +266,5 @@ def decay_curve(rate: float = 5.0, points: int = 9):
 
 from . import ambience, magic, physical, status, ui, world  # noqa: E402,F401  (registers the recipes)
 
-__all__ = ["ERAS", "MATERIALS", "RECIPES", "Fx", "Material", "Modal", "Noise", "Recipe", "Scatter", "Sfx", "Syllable",
-           "bell_curve", "decay_curve", "recipe"]
+__all__ = ["ERAS", "KEY", "KNOBS", "MATERIALS", "RECIPES", "Fx", "Knob", "Material", "Modal", "Noise", "Recipe",
+           "Scatter", "Sfx", "Syllable", "bell_curve", "decay_curve", "recipe"]

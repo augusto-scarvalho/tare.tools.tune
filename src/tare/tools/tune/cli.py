@@ -166,7 +166,8 @@ def cmd_bake(a):
 def _sfx(a):
     from .sfx import Sfx
     genes = {name: float(value) for name, value in (g.split("=", 1) for g in a.gene)}
-    return Sfx(a.kind, a.style or "", a.species, a.size, a.power, genes=genes, era=a.era)
+    knobs = {name: float(value) for name, value in (k.split("=", 1) for k in a.knob)}
+    return Sfx(a.kind, a.style or "", a.species, a.size, a.power, genes=genes, era=a.era, knobs=knobs)
 
 
 def cmd_sfx(a):
@@ -180,11 +181,24 @@ def cmd_sfx(a):
 
 
 def cmd_sounds(a):
-    from .sfx import RECIPES
+    from .sfx import KNOBS, RECIPES
     for kind, r in RECIPES.items():
         print(f"{kind:10s} {r.description}")
         print(f"{'':10s} styles: {', '.join(r.styles)}")
         print(f"{'':10s} events: {', '.join(e + (' (loop)' if e in r.loops else '') for e in r.events)}")
+        own = [n for n in r.knobs if n not in KNOBS]
+        if own:
+            print(f"{'':10s} knobs: the general ones, and {', '.join(own)}")
+    if a.knobs:
+        shown = {}
+        for r in RECIPES.values():
+            shown.update(r.knobs)
+        print()
+        print("knobs (--knob NAME=VALUE; every sound has the general ones):")
+        for name, k in shown.items():
+            default = "from the species" if k.default is None else f"{k.default:g}"
+            span = f"{k.lo:g} .. {k.hi:g} {k.unit}"
+            print(f"  {name:11s} {span:22s} default {default:17s} {k.description}")
 
 
 def cmd_zoo(a):
@@ -266,13 +280,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--power", type=float, default=0.5)
     p.add_argument("--take", type=int, default=0)
     p.add_argument("--gene", action="append", default=[], metavar="NAME=VALUE")
+    p.add_argument("--knob", action="append", default=[], metavar="NAME=VALUE",
+                   help="register, tempo, length, ring, brightness, sparkle, key... (see 'sounds --knobs')")
     p.add_argument("-o", "--output")
     p.add_argument("--spec", help="also save the voice spec (JSON)")
     p.add_argument("--png", action="store_true")
     p.add_argument("--sr", type=int, default=DEFAULT_SR)
     p.set_defaults(fn=cmd_sfx)
 
-    sub.add_parser("sounds", help="sound effect kinds, styles and events").set_defaults(fn=cmd_sounds)
+    p = sub.add_parser("sounds", help="sound effect kinds, styles and events")
+    p.add_argument("--knobs", action="store_true", help="also list the knobs, their ranges and what they do")
+    p.set_defaults(fn=cmd_sounds)
 
     for name, fn, what, helptext in (("design", cmd_design, "prompt", "creature from a text prompt (CLAP)"),
                                      ("match", cmd_match, "sample", "creature closest to a recording (CLAP)")):

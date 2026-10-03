@@ -136,6 +136,41 @@ def test_the_grain_follows_the_level():
         assert 0.01 < err < 0.2                                     # 4 bits: a hiss 14-40 dB down, at any level
 
 
+def test_knobs_vary_a_sound_within_its_character():
+    base = Sfx("ui", "crystal", species=3)
+    assert np.array_equal(base.render("confirm", 0, SR),                                  # defaults: untouched
+                          base.but(knobs={"tempo": 1.0, "register": 0}).render("confirm", 0, SR))
+    starts = lambda s: sorted(m.start for m in s.voice("confirm").modal)  # noqa: E731
+    assert starts(base.but(knobs={"tempo": 2}))[-1] == pytest.approx(2 * starts(base)[-1], rel=0.01)
+    pitch = lambda s, e="confirm": np.mean([np.log2(f) for _, f in notes(s.voice(e))])  # noqa: E731
+    assert pitch(base.but(knobs={"register": -1})) == pytest.approx(pitch(base) - 1, abs=0.01)
+    assert base.but(knobs={"ring": 0.5}).voice("confirm").duration < base.voice("confirm").duration
+    assert base.but(knobs={"length": 2}).voice("confirm").duration == pytest.approx(
+        2 * base.voice("confirm").duration, rel=0.02)
+    learn = Sfx("ui", "fantasy", species=3)
+    assert any(s.event == "ping" for s in learn.voice("learn").scatter)
+    assert not any(s.event == "ping" for s in learn.but(knobs={"sparkle": 0}).voice("learn").scatter)
+    assert base.but(knobs={"brightness": -1}).voice("confirm").lowpass == 2000
+    keyed = [Sfx("ui", "crystal", species=n, knobs={"key": 60}) for n in range(4)]          # one key, any species
+    assert all(abs(12 * (pitch(s, "hover") - np.log2(440 * 2 ** ((67 - 69) / 12)))) < 0.2 for s in keyed)
+    assert Sfx.from_dict(json.loads(json.dumps(keyed[0].to_dict()))) == keyed[0]
+    assert keyed[0].voice("hover").meta["knobs"] == {"key": 60.0}
+    for bad in ({"tempo": 9}, {"pitch": 1}):
+        with pytest.raises(ValueError):
+            Sfx("ui", knobs=bad)
+    with pytest.raises(ValueError):
+        Sfx("blade", knobs={"key": 60})                                                    # only interface, status
+
+
+@pytest.mark.parametrize("kind", list(RECIPES))
+def test_every_recipe_takes_the_knobs(kind):
+    r = RECIPES[kind]
+    for knobs in ({"register": -2, "tempo": 4, "ring": 4, "sparkle": 3, "brightness": 1},
+                  {"register": 1, "tempo": 0.25, "length": 0.25, "ring": 0.1, "brightness": -1, "sparkle": 0}):
+        y = Sfx(kind, r.styles[-1], species=1, power=0.8, knobs=knobs).render(r.events[-1], 0, SR)
+        assert np.isfinite(y).all() and np.abs(y).max() > 0.3, (kind, knobs)
+
+
 def test_identity_takes_and_validation():
     sword = Sfx("blade", "steel", species=3)
     assert np.array_equal(sword.render("clash", 0, SR), sword.render("clash", 0, SR))
@@ -169,12 +204,13 @@ def test_runtime_bank_and_ambience_player():
 
 def test_bake_sounds_section(tmp_path):
     _, settings = load_bestiary({"creatures": {}, "sounds": {
-        "excalibur": {"kind": "blade", "species": "excalibur", "events": ["clash"]},
+        "excalibur": {"kind": "blade", "species": "excalibur", "events": ["clash"], "knobs": {"register": -1}},
         "rain": {"kind": "ambience", "style": "cave", "events": ["loop"]}}})
     m = bake({}, tmp_path, sr=SR, takes=2, workers=1, sounds=settings["sounds"])
     clash, loop = m["sounds"]["excalibur"]["events"]["clash"], m["sounds"]["rain"]["events"]["loop"]
     assert len(clash) == 2 and len(loop) == 1 and loop[0]["loop"] and "loop" not in clash[0]
     assert m["sounds"]["excalibur"]["sfx"]["kind"] == "blade" and (tmp_path / clash[1]["file"]).exists()
+    assert m["sounds"]["excalibur"]["sfx"]["knobs"] == {"register": -1.0}
     with pytest.raises(ValueError):
         load_bestiary({"sounds": {"x": {"kind": "blade", "events": ["fly"]}}})
     with pytest.raises(ValueError):

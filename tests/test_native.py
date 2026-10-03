@@ -1,6 +1,7 @@
 """The native core (native/, the renderer for Godot) against the Python reference: same random numbers, same sound.
 Skipped unless it is built: python tools/build_native.py build (or point TARE_TOOLS_TUNE_NATIVE at the library)."""
 import ctypes
+import json
 import os
 import platform
 import re
@@ -60,7 +61,7 @@ def lib():
                                      POINTER(c_double), c_int32, c_double, c_double, c_double, c_double, c_uint64,
                                      c_int32, POINTER(POINTER(c_double)), POINTER(c_int32)]
     lib.tt_render_voice.restype = c_int32
-    lib.tt_render_voice.argtypes = [c_char_p, POINTER(c_void_p), POINTER(c_char_p), c_int32, c_int32,
+    lib.tt_render_voice.argtypes = [c_char_p, c_char_p, POINTER(c_void_p), POINTER(c_char_p), c_int32, c_int32,
                                     POINTER(POINTER(c_float)), POINTER(c_int32)]
     lib.tt_last_error.restype = c_char_p
     lib.tt_free.argtypes = [c_void_p]
@@ -123,14 +124,15 @@ def test_spoken_layers_sound_the_same(lib, banks, speaker, sr):
         assert np.max(np.abs(got - expected)) < 1e-6, text
 
 
-def native_voice(lib, voice, sr: int, banks: dict | None = None):
+def native_voice(lib, voice, sr: int, banks: dict | None = None, knobs: dict | None = None):
     """tt_render_voice: (status, samples or the error)."""
     names = list(banks or {})
     handles = (c_void_p * max(len(names), 1))(*[banks[n] for n in names])
     keys = (c_char_p * max(len(names), 1))(*[n.encode() for n in names])
     out, n = POINTER(c_float)(), c_int32()
-    status = lib.tt_render_voice(voice if isinstance(voice, bytes) else voice.to_json().encode(), handles, keys,
-                                 len(names), sr, ctypes.byref(out), ctypes.byref(n))
+    status = lib.tt_render_voice(voice if isinstance(voice, bytes) else voice.to_json().encode(),
+                                 json.dumps(knobs).encode() if knobs else None, handles, keys, len(names), sr,
+                                 ctypes.byref(out), ctypes.byref(n))
     if status:
         return status, lib.tt_last_error().decode()
     y = np.ctypeslib.as_array(out, (n.value,)).copy()
@@ -187,6 +189,22 @@ def test_the_eras_sound_the_same(lib):
                                    ("ambience", "rain", "loop")):
             voice = Sfx(kind, style, species=3, power=0.8, era=era).voice(event)
             assert same(lib, voice, 22050) < 1e-6, (era, kind)
+
+
+@built
+def test_a_game_turns_the_knobs_as_python_does(lib):
+    """The knobs over a ready spec (native) against Python designing the sound with them."""
+    for kind, style, event in (("ui", "crystal", "confirm"), ("ui", "retro", "learn"), ("status", "fantasy", "shell"),
+                               ("blade", "steel", "clash"), ("ambience", "rain", "loop")):
+        plain = Sfx(kind, style, species=3, power=0.8, era="16bit")
+        for k in ({"register": -1, "tempo": 1.5}, {"length": 0.6, "ring": 2.5, "sparkle": 0},
+                  {"brightness": 0.7, "register": 0.25}, {"brightness": -0.8, "sparkle": 2.5, "length": 1.3}):
+            status, got = native_voice(lib, plain.voice(event), 22050, knobs=k)
+            assert status == 0, got
+            expected = plain.but(knobs=k).render(event, 0, 22050)
+            assert len(got) == len(expected) and np.max(np.abs(got - expected)) < 1e-6, (kind, event, k)
+    status, why = native_voice(lib, Sfx("ui").voice("cursor"), 22050, knobs={"key": 60})
+    assert status == 1 and "register" in why
 
 
 @built
