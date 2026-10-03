@@ -634,6 +634,11 @@ def gear_move(fx: Fx, style: str, dur: float, energy: float) -> list:
         return [Modal(0.0, round(dur + 0.3, 3), plate, hits, (0.0, round(dur, 3), 0.25, 0.0), 12000, 0.2),
                 Noise(0.0, round(dur, 3), [(0, 900), (1, 700)], "band", 0.7, amp=swell, attack=0.02, release=0.05,
                       wobble=(12.0, 0.5), gain=0.2)]
+    if style == "cloth":   # fabric only: a rustle swelling and falling, no creak
+        return [Noise(0.0, round(dur, 3), [(0, 500), (1, 650)], "band", 0.5, amp=swell, attack=0.03, release=0.05,
+                      wobble=(22.0, 0.8), gain=0.8),
+                Noise(0.0, round(dur, 3), [(0, 2500), (1, 3000)], "band", 0.6, amp=swell, attack=0.03, release=0.05,
+                      wobble=(30.0, 0.8), gain=0.25)]
     # leather: a low creak and a rustle
     hits = stick_slip(fx, dur, 0.012, 0.35, 0.8)
     body = Modal(0.0, round(dur + 0.1, 3), wood_modes(fx, 0.15, 0.02, 8), hits, hardness=1600, click=0.02)
@@ -868,6 +873,12 @@ def item(fx: Fx, style: str, event: str) -> list:
         if event == "use":
             return paper(fx, 0.45 + 0.2 * fx.rand("pages"))
         return paper(fx, 0.12) + [Noise(0.1, 0.08, [(0, 500), (1, 300)], "low", 0.8, amp=decay_curve(5), gain=0.5)]
+    if style == "letter":   # Triangle Strategy's letters handed over: ~0.3 s, bright paper (strongest 8 kHz up)
+        crisp = [replace(x, freq=[(t, f * 2.0) for t, f in x.freq]) if isinstance(x, Noise) else x
+                 for x in paper(fx, 0.28 if event == "pickup" else 0.55 if event == "use" else 0.2)]
+        if event == "drop":
+            crisp.append(Noise(0.18, 0.08, [(0, 600), (1, 400)], "low", 0.8, amp=decay_curve(5), gain=0.3))
+        return crisp
     # gem: a crystal that rings
     ring = 1.5 if event == "use" else 1.0
     gem = fx.strike("glass", size=0.1, hits=[(0.0, 1.0, 0.0006)], ring=ring * 2, prefix="gem", click=0.05)
@@ -934,10 +945,11 @@ def breakable(fx: Fx, style: str, broken: bool, size: float) -> list:
 
 # --- weapons ----------------------------------------------------------------------------------------------------------
 
-@recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop"),
+@recipe("blade", ("swing", "clash", "hit_flesh", "hit_wood", "hit_metal", "hit_stone", "draw", "drop", "quickdraw"),
         ("steel", "iron", "glass", "wood"))
 def blade(fx: Fx):
-    """Swords, daggers, axes: swing, clash, hits on flesh/wood/armor/stone, draw, drop."""
+    """Swords, daggers, axes: swing, clash, hits on flesh/wood/armor/stone, draw, drop, and the katana's quick
+    draw (out of the scabbard and through in one move: in the games, a cut of 0.34-0.63 s falling 30-46 semitones)."""
     mat, s, p, e = fx.style, fx.size, fx.power, fx.event
     # chosen by ear: size 0.5 / power 0.5 is the measured sword, size 1 the heavy one, power 1 the cinematic one
     # (swing, clash and hits; glass and wooden blades keep the generic clash and hits)
@@ -954,6 +966,12 @@ def blade(fx: Fx):
     if e in TARGETS and mat in ("steel", "iron"):
         layers = blade_hit(fx, TARGETS[e], shift, 0.5 if mat == "iron" else 1.0, big, hard)
         return fx.voice(fx.level(0.95), **splits(layers))
+    if e == "quickdraw":
+        draw = blade_draw(fx, shift, 0.6, 0.12) if mat in ("steel", "iron") else []
+        cut = [replace(x, start=round(x.start + 0.1, 4)) for x in blade_swing(fx, 0.03, 0.12, 2200, 0.6, 0.0)]
+        cut.append(Noise(0.12, 0.32, [(0, 6000), (1, 1100)], "band", 6.0, amp=bell_curve(0.15, 1.5), attack=0.005,
+                         release=0.02, gain=0.45))       # the edge singing down
+        return fx.voice(fx.level(0.7), **splits(draw + cut))
     if e == "draw" and mat in ("steel", "iron"):
         dur = (0.3 + 0.25 * s) * (0.85 + 0.3 * fx.rand("pull")) * (1 - 0.3 * hard)
         ring = (1 + 1.2 * hard) * (0.5 if mat == "iron" else 1.0)
@@ -1006,9 +1024,10 @@ def shield(fx: Fx):
     return fx.voice(fx.level(0.95), **splits(layers))
 
 
-@recipe("gear", ("move", "run", "equip"), ("chainmail", "plate", "leather"))
+@recipe("gear", ("move", "run", "equip"), ("chainmail", "plate", "leather", "cloth"))
 def gear(fx: Fx):
-    """Armour and clothing moving: chainmail jingling, plate clanking, leather creaking."""
+    """Armour and clothing moving: chainmail jingling, plate clanking, leather creaking, cloth rustling (a kneel, a
+    curtsy, a cloak: Triangle Strategy's ~0.4 s, strongest near 500 Hz)."""
     s, p, e = fx.size, fx.power, fx.event
     if e == "equip":   # putting it on: two movements and a buckle or a latch
         a = gear_move(fx, fx.style, 0.6 + 0.3 * s, 0.8)
@@ -1026,10 +1045,23 @@ def body(fx: Fx):
     return fx.voice(fx.level(0.9), **splits(body_fall(fx, fx.style, weight, dead=fx.event == "drop")))
 
 
-@recipe("door", ("open", "close", "locked", "unlock", "knock"), ("wood", "iron"))
+@recipe("door", ("open", "close", "locked", "unlock", "knock", "slam", "break"), ("wood", "iron"))
 def door(fx: Fx):
-    """Doors and gates, wooden or iron: open (squeaking), close (slam), locked (rattle), unlock, knock."""
-    layers = closure(fx, "door", fx.event, fx.style == "iron", fx.size)
+    """Doors and gates, wooden or iron: open (squeaking), close, locked (rattle), unlock, knock, slammed shut,
+    broken down. (Triangle Strategy's slammed and broken doors: ~0.8 s, their weight at 63 Hz.)"""
+    iron = fx.style == "iron"
+    if fx.event == "slam":      # flung shut: the frame and the wall take it, low, the latch rattling
+        layers = closure(fx, "door", "close", iron, fx.size)
+        layers = [replace(x, gain=round(x.gain * 1.3, 3)) if isinstance(x, Noise) else x for x in layers]
+        hit = max(x.start for x in layers if isinstance(x, Noise))
+        layers += [thud(hit, 0.4, 90, 1.0), latch(fx, hit + 0.04, 0.6, "rattle"), latch(fx, hit + 0.1, 0.4, "rattle2")]
+        return fx.voice(fx.level(1.0), **splits(layers), room=0.3)
+    if fx.event == "break":     # broken down: a heavy blow, the wood splitting, the door crashing open
+        layers = [thud(0.0, 0.35, 80, 1.0), *breakable(fx, "crate", True, 0.9),
+                  panel(fx, "gate" if iron else "door", [(0.0, 1.0, 0.004), (0.45, 0.6, 0.004)]),
+                  thud(0.45, 0.4, 100, 0.8)]
+        return fx.voice(fx.level(1.0), **splits(layers), room=0.3)
+    layers = closure(fx, "door", fx.event, iron, fx.size)
     return fx.voice(fx.level(0.9), **splits(layers))
 
 
@@ -1040,9 +1072,10 @@ def chest(fx: Fx):
     return fx.voice(fx.level(0.8), **splits(layers))
 
 
-@recipe("item", ("pickup", "use", "drop"), ("coins", "potion", "scroll", "gem"))
+@recipe("item", ("pickup", "use", "drop"), ("coins", "potion", "scroll", "gem", "letter"))
 def item_recipe(fx: Fx):
-    """Inventory items: coins, a potion, a scroll or book, a gem; picked up, used (paid, drunk, read), dropped."""
+    """Inventory items: coins, a potion, a scroll or book, a gem, a letter; picked up (handed over), used (paid,
+    drunk, read), dropped."""
     return fx.voice(fx.level(0.7), **splits(item(fx, fx.style, fx.event)))
 
 

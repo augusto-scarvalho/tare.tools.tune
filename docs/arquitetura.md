@@ -387,6 +387,53 @@ E o que os jogos corrigiram nos eventos:
 - No TS: `sleep` é um tom grave puro (~400 Hz) pulsando ~11 vezes por segundo e descendo ~9 semitons; `silence` cai ~32 semitons; `blind` entra devagar (~0,4 s) e grave (~600 Hz). E três estados novos: `paralysis` (um crepitar brilhante, centro em ~7 kHz, caindo ~9 semitons), `regen` (um brilho muito agudo, ~9 kHz) e `expire` (um estado acabando: um tom brilhante que entra em 0,3 s e desliza ~16 semitons para baixo).
 - Gritos: as vozes de dor do TO são arquejos de ~0,4 s, com voz em só um quarto a um terço do tempo e perto do tom da fala (homens ~160 Hz, mulheres ~380 Hz); as de morte, 0,65–0,85 s, largas (13–20 semitons) e caindo ~5. Os gritos de batalha do Octopath ficam só ~7 semitons acima da fala. Daí o estilo `gasp` de `emote`: duração ajustada a cada tipo (dor 0,42 s, morte 0,75 s) e esforço 0,4 (o intérprete gritou com tudo; a voz nova, não).
 
+**Armas que faltavam (`sfx/arms.py`: `spear`, `fist`, `gun`, `thrown`; e `blade` quickdraw).** Medidas nos jogos (*Tactics Ogre: Reborn* e *FFTA2* nas cópias do usuário, os efeitos de *Triangle Strategy*) e nos impactos CC0 da Kenney; só análise:
+
+| medido | o que é | evento |
+|---|---|---|
+| a estocada da lança (TO) | 0,28 s, entra em 25 ms, ar centrado perto de 0,9 kHz, caindo ~36 semitons | `spear` thrust |
+| perfurar (TO) | entra em 15 ms, 0,44 s, ruidoso, o rasgo subindo | `spear` hit_flesh |
+| o salto do dragoon (TS) | ~2,5 s e uns oito eventos: o impulso, o ar subindo e descendo, o estrondo | `spear` jump, land |
+| o punho no ar (TO) e o soco (Kenney) | ~70 ms de ar; ao acertar, um baque grave (centro ~115 Hz, tudo abaixo de ~450 Hz), 0,28 s | `fist` swing, hit_flesh |
+| o tiro (FFTA2, TO) | 0,6–0,8 s, entra em 5–22 ms, um estouro centrado em 0,7–1,1 kHz sobre uma cauda grave | `gun` shot (a pederneira e a caçoleta antes, nas de pederneira) |
+| recarregar (FFTA2) | quatro cliques brilhantes em ~0,26 s | `gun` reload |
+| o impacto da bala (TO) | 0,29 s, ruidoso, ~1,9 kHz | `gun` impact |
+| arremessar (FFTA2, TO) | um silvo curto e claro, 0,13–0,14 s | `thrown` throw |
+| a granada (FFTA2) | ~0,64 s e uns quatro eventos | `thrown` fuse, blast |
+| a katana (TO, TS) | um corte de 0,34–0,63 s caindo 30–46 semitons | `blade` quickdraw: saca em 0,12 s e corta, o fio cantando para baixo |
+
+**Magias que faltavam (`spell`: water, wind, earth, poison, gravity, meteor; `summon`).** Medidas nos efeitos de *Triangle Strategy* e nas invocações do *FFTA2* (cópia do usuário); só análise:
+
+| medido | o que é | evento |
+|---|---|---|
+| água (TS) | ~2,1 s, crescendo em ~0,25 s, mais forte em 1–4 kHz, subindo um pouco | `water`: o "ploc", a onda de espuma, gotas caindo depois |
+| vento (TS) | ~2 s, uma rajada crescendo por ~0,5 s, larga (0,5–2 kHz) | `wind`: rajadas com assobio; viajando, um redemoinho (a faixa girando) |
+| terra (TS) | ~1,7 s, a rocha rachando mais forte (~2 kHz), caindo ~11 semitons | `earth`: estalos descendo, pedras, o tremor |
+| veneno (TS) | ~0,9 s, entra em ~40 ms, mais forte perto de 4 kHz | `poison`: um chiado ácido, bolhas por baixo |
+| chegada de invocação (FFTA2) | 4,6–8,4 s, crescendo por ~2,3 s, grave (63 Hz–1 kHz) | `summon` arrive: o chão, o ar subindo, vozes, um clarão; o dragão bate as asas e ruge |
+| golpe de invocação (FFTA2) | ~2–5 s, o peso em 125–500 Hz | `summon` strike: o impacto da magia do elemento, maior e mais grave, depois de uma investida |
+
+Sem gravação, pelo que os clássicos fazem: `gravity` (um tom grave afundando, uma pulsação lenta, o esmagamento) e `meteor` (um assobio caindo do céu, o rugido descendo, a explosão e uma chuva de pedras). A partida da invocação (`leave`) sobe: vozes se afinando, um brilho, o ar puxado para cima.
+
+**O dia a dia de uma história (`sfx/home.py`: `book`, `tableware`, `furniture`, `bell`; e `door` slam/break, `item` letter, `gear` cloth).** Medidos nas cenas de *Triangle Strategy*, no *FFTA2* (cópia do usuário) e nos sons CC0 de RPG e de impacto da Kenney; só análise:
+
+| medido | o que é | evento |
+|---|---|---|
+| página | 0,35–0,9 s de papel, mais forte em 2–8 kHz, duas ou três estaladas | `book` page; `flip` folheia muitas |
+| livro aberto, fechado, pousado | 0,14–0,48 s com o baque da capa grave; o fechar é um tapa (~0,18 s) em 250–500 Hz; pousar, ~0,17 s perto de 250 Hz | `book` open, close, place |
+| taças | quase puras, 1–2 kHz, ~0,11 s (o cristal fino soa mais) | `tableware` clink |
+| copo pousado | 0,3–0,5 s, o anel perto de 1 kHz sobre a batida da mesa | `tableware` set |
+| prato quebrando | ~0,9 s, claro (4–8 kHz) e ruidoso | `tableware` break |
+| talheres | tiques leves de metal em 1–4 kHz | `tableware` cutlery |
+| cadeira arrastada, soco na mesa | ~0,4 s de raspado perto de 0,9 kHz; ~0,36 s perto de 250 Hz | `furniture` chair, desk |
+| cama | ~0,6 s de rangidos e roupa, grave | `furniture` bed |
+| sinos | igreja e casamento: ~7 s, 125 Hz–1 kHz; o sininho de loja: ~0,6 s perto de 2 kHz | `bell` |
+| portas batidas e arrombadas | ~0,8 s, o peso em 63 Hz | `door` slam, break |
+| cartas passadas | ~0,3 s de papel, claro (8 kHz para cima) | `item` letter |
+| roupa (ajoelhar, reverência) | ~0,4 s, mais forte perto de 500 Hz | `gear` cloth |
+
+Sem gravação: servir (`pour`: o ar do copo subindo de tom enquanto enche, bolhas), mexer (`stir`: um tilintar a cada volta da colher), escrever (`write`: a pena riscando em traços, molhada uma vez no tinteiro), gaveta e sentar.
+
 **Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
 - **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.
 - **Tocha:** acende com um raspado e uma labareda que vira crepitar (larga, 1–6 kHz, ~1 s). Apagar é um chiado.

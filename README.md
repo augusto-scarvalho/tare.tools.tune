@@ -185,15 +185,23 @@ audio = rei.render("Salve o reino!")
 
 | tipo | estilos | eventos |
 |---|---|---|
-| `blade` (espadas, adagas, machados) | steel, iron, glass, wood | swing, clash, hit_flesh, hit_wood, hit_metal, hit_stone, draw, drop |
+| `blade` (espadas, adagas, machados) | steel, iron, glass, wood | swing, clash, hit_flesh, hit_wood, hit_metal, hit_stone, draw, drop, quickdraw (o saque-e-corte da katana) |
+| `spear` (lanças e alabardas) | spear, halberd | thrust, swing, hit_flesh, hit_metal, jump e land (o salto do dragoon) |
+| `fist` (mãos nuas) | bare, gauntlet | swing, kick, hit_flesh, hit_heavy, hit_armor, block |
+| `gun` (armas de fogo) | pistol, musket, cannon | shot, click, reload, impact |
+| `thrown` (arremesso) | knife, shuriken, bomb | throw, fly, hit_wood, hit_flesh, fuse, blast |
 | `blunt` (clavas, maças, martelos) | wood, iron, stone | swing, hit_flesh, hit_wood, hit_metal, hit_stone, drop |
 | `bow` | longbow, crossbow | draw, release, fly, hit_wood, hit_flesh, hit_stone |
 | `shield` (escudos) | wood, metal | block_blade, block_blunt, block_arrow, bash |
-| `gear` (armaduras e roupas) | chainmail, plate, leather | move, run, equip |
+| `gear` (armaduras e roupas) | chainmail, plate, leather, cloth | move, run, equip |
 | `body` (corpo caindo) | stone, wood, dirt | fall, drop |
-| `door` (portas e portões) | wood, iron | open, close, locked, unlock, knock |
+| `door` (portas e portões) | wood, iron | open, close, locked, unlock, knock, slam, break |
 | `chest` (baús) | wood, iron | open, close, locked, unlock |
-| `item` (itens) | coins, potion, scroll, gem | pickup, use, drop |
+| `item` (itens) | coins, potion, scroll, gem, letter | pickup, use, drop |
+| `book` (livros e pergaminhos) | tome, notebook, scroll | open, close, page, flip, place, write |
+| `tableware` (copos, canecas, pratos, talheres) | glass, ceramic, pewter, wood | clink, set, pour, drink, cutlery, stir, break |
+| `furniture` (móveis) | wood, oak | chair, sit, desk, drawer_open, drawer_close, bed |
+| `bell` (sinos) | church, hand, shop, ship | ring, toll |
 | `breakable` (coisas para quebrar) | crate, barrel, pot, glass | hit, break |
 | `ui` (interface) | fantasy, crystal, wood, retro | click, open, close, levelup, quest, error; para tactics: cursor, hover, target, select, confirm, cancel, scroll, range, text, advance, turn, enemy_turn, learn, battle; o que cada golpe fez: critical, miss, damage, heal, mp, ko, revive |
 | `status` (estados) | fantasy, retro | buff, debuff, protect, shell, haste, slow, stop, sleep, poison, silence, blind, confuse, charm, berserk, doom, stone, toad, zombie, paralysis, regen, expire, cure |
@@ -203,7 +211,8 @@ audio = rei.render("Salve o reino!")
 | `water` (água) | small, big | splash, dive, drip |
 | `footstep` | stone, wood, metal, gravel, dirt, grass, snow, water | walk, run, land, scuff |
 | `explosion` | fire, stone, magic | blast, distant, debris |
-| `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal | charge, cast, travel (loop), impact |
+| `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal, water, wind, earth, poison, gravity, meteor | charge, cast, travel (loop), impact |
+| `summon` (invocações) | fire, ice, thunder, earth, holy, dark, dragon | arrive, strike, leave |
 | `ambience` | rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon | loop (16 s, sem emenda), accent |
 
 **Época (`era`).** Qualquer efeito pode vir vestido como uma geração de jogos, medida nos próprios jogos:

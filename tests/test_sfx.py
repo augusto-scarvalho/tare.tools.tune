@@ -136,6 +136,48 @@ def test_the_grain_follows_the_level():
         assert 0.01 < err < 0.2                                     # 4 bits: a hiss 14-40 dB down, at any level
 
 
+def test_the_new_weapons_keep_to_the_games():
+    spear = Sfx("spear", "spear", species=2)
+    thrust = spear.voice("thrust").noise[0]
+    assert thrust.freq[-1][1] < thrust.freq[0][1] / 4 and spear.voice("thrust").duration < 0.35   # TO: 0.28 s, falling
+    assert spear.voice("land").duration > 1.0 > spear.voice("thrust").duration
+    fist = Sfx("fist", "bare", species=2)
+    assert fist.voice("swing").duration < 0.12                                                   # TO: ~70 ms of air
+    assert min(f for m in fist.voice("hit_flesh").modal for f, _, _ in m.modes) < 150           # a low body thump
+    pistol, cannon = Sfx("gun", "pistol", species=2), Sfx("gun", "cannon", species=2)
+    assert 0.5 < pistol.voice("shot").duration < cannon.voice("shot").duration
+    clicks = [m.start for m in pistol.voice("reload").modal]
+    assert len(clicks) == 4 and max(clicks) < 0.35                                              # four in ~0.26 s
+    assert Sfx("thrown", "knife").voice("throw").duration < 0.2
+    spins = lambda style: len(Sfx("thrown", style).voice("fly").noise[0].amp)  # noqa: E731
+    assert spins("shuriken") > spins("knife")
+    cut = Sfx("blade", "steel", species=2).voice("quickdraw")
+    assert any(n.freq[0][1] > 4 * n.freq[-1][1] for n in cut.noise)                            # the edge sings down
+
+
+def test_the_new_magic_keeps_to_the_games():
+    for el in ("water", "wind", "earth", "poison", "gravity", "meteor"):
+        assert el in RECIPES["spell"].styles
+    assert Sfx("spell", "poison").voice("impact").duration < 1.5 < Sfx("spell", "meteor").voice("impact").duration
+    for style in RECIPES["summon"].styles:
+        s = Sfx("summon", style, species=2)
+        assert s.voice("arrive").duration > 4.0 and s.voice("strike").duration > 2.5     # FFTA2: ~5 s, ~4 s
+        rise = s.voice("leave").syllables[-1].pitch
+        assert rise[-1][1] > 2 * rise[0][1]                                             # leaving upward
+
+
+def test_everyday_sounds_keep_to_the_references():
+    tome = Sfx("book", "tome", species=2)
+    assert max(tome.voice("page").noise, key=lambda n: n.dur).freq[0][1] > 1500         # paper: 2-8 kHz
+    assert min(m.modes[0][0] for m in tome.voice("close").modal) < 500                     # a slap at 250-500 Hz
+    assert tome.voice("close").duration < 0.4 < tome.voice("page").duration
+    glass = Sfx("tableware", "glass", species=2).voice("clink").modal[0].modes[0][0]
+    assert 1000 < glass < 2200                                                            # nearly pure, 1-2 kHz
+    assert Sfx("bell", "church").voice("ring").duration > 5 > 1 > Sfx("bell", "shop").voice("ring").duration
+    assert Sfx("door", "wood").voice("break").duration > 1.0 and Sfx("item", "letter").voice("pickup").duration < 0.5
+    assert len(Sfx("tableware", "pewter", species=2).voice("cutlery").modal) >= 5         # a meal of light ticks
+
+
 def test_knobs_vary_a_sound_within_its_character():
     base = Sfx("ui", "crystal", species=3)
     assert np.array_equal(base.render("confirm", 0, SR),                                  # defaults: untouched

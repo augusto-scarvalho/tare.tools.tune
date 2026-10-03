@@ -35,7 +35,7 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Texto aparecendo letra a letra, com a cor da voz de quem fala | FFTA, TO | tem: `ui` text (`size` engrossa a voz); balbucio `animalese` | A |
 | Avançar o diálogo | todos | tem: `ui` advance | A |
 | Escolher para onde a unidade fica virada | FFT, FFTA, TO | falta | B |
-| Comprar e vender, equipar, trocar de classe | todos | parcial: `item` coins, `gear` equip | B |
+| Comprar e vender, equipar, trocar de classe | todos | parcial: `item` coins, letter, `gear` equip | B |
 | Salvar e carregar | todos | falta | C |
 
 ## 2. Ritmo da batalha
@@ -73,11 +73,11 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Espadas, adagas, machados | todos | tem: `blade` | A |
 | Maças, martelos, cajados | todos | tem: `blunt` | A |
 | Arcos e bestas | todos | tem: `bow` | A |
-| Lanças e alabardas: estocada; o salto do dragoon (sobe, cai) | todos | falta | A |
-| Mãos nuas: soco, chute | FFT, FFTA | falta | A |
-| Katana: sacar e cortar num golpe só | FFT, FFTA | parcial: `blade` draw, swing | B |
-| Armas de fogo: tiro, recarregar | FFT, FFTA | falta | B |
-| Arremesso: shuriken, facas, bombas | FFT, FFTA | falta | B |
+| Lanças e alabardas: estocada; o salto do dragoon (sobe, cai) | todos | medido nos jogos: `spear` | A |
+| Mãos nuas: soco, chute | FFT, FFTA | medido: `fist` | A |
+| Katana: sacar e cortar num golpe só | FFT, FFTA | medido nos jogos: `blade` quickdraw | B |
+| Armas de fogo: tiro, recarregar | FFT, FFTA | medido nos jogos: `gun` | B |
+| Arremesso: shuriken, facas, bombas | FFT, FFTA | medido nos jogos: `thrown` | B |
 | Chicote, livro, instrumento do bardo, dança, cartas e dados | FFT, FFTA | falta | C |
 | Cerco: catapulta, balista, aríete | TO, UO, TS | falta | C |
 
@@ -86,10 +86,10 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
 | Fogo, gelo, raio, arcano, sagrado, sombra, natureza, cura | todos | tem: `spell` | A |
-| Água, vento, terra e terremoto, veneno | todos | falta | A |
+| Água, vento, terra e terremoto, veneno | todos | medido nos jogos: `spell` water, wind, earth, poison | A |
 | Níveis da mesma magia (Fire, Fira, Firaga) | FFT, FFTA | parcial: `power` | A |
-| Tempo: pressa, lentidão, parar, gravidade, meteoro | FFT, FFTA | parcial: `status` haste, slow, stop | B |
-| Invocações: chegada, golpe, saída | FFT, FFTA | falta | B |
+| Tempo: pressa, lentidão, parar, gravidade, meteoro | FFT, FFTA | tem: `status` haste, slow, stop; desenhado: `spell` gravity, meteor | B |
+| Invocações: chegada, golpe, saída | FFT, FFTA | medido no FFTA2: `summon` | B |
 | Conjuração carregando por turnos | FFT, TO | parcial: `spell` charge | B |
 | Terreno reagindo: óleo pegando fogo, água eletrificada, gelo, vento empurrando | TS | parcial: `spell`, `torch`, `water` | B |
 | Geomancia, canções, danças | FFT, FFTA | falta | C |
@@ -147,6 +147,18 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Cartas de tarô; voltar o tempo | TO | falta | C |
 | Encontro de tropas, captura de fortaleza, libertação de cidade | UO | falta | C |
 | Balança da Convicção: votação, convicção ganha | TS | falta | C |
+
+## 12. Cenas de história (o dia a dia)
+
+| Som | Jogos | Hoje | Prioridade |
+|---|---|---|---|
+| Portas: abrir, fechar, trancada, bater, tranco, arrombar | todos | medido: `door` (slam e break nos jogos) | A |
+| Livros e páginas: abrir, fechar, virar, folhear, pousar, escrever | todos | medido: `book` | A |
+| Copos, canecas e pratos: brinde, pousar, servir, beber, talheres, mexer, quebrar | todos | medido: `tableware` | A |
+| Móveis: cadeira, sentar, mesa, gaveta, cama | todos | medido: `furniture` | B |
+| Sinos: igreja e casamento, mão, loja, navio | todos | medido: `bell` | B |
+| Cartas e encomendas passadas de mão em mão; roupa (ajoelhar, reverência) | TS | medido: `item` letter, `gear` cloth | B |
+| Um salão de jantar, uma taverna cheia | TS | falta (um ambiente) | C |
 
 ## Ordem proposta
 
