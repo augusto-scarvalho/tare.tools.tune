@@ -32,9 +32,10 @@ public:
     const tt_bank *handle() const { return bank_; }
 };
 
-// Renders voice specs (Voice.to_json() from tare.tools.tune, parsed) with the banks it was given.
-class TareSpeech : public RefCounted {
-    GDCLASS(TareSpeech, RefCounted)
+// Renders voice specs from tare.tools.tune (Voice.to_json(): the JSON text, or parsed), with the banks it was given
+// for the spoken layers: any sound of the project, the same samples the Python renderer makes.
+class TareSound : public RefCounted {
+    GDCLASS(TareSound, RefCounted)
 
     Dictionary banks_;   // name -> TareVoiceBank
 
@@ -43,8 +44,8 @@ protected:
 
 public:
     void add_bank(const Ref<TareVoiceBank> &bank);
-    PackedFloat32Array render_samples(const Dictionary &spec, int64_t sample_rate) const;
-    Ref<AudioStreamWAV> render(const Dictionary &spec, int64_t sample_rate) const;
+    PackedFloat32Array render_samples(const Variant &spec, int64_t sample_rate) const;
+    Ref<AudioStreamWAV> render(const Variant &spec, int64_t sample_rate) const;
 };
 
 }  // namespace godot

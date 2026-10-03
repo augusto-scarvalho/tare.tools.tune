@@ -1,4 +1,4 @@
-#include "tare_speech.h"
+#include "tare_sound.h"
 
 #include <algorithm>
 #include <cmath>
@@ -10,7 +10,6 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
 
 namespace godot {
 
@@ -66,77 +65,53 @@ Error TareVoiceBank::load(const String &path) {
     return OK;
 }
 
-// -- TareSpeech ----------------------------------------------------------------------------------------------------
+// -- TareSound -----------------------------------------------------------------------------------------------------
 
-void TareSpeech::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("add_bank", "bank"), &TareSpeech::add_bank);
-    ClassDB::bind_method(D_METHOD("render_samples", "spec", "sample_rate"), &TareSpeech::render_samples,
+void TareSound::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("add_bank", "bank"), &TareSound::add_bank);
+    ClassDB::bind_method(D_METHOD("render_samples", "spec", "sample_rate"), &TareSound::render_samples,
                          DEFVAL(48000));
-    ClassDB::bind_method(D_METHOD("render", "spec", "sample_rate"), &TareSpeech::render, DEFVAL(48000));
+    ClassDB::bind_method(D_METHOD("render", "spec", "sample_rate"), &TareSound::render, DEFVAL(48000));
 }
 
-void TareSpeech::add_bank(const Ref<TareVoiceBank> &bank) {
+void TareSound::add_bank(const Ref<TareVoiceBank> &bank) {
     ERR_FAIL_COND_MSG(bank.is_null() || !bank->handle(), "Load the voice bank before adding it");
     banks_[bank->get_bank_name()] = bank;
 }
 
-PackedFloat32Array TareSpeech::render_samples(const Dictionary &spec, int64_t sample_rate) const {
-    const int32_t sr = static_cast<int32_t>(sample_rate);
-    const uint64_t seed = static_cast<uint64_t>(static_cast<int64_t>(spec.get("seed", 0)));
-    for (const char *other : {"syllables", "chips", "speech", "modal", "noise", "scatter", "vocoded"})
-        if (!Array(spec.get(other, Array())).is_empty())
-            UtilityFunctions::push_warning(String("tare.tools.tune: only spoken layers render here; skipping ") +
-                                           String(other));
-    for (const char *other : {"room", "air", "lowpass", "loop", "space"})
-        if (static_cast<double>(spec.get(other, 0.0)) != 0.0)
-            UtilityFunctions::push_warning(String("tare.tools.tune: '") + String(other) +
-                                           String("' is left to the engine here"));
+static String spec_text(const Variant &spec) {
+    return spec.get_type() == Variant::STRING ? String(spec) : JSON::stringify(spec, "", false, true);
+}
 
-    std::vector<std::pair<int64_t, std::vector<double>>> parts;
-    const Array layers = spec.get("spoken", Array());
-    for (int64_t i = 0; i < layers.size(); ++i) {
-        const Dictionary layer = layers[i];
-        const String bank_name = layer["bank"];
-        const Ref<TareVoiceBank> bank = banks_.get(bank_name, Variant());
-        ERR_FAIL_COND_V_MSG(bank.is_null(), PackedFloat32Array(),
-                            String("No voice bank ") + bank_name + String(" was added"));
-        const Array pieces = layer["pieces"], joins_a = layer.get("joins", Array()), f0_a = layer["f0"];
-        std::vector<double> p(3 * pieces.size()), f0(f0_a.size());
-        std::vector<int32_t> joins(joins_a.size());
-        for (int64_t k = 0; k < pieces.size(); ++k) {
-            const Array piece = pieces[k];
-            for (int c = 0; c < 3; ++c) p[3 * k + c] = piece[c];
-        }
-        for (int64_t k = 0; k < joins_a.size(); ++k) joins[k] = static_cast<int32_t>(static_cast<int64_t>(joins_a[k]));
-        for (int64_t k = 0; k < f0_a.size(); ++k) f0[k] = f0_a[k];
-        double *out = nullptr;
-        int32_t n = 0;
-        const int32_t status = tt_render_spoken(
-            bank->handle(), p.data(), static_cast<int32_t>(pieces.size()), joins.data(),
-            static_cast<int32_t>(joins.size()), f0.data(), static_cast<int32_t>(f0.size()), layer.get("warp", 1.0),
-            layer.get("breath", 0.0), layer.get("tilt", 0.0), layer.get("gain", 1.0),
-            tt_key(seed, "spoken", i), sr, &out, &n);
-        ERR_FAIL_COND_V_MSG(status != 0, PackedFloat32Array(), "Cannot render a spoken layer");
-        const double start = layer.get("start", 0.0);
-        parts.emplace_back(static_cast<int64_t>(start * sr), std::vector<double>(out, out + n));
-        tt_free(out);
+PackedFloat32Array TareSound::render_samples(const Variant &spec, int64_t sample_rate) const {
+    ERR_FAIL_COND_V_MSG(spec.get_type() != Variant::STRING && spec.get_type() != Variant::DICTIONARY,
+                        PackedFloat32Array(), "A voice spec is its JSON text or the parsed Dictionary");
+    const CharString json = spec_text(spec).utf8();
+    std::vector<const tt_bank *> handles;
+    std::vector<CharString> names;
+    const Array keys = banks_.keys();
+    for (int64_t i = 0; i < keys.size(); ++i) {
+        const Ref<TareVoiceBank> bank = banks_[keys[i]];
+        handles.push_back(bank->handle());
+        names.push_back(String(keys[i]).utf8());
     }
-    ERR_FAIL_COND_V_MSG(parts.empty(), PackedFloat32Array(), "The spec has no spoken layers");
-    int64_t length = 0;
-    for (const auto &[at, y] : parts) length = std::max<int64_t>(length, at + static_cast<int64_t>(y.size()));
-    std::vector<double> mix(length, 0.0);
-    for (const auto &[at, y] : parts)
-        for (size_t k = 0; k < y.size(); ++k) mix[at + k] += y[k];
-    tt_finish(mix.data(), static_cast<int32_t>(length), sr, spec.get("gain", 1.0), spec.get("crush", 0.0),
-              spec.get("drive", 0.0));
+    std::vector<const char *> name_ptrs;
+    for (const CharString &n : names) name_ptrs.push_back(n.get_data());
+    float *out = nullptr;
+    int32_t n = 0;
+    const int32_t status = tt_render_voice(json.get_data(), handles.data(), name_ptrs.data(),
+                                           static_cast<int32_t>(handles.size()), static_cast<int32_t>(sample_rate),
+                                           &out, &n);
+    ERR_FAIL_COND_V_MSG(status != 0, PackedFloat32Array(),
+                        String("tare.tools.tune: ") + String::utf8(tt_last_error()));
     PackedFloat32Array samples;
-    samples.resize(length);
-    float *w = samples.ptrw();
-    for (int64_t k = 0; k < length; ++k) w[k] = static_cast<float>(mix[k]);
+    samples.resize(n);
+    std::memcpy(samples.ptrw(), out, static_cast<size_t>(n) * sizeof(float));
+    tt_free(out);
     return samples;
 }
 
-Ref<AudioStreamWAV> TareSpeech::render(const Dictionary &spec, int64_t sample_rate) const {
+Ref<AudioStreamWAV> TareSound::render(const Variant &spec, int64_t sample_rate) const {
     const PackedFloat32Array samples = render_samples(spec, sample_rate);
     PackedByteArray data;
     data.resize(samples.size() * 2);
@@ -152,6 +127,12 @@ Ref<AudioStreamWAV> TareSpeech::render(const Dictionary &spec, int64_t sample_ra
     stream->set_mix_rate(static_cast<int32_t>(sample_rate));
     stream->set_stereo(false);
     stream->set_data(data);
+    const Dictionary fields = spec.get_type() == Variant::STRING ? Dictionary(JSON::parse_string(spec)) : Dictionary(spec);
+    if (static_cast<double>(fields.get("loop", 0.0)) > 0) {   // rendered as a seamless loop: play it as one
+        stream->set_loop_mode(AudioStreamWAV::LOOP_FORWARD);
+        stream->set_loop_begin(0);
+        stream->set_loop_end(samples.size());
+    }
     return stream;
 }
 

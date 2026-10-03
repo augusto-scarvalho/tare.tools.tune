@@ -1,4 +1,4 @@
-// The natural voice's spec layer (concat.render_spoken and concat.frames) and a Voice's finishing (render.render).
+// The natural voice's spec layer (concat.render_spoken and concat.frames).
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -21,7 +21,6 @@ namespace tune {
 namespace {
 
 inline constexpr int SMOOTH = 3;   // frames cross-faded on each side of a join
-inline constexpr double PEAK = 0.89;
 
 // concat.frames: the bank's frames along the pieces; joins cross-fade both pieces, each carried on past its cut
 void frames(const tt_bank &b, const double *pieces, int32_t n_pieces, const int32_t *joins, int32_t n_joins,
@@ -146,39 +145,6 @@ int32_t tt_render_spoken(const tt_bank *bank, const double *pieces, int32_t n_pi
     } catch (...) {
         return 3;
     }
-}
-
-int32_t tt_finish(double *x, int32_t n, int32_t sr, double gain, double crush, double drive) {
-    if (!x || n <= 0 || sr <= 0) return 1;
-    // butter(2, 40 / (sr / 2), "high"), run as scipy's sosfilt (transposed direct form II)
-    const double K = std::tan(3.141592653589793 * 40.0 / sr), r2 = std::sqrt(2.0);
-    const double norm = 1 / (1 + r2 * K + K * K);
-    const double b0 = norm, b1 = -2 * norm, b2 = norm, a1 = 2 * (K * K - 1) * norm, a2 = (1 - r2 * K + K * K) * norm;
-    double z1 = 0, z2 = 0;
-    for (int32_t i = 0; i < n; ++i) {
-        const double v = x[i], y = b0 * v + z1;
-        z1 = b1 * v - a1 * y + z2;
-        z2 = b2 * v - a2 * y;
-        x[i] = y;
-    }
-    std::vector<double> v(x, x + n);
-    double p = peak_of(v) + 1e-12;
-    for (auto &s : v) s /= p;
-    if (crush != 0) {                    // render._crush: hold every `hold` samples, fewer levels
-        const int hold = 1 + static_cast<int>(crush * 11);
-        const double levels = std::pow(2.0, 14 - 10 * crush);
-        const std::vector<double> held = v;
-        for (int32_t i = 0; i < n; ++i) v[i] = std::nearbyint(held[i - i % hold] * levels) / levels;
-    }
-    if (drive != 0)
-        for (auto &s : v) s = std::tanh(drive * s) / std::tanh(drive);
-    const int32_t fade = std::min(static_cast<int32_t>(0.004 * sr), n);   // * np.linspace(1, 0, fade)
-    const double step = fade > 1 ? -1.0 / (fade - 1) : 0.0;
-    for (int32_t i = 0; i < fade; ++i)
-        v[n - fade + i] *= (fade > 1 && i == fade - 1) ? 0.0 : static_cast<double>(i) * step + 1.0;
-    p = peak_of(v) + 1e-12;
-    for (int32_t i = 0; i < n; ++i) x[i] = PEAK * gain * v[i] / p;
-    return 0;
 }
 
 void tt_free(void *buffer) { std::free(buffer); }

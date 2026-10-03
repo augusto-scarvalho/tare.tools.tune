@@ -1,8 +1,8 @@
-/* tare.tools.tune, native core: the natural voice's vocoder, for engines that cannot run Python.
+/* tare.tools.tune, native core: the renderer, for engines that cannot run Python.
  *
- * Python plans a line (text -> phones -> melody -> pieces of a voice bank) into a small spec, a `Spoken` layer;
- * this renders it, the same sound as src/tare/tools/tune/speech/concat.py:render_spoken, deterministically.
- * Arrays in, arrays out: reading banks and specs from files is the engine wrapper's job.
+ * Python designs a sound (a sword hit, a menu tick, a creature's call, a planned line of speech) into a voice spec,
+ * plain JSON; this renders it, the same sound as src/tare/tools/tune/render.py, deterministically.
+ * Reading banks and specs from files is the engine wrapper's job.
  */
 #ifndef TARE_TUNE_H
 #define TARE_TUNE_H
@@ -44,9 +44,16 @@ TT_API int32_t tt_render_spoken(const tt_bank *bank, const double *pieces, int32
                                 double tilt, double gain, uint64_t seed, int32_t sample_rate, double **out,
                                 int32_t *n_out);
 
-/* A Voice's finishing, in place, over its layers already mixed at their start times: a 40 Hz high-pass, crush,
- * drive, a 4 ms fade-out and the peak at -1 dBFS x gain (render.py). Reverb ("space") is left to the engine. */
-TT_API int32_t tt_finish(double *samples, int32_t n, int32_t sample_rate, double gain, double crush, double drive);
+/* A whole voice spec, as Voice.to_json() writes it: render.render(voice, sample_rate), float samples peaking at
+ * -1 dBFS x gain. Spoken layers find their voice bank by name in `names` (n_banks of them, with `banks`).
+ * Returns 0 and a buffer of *n_out samples to release with tt_free; otherwise tt_last_error() says why:
+ * 1 a bad argument or spec, 2 out of memory, 4 a layer this core does not render yet (chip programs, formant speech,
+ * vocoded clips), 5 a spoken layer whose bank was not given. */
+TT_API int32_t tt_render_voice(const char *json, const tt_bank *const *banks, const char *const *names,
+                               int32_t n_banks, int32_t sample_rate, float **out, int32_t *n_out);
+
+/* Why the last tt_render_voice on this thread failed ("" if it did not). */
+TT_API const char *tt_last_error(void);
 
 TT_API void tt_free(void *buffer);
 

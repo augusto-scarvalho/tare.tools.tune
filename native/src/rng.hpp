@@ -34,13 +34,24 @@ uint64_t key(Parts... parts) {
     return h;
 }
 
-// rng.noise(k, n): white noise in [-1, 1), element i = fmix(k + (i + 1) * GOLDEN)
+// rng.uniforms(k, n): [0, 1), element i = fmix(k + (i + 1) * GOLDEN)
+inline std::vector<double> uniforms(uint64_t k, std::size_t n) {
+    std::vector<double> out(n);
+    for (std::size_t i = 0; i < n; ++i)
+        out[i] = static_cast<double>(fmix(k + static_cast<uint64_t>(i + 1) * GOLDEN) >> 11) * 0x1p-53;
+    return out;
+}
+
+// rng.noise(k, n): white noise in [-1, 1)
 inline void noise(uint64_t k, std::size_t n, std::vector<double> &out) {
-    out.resize(n);
-    for (std::size_t i = 0; i < n; ++i) {
-        const uint64_t z = fmix(k + static_cast<uint64_t>(i + 1) * GOLDEN);
-        out[i] = static_cast<double>(z >> 11) * 0x1p-53 * 2.0 - 1.0;
-    }
+    out = uniforms(k, n);
+    for (double &v : out) v = v * 2.0 - 1.0;
+}
+
+inline std::vector<double> noise(uint64_t k, std::size_t n) {
+    std::vector<double> out;
+    noise(k, n, out);
+    return out;
 }
 
 }  // namespace tune

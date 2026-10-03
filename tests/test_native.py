@@ -1,4 +1,4 @@
-"""The native core (native/, the vocoder for Godot) against the Python reference: same random numbers, same sound.
+"""The native core (native/, the renderer for Godot) against the Python reference: same random numbers, same sound.
 Skipped unless it is built: python tools/build_native.py build (or point TARE_TOOLS_TUNE_NATIVE at the library)."""
 import ctypes
 import os
@@ -10,8 +10,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tare.tools.tune import rng
+from tare.tools.tune import ARCHETYPES, RECIPES, Creature, Sfx, Voice, rng
+from tare.tools.tune.music import Cue
 from tare.tools.tune.render import render
+from tare.tools.tune.spec import Modal, Noise, Scatter, Syllable
 from tare.tools.tune.speech import Speaker, concat
 
 NAME = {"Windows": "tare_tune.dll", "Darwin": "libtare_tune.dylib"}.get(platform.system(), "libtare_tune.so")
@@ -57,8 +59,10 @@ def lib():
     lib.tt_render_spoken.argtypes = [c_void_p, POINTER(c_double), c_int32, POINTER(c_int32), c_int32,
                                      POINTER(c_double), c_int32, c_double, c_double, c_double, c_double, c_uint64,
                                      c_int32, POINTER(POINTER(c_double)), POINTER(c_int32)]
-    lib.tt_finish.restype = c_int32
-    lib.tt_finish.argtypes = [POINTER(c_double), c_int32, c_int32, c_double, c_double, c_double]
+    lib.tt_render_voice.restype = c_int32
+    lib.tt_render_voice.argtypes = [c_char_p, POINTER(c_void_p), POINTER(c_char_p), c_int32, c_int32,
+                                    POINTER(POINTER(c_float)), POINTER(c_int32)]
+    lib.tt_last_error.restype = c_char_p
     lib.tt_free.argtypes = [c_void_p]
     return lib
 
@@ -119,19 +123,70 @@ def test_spoken_layers_sound_the_same(lib, banks, speaker, sr):
         assert np.max(np.abs(got - expected)) < 1e-6, text
 
 
+def native_voice(lib, voice, sr: int, banks: dict | None = None):
+    """tt_render_voice: (status, samples or the error)."""
+    names = list(banks or {})
+    handles = (c_void_p * max(len(names), 1))(*[banks[n] for n in names])
+    keys = (c_char_p * max(len(names), 1))(*[n.encode() for n in names])
+    out, n = POINTER(c_float)(), c_int32()
+    status = lib.tt_render_voice(voice if isinstance(voice, bytes) else voice.to_json().encode(), handles, keys,
+                                 len(names), sr, ctypes.byref(out), ctypes.byref(n))
+    if status:
+        return status, lib.tt_last_error().decode()
+    y = np.ctypeslib.as_array(out, (n.value,)).copy()
+    lib.tt_free(out)
+    return status, y
+
+
+def same(lib, voice, sr, banks=None):
+    status, got = native_voice(lib, voice, sr, banks)
+    assert status == 0, got
+    expected = render(voice, sr)
+    assert len(got) == len(expected)
+    return float(np.max(np.abs(got - expected)))
+
+
 @built
 def test_a_whole_voice_sounds_the_same(lib, banks):
-    sr = 48000
     speaker = VOICES[0].but(crush=0.2, drive=1.5)
     voice = speaker.voice("[alegria] Que bom te ver! [tristeza] Mas eu preciso partir...", "pt")
     assert len(voice.spoken) == 2
-    layers = [(int(v.start * sr), native_layer(lib, banks, v, rng.key(voice.seed, "spoken", i), sr))
-              for i, v in enumerate(voice.spoken)]
-    mix = np.zeros(max(k + len(y) for k, y in layers))
-    for k, y in layers:
-        mix[k:k + len(y)] += y
-    assert lib.tt_finish(mix.ctypes.data_as(POINTER(c_double)), len(mix), sr, voice.gain, voice.crush,
-                         voice.drive) == 0
-    expected = render(voice, sr)
-    assert len(mix) == len(expected)
-    assert np.max(np.abs(mix - expected)) < 1e-5
+    assert same(lib, voice, 48000, banks) < 1e-5
+
+
+@built
+@pytest.mark.parametrize("kind", list(RECIPES))
+def test_every_sound_effect_sounds_the_same(lib, kind):
+    """Every event once, spread across the styles: every layer and finishing step."""
+    r = RECIPES[kind]
+    for i, style in enumerate(r.styles):
+        for event in r.events[i::len(r.styles)] or [r.events[i % len(r.events)]]:
+            voice = Sfx(kind, style, species=1, size=0.3, power=0.8).voice(event)
+            assert same(lib, voice, 22050) < 1e-6, (style, event)
+
+
+@built
+def test_creatures_and_music_sound_the_same(lib):
+    for arch in ARCHETYPES:
+        if arch != "chip":                                                    # chip programs: not native yet
+            assert same(lib, Creature(arch, species=3).voice("attack"), 22050) < 1e-6, arch
+    cue = Cue("levelup", "orchestral", seed=1)
+    for t in cue.score.tracks.values():                                     # each track as Track.render builds it
+        groups = {}
+        for layer in t.layers:
+            groups.setdefault({Syllable: "syllables", Modal: "modal", Noise: "noise", Scatter: "scatter"}[type(layer)],
+                              []).append(layer)
+        voice = Voice(**groups, seed=rng.key(cue.score.seed, t.name) & 0x7FFFFFFF, **t.voice)
+        assert same(lib, voice, 22050) < 1e-6, t.name
+
+
+@built
+def test_what_it_cannot_render_it_says(lib):
+    assert native_voice(lib, b"{not json", 48000) == (1, "expected '\"' in the JSON")
+    status, why = native_voice(lib, Creature("chip", species=3).voice("attack"), 48000)
+    assert status == 4 and "chips" in why
+    status, why = native_voice(lib, VOICES[0].voice("Oi!", "pt"), 48000)
+    assert status == 5 and "pt/" in why
+    assert native_voice(lib, Voice(modal=[Modal(0, 0.1, [(440, 0.1, 1, 9)])]), 48000)[0] == 0   # extra numbers: fine
+    status, why = native_voice(lib, b'{"noise": [{"start": 0, "dur": 0.1, "freq": [[0, 500]], "wobble": [1]}]}', 48000)
+    assert status == 1 and "wobble" in why

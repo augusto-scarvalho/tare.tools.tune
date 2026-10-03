@@ -1,9 +1,9 @@
-"""Build the native core (native/): the vocoder in C++, for engines that cannot run Python (Godot first).
+"""Build the native core (native/): the renderer in C++, for engines that cannot run Python (Godot first).
 
     python tools/build_native.py tables    # native/src/tables.hpp: the constants, from the Python reference
     python tools/build_native.py build     # native/build/tare_tune.(dll|so|dylib), for tests/test_native.py
     python tools/build_native.py godot     # the Godot extension, into native/godot/demo/bin (pip install scons)
-    python tools/build_native.py demo      # the demo's voice banks and a dialogue planned in Python
+    python tools/build_native.py demo      # the demo's voice banks, a dialogue planned in Python, its sounds
 
 The constants are written as exact hexadecimal floats, so the port uses the very numbers numpy computed. The build
 needs a C++17 compiler (g++ or clang++; $CXX picks another); the Godot extension, what godot-cpp builds with (on
@@ -87,6 +87,11 @@ def demo():
         index.append({"speaker": who, "text": re.sub(r"\[[^\]]*\]\s*", "", text), "spec": f"{i:02d}.json"})
     (DEMO / "lines" / "dialogue.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"-> {DEMO / 'lines'}: {len(index)} lines")
+    from tare.tools.tune import Sfx
+    (DEMO / "sounds").mkdir(exist_ok=True)
+    (DEMO / "sounds" / "advance.json").write_text(Sfx("ui", "fantasy", species=3).voice("advance").to_json(),
+                                                  encoding="utf-8")
+    print(f"-> {DEMO / 'sounds'}")
 
 
 if __name__ == "__main__":

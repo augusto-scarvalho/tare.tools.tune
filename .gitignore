@@ -14,7 +14,7 @@ dist/
 *.raw
 /baked/
 /native/build/
-# the Godot extension's build and the demo's generated voices and lines (tools/build_native.py godot | demo)
+# the Godot extension's build and the demo's generated voices, lines and sounds (tools/build_native.py godot | demo)
 .sconsign.dblite
 *.o
 *.os
@@ -25,6 +25,7 @@ dist/
 !/native/godot/demo/bin/tare_tune.gdextension
 /native/godot/demo/voices/
 /native/godot/demo/lines/
+/native/godot/demo/sounds/
 /zoo/
 /gen1/
 /teacher/*.npz

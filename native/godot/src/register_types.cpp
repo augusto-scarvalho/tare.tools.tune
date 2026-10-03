@@ -4,14 +4,14 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
-#include "tare_speech.h"
+#include "tare_sound.h"
 
 using namespace godot;
 
 static void initialize_tare_tune(ModuleInitializationLevel level) {
     if (level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
     GDREGISTER_CLASS(TareVoiceBank);
-    GDREGISTER_CLASS(TareSpeech);
+    GDREGISTER_CLASS(TareSound);
 }
 
 static void uninitialize_tare_tune(ModuleInitializationLevel) {}
