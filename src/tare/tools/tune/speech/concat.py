@@ -14,6 +14,7 @@ the phones labelled. To say a new sentence:
 Nothing neural runs here: it is table look-up, dynamic programming and arithmetic, deterministic for a seed.
 """
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -202,8 +203,9 @@ class Bank:
 
     def intonation(self, seq: list[tuple[str, int, int]], kinds: list[tuple[str, bool]]):
         """(log2 pitch at the start and end of each nucleus relative to the sentence's median, where they are), or
-        None when the bank has no intonation model."""
-        model = self.meta.get("intonation")
+        None when there is no intonation model: the one learned from real speakers of the language if there is one
+        (prosody_<lang>.json), else the teacher's."""
+        model = prosody(self.meta["lang"]).get("intonation") or self.meta.get("intonation")
         if not model:
             return None
         index = {k: i for i, k in enumerate(model["names"])}
@@ -244,6 +246,16 @@ class Bank:
             if np.isfinite(c):
                 out += [(c, k) for k in ks]
         return out
+
+
+@lru_cache(maxsize=8)
+def prosody(lang: str) -> dict:
+    """What real speakers of the language do (prosody_<lang>.json, from tools/real_prosody.py), if known. Experimental
+    and off by default: by ear, the teacher's intonation with the hand-written tunes still makes clearer questions.
+    To try it, point TARE_TOOLS_TUNE_PROSODY at the folder with the model (the tool writes it to real/)."""
+    folder = os.environ.get("TARE_TOOLS_TUNE_PROSODY")
+    path = Path(folder) / f"prosody_{lang}.json" if folder else DATA / f"prosody_{lang}.json"
+    return json.loads(path.read_text()) if path.exists() else {}
 
 
 def banks(lang: str | None = None) -> list[str]:
@@ -478,10 +490,17 @@ def render_spoken(sp, sr: int, seed: int) -> np.ndarray:
 
 
 # -- phrase-final tunes ------------------------------------------------------------------------------------------------
-# The teacher does not make Brazilian Portuguese question tunes: measured over its corpus, its yes/no questions end
-# like statements (last two vowels -8.7 and -6.4 semitones from the sentence's median, statements -8.5 and -8.0).
-# These replace what the regression learned for the last stressed vowel and what follows it, in semitones from the
-# median, after descriptions of Brazilian Portuguese intonation (Moraes 2008; Frota et al. 2015):
+# With an intonation model learned from real speakers (prosody_<lang>.json) the tunes are theirs: a phrase kind they
+# gave too few examples of is told as its closest kind (surprise as a yes/no question, its movements wider; trailing
+# off as a phrase left open), and lengthened as below.
+RARE = 200                        # nuclei
+PROXY = {"?!": "?", "…": ","}
+SURPRISE = 1.6                    # "?!": the question's pitch movements, wider (as the formant engine does)
+# Without one, the teacher's regression is all there is, and the teacher does not make Brazilian Portuguese question
+# tunes: measured over its corpus, its yes/no questions end like statements (last two vowels -8.7 and -6.4 semitones
+# from the sentence's median, statements -8.5 and -8.0). These replace what the regression learned for the last
+# stressed vowel and what follows it, in semitones from the median, after descriptions of Brazilian Portuguese
+# intonation (Moraes 2008; Frota et al. 2015):
 #   ?    yes/no question, L+H* L%: the last stressed vowel rises from low to high, what follows falls back down;
 #        a last stressed syllable at the very end keeps the rise
 #   ?!   surprise ("Sério?!", "O quê?!"): the same, higher and longer
@@ -522,21 +541,23 @@ def stretch_finals(seq: list, phrases) -> None:
                 seq[k][1] *= factor
 
 
-def tunes(learned, seq: list, phrases, final: float = 0.0):
-    """The learned targets with the phrase-final tunes laid over them (log2 units). `final`: semitones added to
-    the last vowels of statements and exclamations (an emotion's end: anger falls further, sadness less)."""
+def tunes(learned, seq: list, phrases, final: float = 0.0, real: bool = False):
+    """The learned targets with the phrase-final tunes laid over them (log2 units); `real`: learned from real
+    speakers, so only surprise is shaped. `final`: semitones added to the last vowels of statements and
+    exclamations (an emotion's end: anger falls further, sadness less)."""
     targets, where = learned
     targets = np.array(targets, dtype=float)
     pos = {i: k for k, i in enumerate(where)}
     for (idx, nuclear), ph in zip(phrase_nuclei(seq), phrases, strict=False):
-        tune = TUNES.get(ph.kind)
-        if ph.kind == "?" and ph.wh:
+        tune = None if real else TUNES.get(ph.kind)
+        widen = SURPRISE if real and ph.kind == "?!" else EXCLAIM if not real and ph.kind == "!" else 1.0
+        if ph.kind == "?" and ph.wh and not real:
             tune = None                                      # wh-questions fall: keep the learned tune
             targets[pos[idx[0]]] += WH_RAISE / 12
-        if ph.kind == "!":
+        if widen != 1.0:
             mean = targets[[pos[i] for i in idx]].mean()
             for i in idx:
-                targets[pos[i]] = mean + EXCLAIM * (targets[pos[i]] - mean)
+                targets[pos[i]] = mean + widen * (targets[pos[i]] - mean)
         if tune:
             post = [i for i in idx if i > nuclear]
             if post:
@@ -572,12 +593,10 @@ def _contour(learned, edges, n: int, pitch: float, range_: float, melody) -> np.
     return pitch * 2 ** lf
 
 
-def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate: float = 1.0,
-         melody: list[float] | None = None, jitter: float = 0.0, seed: int = 0, final: float = 0.0,
-         pause: float = 1.0) -> tuple[list, list, list, str]:
-    """Phrases (from a g2p front-end) -> (pieces, joins, f0 per output frame, the teacher-accent transcription)."""
-    from .phonetics import _intonation, segments
-    b = bank(name)
+def sequence(phrases, lang: str, rate: float = 1.0) -> tuple[list, list, list[list]]:
+    """Phrases -> our segments, their syllables, and the phones to say in the teacher's accent:
+    [[symbol, our duration, stress, flags (1 word-initial, 2 word-final)]]."""
+    from .phonetics import segments
     segs, sylls = segments(phrases, lang, rate)
     seq, meta = [], None
     for s in segs:                     # our segments (a stop is closure + burst + aspiration) -> phones
@@ -588,11 +607,19 @@ def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate:
         else:
             seq.append([s.phone, s.dur, st, fl])
         meta = s.meta
+    return segs, sylls, ACCENTS[lang](seq) if lang in ACCENTS else seq
+
+
+def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate: float = 1.0,
+         melody: list[float] | None = None, jitter: float = 0.0, seed: int = 0, final: float = 0.0,
+         pause: float = 1.0) -> tuple[list, list, list, str]:
+    """Phrases (from a g2p front-end) -> (pieces, joins, f0 per output frame, the teacher-accent transcription)."""
+    from .phonetics import _intonation
+    b = bank(name)
+    segs, sylls, seq = sequence(phrases, lang, rate)
     ends = np.cumsum([0.0] + [s.dur for s in segs])
     t_ours = np.arange(int(ends[-1] / FRAME) + 1) * FRAME
     f0_ours = _intonation(segs, sylls, t_ours, pitch, range_, lang, melody)
-    if lang in ACCENTS:
-        seq = ACCENTS[lang](seq)
     ours = np.cumsum([0.0] + [p[1] for p in seq])
     for p, d in zip(seq, b.durations([(p[0], p[2], p[3]) for p in seq]), strict=True):
         if p[0] != "_":
@@ -604,9 +631,12 @@ def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate:
     new = np.cumsum([0.0] + [2 * max(int(round(p[1] / 2 / FRAME)), 1) * FRAME for p in seq])
     n = int(round(new[-1] / FRAME))
     f0 = np.interp(np.interp(np.arange(n) * FRAME, new, ours), t_ours, f0_ours)
-    learned = b.intonation([(p[0], p[2], p[3]) for p in seq], [(ph.kind, ph.wh) for ph in phrases])
-    if learned is not None:            # the teacher's intonation, for our phones, timing and pitch
-        f0 = _contour(tunes(learned, seq, phrases, final), new / FRAME, n, pitch, range_, melody)
+    real = prosody(lang)
+    kinds = [(PROXY.get(ph.kind, ph.kind) if real and real["kinds"].get(ph.kind, 0) < RARE else ph.kind, ph.wh)
+             for ph in phrases]
+    learned = b.intonation([(p[0], p[2], p[3]) for p in seq], kinds)
+    if learned is not None:            # real speakers' intonation (or the teacher's), for our phones, timing and pitch
+        f0 = _contour(tunes(learned, seq, phrases, final, bool(real)), new / FRAME, n, pitch, range_, melody)
     middles = np.clip(((new[:-1] + new[1:]) / 2 / FRAME).astype(int), 0, n - 1)
     units = select(b, seq, [float(f0[m]) if p[0] in VOWEL or p[0] in VOICED else 0.0
                             for p, m in zip(seq, middles, strict=True)])

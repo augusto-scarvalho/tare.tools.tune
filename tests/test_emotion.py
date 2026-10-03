@@ -108,3 +108,25 @@ def test_pauses_are_silent():
             inside.append(voiced[k + n // 4:k + 3 * n // 4].mean())   # the middle; the edges belong to the joins
         k += n
     assert len(inside) >= 4 and max(inside) < 0.2
+
+
+def test_real_speech_intonation_is_an_opt_in_experiment(tmp_path, monkeypatch):
+    """tools/real_prosody.py: intonation learned from real Brazilians. Off by default (by ear the hand-written
+    tunes make clearer questions); TARE_TOOLS_TUNE_PROSODY points at a model to try it."""
+    import json
+
+    from tare.tools.tune.speech import concat
+    concat.prosody.cache_clear()
+    assert concat.prosody("pt") == {}
+    sp = Speaker(pitch=120, engine="natural")
+    default = sp.spoken("Você comprou a espada?", "pt").f0
+    model = {"intonation": concat.bank("pt/alex").meta["intonation"], "kinds": {"?": 1000, ".": 1000}}
+    (tmp_path / "prosody_pt.json").write_text(json.dumps(model))
+    monkeypatch.setenv("TARE_TOOLS_TUNE_PROSODY", str(tmp_path))
+    concat.prosody.cache_clear()
+    try:
+        assert concat.prosody("pt")["kinds"]["?"] == 1000
+        assert sp.spoken("Você comprou a espada?", "pt").f0 != default     # its tunes, not the hand-written ones
+    finally:
+        monkeypatch.delenv("TARE_TOOLS_TUNE_PROSODY")
+        concat.prosody.cache_clear()
