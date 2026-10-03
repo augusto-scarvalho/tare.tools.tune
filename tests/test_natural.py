@@ -97,7 +97,7 @@ def test_duration_model_learns_stress_and_final_lengthening():
 
 def test_selection_prefers_contiguous_pieces():
     b = bank("pt/alex")
-    utt = [p for p in b.ph if p[4] == 3]
+    utt = [p for p in b.ph if p[4] == 52]   # every vowel voiced, no pause inside (those are taken from elsewhere)
     seq = [[p[0], (p[2] - p[1]) * 0.005, p[3], p[5]] for p in utt]
     units = select(b, seq)
     joins = sum(units[i - 1][1] != units[i][0] for i in range(1, len(units)))

@@ -77,3 +77,34 @@ def test_whisper_and_less_air():
     sp = Speaker(engine="natural")
     assert sp.voice("Fique quieto.", "pt", emotion="sussurro").spoken[0].breath >= 0.8
     assert sp.voice("Que bom!", "pt", emotion="alegria").spoken[0].breath < 0
+
+
+@pytest.mark.parametrize("pitch, tract", [(120, 1.0), (180, 1.15)])
+def test_sung_exclamations_keep_their_voice(pitch, tract):
+    """A high "Sério?!" must not take its vowels from where the teacher's voice faded to breath (a hiss)."""
+    from tare.tools.tune.speech import concat
+    sp = Speaker(pitch=pitch, tract=tract, engine="natural")
+    for text in ("Sério?!", "É sério?", "Jura?!", "Ah, é?"):
+        layer = sp.spoken(text, "pt")
+        _, _, voiced = concat.frames(concat.bank(layer.bank), layer.pieces, layer.joins)
+        phones, k, quiet, total = layer.phonemes.split(), 0, 0, 0
+        for i, p in enumerate(phones):
+            n = layer.pieces[2 * i][2] + layer.pieces[2 * i + 1][2]
+            if p.rstrip("'") in concat.SONORANT:
+                quiet, total = quiet + int((~voiced[k:k + n]).sum()), total + n
+            k += n
+        assert quiet < 0.05 * total, text
+
+
+def test_pauses_are_silent():
+    """The teacher reads through most commas: a pause must come from a real silence, not murmur."""
+    from tare.tools.tune.speech import concat
+    layer = Speaker(pitch=120, engine="natural").spoken("Olá, viajante! Eu vendo pão, queijo e vinho.", "pt")
+    _, _, voiced = concat.frames(concat.bank(layer.bank), layer.pieces, layer.joins)
+    k, inside = 0, []
+    for i, p in enumerate(layer.phonemes.split()):
+        n = layer.pieces[2 * i][2] + layer.pieces[2 * i + 1][2]
+        if p == "_":
+            inside.append(voiced[k + n // 4:k + 3 * n // 4].mean())   # the middle; the edges belong to the joins
+        k += n
+    assert len(inside) >= 4 and max(inside) < 0.2

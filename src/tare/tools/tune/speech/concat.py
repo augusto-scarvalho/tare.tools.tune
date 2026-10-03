@@ -43,6 +43,13 @@ SMOOTH = 3                        # frames cross-faded on each side of a join
 JOIN_CLASS = {"vowel": 3.0, "glide": 2.0, "liquid": 1.5, "nasal": 1.0, "fric": 0.4, "affricate": 0.4, "stop": 0.2,
               "pause": 0.05}
 F0_TARGET = 0.5                   # per octave between a piece's own pitch and the pitch it will be given
+# a vowel or a sonorant taken from where the teacher's voice faded to breath (5% of the vowels, most of them at the
+# end of a sentence: "cemitério" whispered out) turns a sung "Sério?!" into a hiss; a pause taken from inside a
+# sentence is no pause (92% of those frames have voice: the teacher reads through most commas) and murmurs.
+# (Preferring voiceless pieces for [s] or [t] as well made "cinquenta" and "vendo" harder to hear: their pieces carry
+# the voiced edges of the vowels around them.)
+VOICING = 2.0                     # x the share of a piece's frames without voice (with voice, for a pause)
+SONORANT = set("a6eEiIoOuU@") | {"6~", "e~", "i~", "o~", "u~", "w~", "j~", "j", "w", "m", "n", "N", "J", "l", "L", "r"}
 F0_JOIN = 0.5                     # per octave between the pitches of two pieces that meet
 
 
@@ -187,6 +194,7 @@ class Bank:
         sums = np.add.reduceat(np.where(voiced, self.f0, 0.0), starts)
         counts = np.add.reduceat(voiced.astype(float), starts)
         self.ph_f0 = np.where(counts > 0, sums / np.maximum(counts, 1), 0.0)   # phones tile the bank in order
+        self.ph_voiced = counts / np.maximum(np.diff(np.append(starts, len(self.f0))), 1)
         model = self.meta["durations"]
         self._index = {k: i for i, k in enumerate(model["names"])}
         self._coef = np.asarray(model["coef"])
@@ -280,6 +288,13 @@ def accent_pt(seq: list[list]) -> list[list]:
             out.append(seq[i][0])
         return out
 
+    def after_stress(i):
+        while i > 0 and not seq[i][3] & 1:
+            i -= 1
+            if seq[i][2]:
+                return True
+        return False
+
     out, i = [], 0
     while i < len(seq):
         sym, dur, st, fl = seq[i]
@@ -307,6 +322,8 @@ def accent_pt(seq: list[list]) -> list[list]:
             sym = "6~" if st or nxt[0] == "J" else "6"         # cama [kɐ̃mɐ], banho; unstressed [ɐ]
         if sym == "I" and inside and nxt[0] in VOWEL:
             sym = "j"                                           # dia, tio: a glide before the vowel
+        if sym == "i" and not st and inside and nxt[0] in VOWEL and after_stress(i - 1):
+            sym = "j"                                           # sério, história [ɾju]: 237 glides, 32 hiatus
         if sym in ("m", "n") and out and out[-1][0].endswith("~") and nxt[0] not in VOWEL:
             sym = "m" if nxt[0] in ("p", "b") else "N"
         if sym == "s" and nxt[0] in VOICED:                     # os dragões [uz]
@@ -354,6 +371,10 @@ def select(b: Bank, seq: list[list], pitch: list[float] | None = None) -> list[t
                 cost += 0.15 * abs(np.log(max(have[2] - have[1], 1) * FRAME / max(want[1], 0.01)))
                 if f > 0 and b.ph_f0[kk] > 0:
                     cost += F0_TARGET * abs(np.log2(b.ph_f0[kk] / f))
+                if want[0] in SONORANT:
+                    cost += VOICING * (1.0 - b.ph_voiced[kk])
+                elif want[0] == "_":
+                    cost += VOICING * b.ph_voiced[kk]
             opts.append((cost, k, k + 1))
         if not opts:                       # no such diphone in the bank: halves from different places
             right = sorted(b.matches(c[0]))[:6]
@@ -466,8 +487,8 @@ def render_spoken(sp, sr: int, seed: int) -> np.ndarray:
 #   …    trailing off: left hanging, level and slow
 # A wh-question ("Onde...?") falls like a statement (the regression has it), with the question word raised.
 TUNES = {
-    "?": {"nuc": (-1.5, 7.0), "post": (4.0, -2.0), "end": 6.0, "stretch": 1.1},
-    "?!": {"nuc": (0.0, 11.0), "post": (7.0, 0.0), "end": 10.0, "stretch": 1.3},
+    "?": {"nuc": (-1.5, 6.0), "post": (3.5, -2.0), "end": 5.5, "stretch": 1.1},
+    "?!": {"nuc": (0.0, 9.0), "post": (6.0, 0.0), "end": 8.5, "stretch": 1.3},
     "…": {"nuc": (-0.5, -1.0), "post": (-1.0, -1.5), "end": -1.0, "stretch": 1.45},
 }
 WH_RAISE = 1.5                    # semitones on a wh-question's first vowel (the regression already starts high)
