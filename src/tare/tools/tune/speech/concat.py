@@ -197,6 +197,15 @@ class Bank:
         counts = np.add.reduceat(voiced.astype(float), starts)
         self.ph_f0 = np.where(counts > 0, sums / np.maximum(counts, 1), 0.0)   # phones tile the bank in order
         self.ph_voiced = counts / np.maximum(np.diff(np.append(starts, len(self.f0))), 1)
+        # the phones as arrays, for the unit selection
+        self.symbols = sorted(self.by_sym)
+        index = {s: i for i, s in enumerate(self.symbols)}
+        self.ph_sym = np.array([index[p[0]] for p in self.ph])
+        self.ph_stress = np.array([p[3] > 0 for p in self.ph])
+        self.ph_dur = np.maximum(bounds[:, 1] - bounds[:, 0], 1) * FRAME
+        utt = np.array([p[4] for p in self.ph])
+        self.ph_next = np.append(utt[1:] == utt[:-1], False)        # the next phone is in the same recording
+        self._subst: dict[str, np.ndarray] = {}
         model = self.meta["durations"]
         self._index = {k: i for i, k in enumerate(model["names"])}
         self._coef = np.asarray(model["coef"])
@@ -238,6 +247,12 @@ class Bank:
                     x[self._index[k]] = v
             out.append(float(np.exp(x @ self._coef)))
         return out
+
+    def substitutions(self, sym: str) -> np.ndarray:
+        """What standing in for `sym` costs, for every phone of the bank (inf: it cannot)."""
+        if sym not in self._subst:
+            self._subst[sym] = np.array([substitution(sym, s) for s in self.symbols])[self.ph_sym]
+        return self._subst[sym]
 
     def matches(self, sym: str) -> list[tuple[float, int]]:
         out = []
@@ -357,45 +372,44 @@ def select(b: Bank, seq: list[list], pitch: list[float] | None = None) -> list[t
     """For each diphone of `seq`: (bank phone giving the first phone's second half, bank phone giving the second
     phone's first half). Contiguous in the bank when possible; Viterbi over target and join costs. `pitch`: the
     pitch each phone will get (Hz, 0 = unknown), so pieces spoken near it are preferred."""
-    n = len(seq)
+    n, last = len(seq), len(b.ph) - 1
     pitch = pitch or [0.0] * n
     cands, costs = [], []
     for i in range(n - 1):
         a, c = seq[i], seq[i + 1]
-        left = b.matches(a[0])
-        opts = []
-        for cost_a, k in left:
-            if k + 1 >= len(b.ph) or b.ph[k + 1][4] != b.ph[k][4]:
-                continue
-            cost_c = substitution(c[0], b.ph[k + 1][0])
-            if not np.isfinite(cost_c):
-                continue
-            cost = cost_a + cost_c
-            if a[0] in VOWEL and (b.ph[k][3] > 0) != (a[2] > 0):
-                cost += 0.15
-            if c[0] in VOWEL and (b.ph[k + 1][3] > 0) != (c[2] > 0):
-                cost += 0.15
-            if i > 0 and k > 0:
-                cost += 0.1 * min(substitution(seq[i - 1][0], b.ph[k - 1][0]), 1.0)
-            if i + 2 < n and k + 2 < len(b.ph):
-                cost += 0.1 * min(substitution(seq[i + 2][0], b.ph[k + 2][0]), 1.0)
+        sub_a, sub_c = b.substitutions(a[0]), b.substitutions(c[0])
+        # every bank phone k that can give the first phone, followed in its recording by one that can give the second
+        k = np.flatnonzero(np.isfinite(sub_a[:-1]) & np.isfinite(sub_c[1:]) & b.ph_next[:-1])
+        if len(k):                         # the terms are added in this order on purpose: the same sums, bit for bit
+            cost = sub_a[k] + sub_c[k + 1]
+            if a[0] in VOWEL:
+                cost = cost + np.where(b.ph_stress[k] != (a[2] > 0), 0.15, 0.0)
+            if c[0] in VOWEL:
+                cost = cost + np.where(b.ph_stress[k + 1] != (c[2] > 0), 0.15, 0.0)
+            if i > 0:
+                prev = 0.1 * np.minimum(b.substitutions(seq[i - 1][0])[np.maximum(k - 1, 0)], 1.0)
+                cost = cost + np.where(k > 0, prev, 0.0)
+            if i + 2 < n:
+                after = 0.1 * np.minimum(b.substitutions(seq[i + 2][0])[np.minimum(k + 2, last)], 1.0)
+                cost = cost + np.where(k + 2 <= last, after, 0.0)
             for want, kk, f in ((a, k, pitch[i]), (c, k + 1, pitch[i + 1])):
-                have = b.ph[kk]
-                cost += 0.15 * abs(np.log(max(have[2] - have[1], 1) * FRAME / max(want[1], 0.01)))
-                if f > 0 and b.ph_f0[kk] > 0:
-                    cost += F0_TARGET * abs(np.log2(b.ph_f0[kk] / f))
+                cost = cost + 0.15 * np.abs(np.log(b.ph_dur[kk] / max(want[1], 0.01)))
+                if f > 0:
+                    f0 = b.ph_f0[kk]
+                    cost = cost + np.where(f0 > 0, F0_TARGET * np.abs(np.log2(np.maximum(f0, 1e-9) / f)), 0.0)
                 if want[0] in SONORANT:
-                    cost += VOICING * (1.0 - b.ph_voiced[kk])
+                    cost = cost + VOICING * (1.0 - b.ph_voiced[kk])
                 elif want[0] == "_":
-                    cost += VOICING * b.ph_voiced[kk]
-            opts.append((cost, k, k + 1))
-        if not opts:                       # no such diphone in the bank: halves from different places
-            right = sorted(b.matches(c[0]))[:6]
-            opts = [(1.0 + c1 + c2, k1, k2) for c1, k1 in sorted(left)[:6] for c2, k2 in right]
-            if not opts:
-                raise ValueError(f"the voice bank {b.name} cannot say {a[0]!r} {c[0]!r}")
-        opts.sort()
-        opts = opts[:N_BEST]
+                    cost = cost + VOICING * b.ph_voiced[kk]
+            best = np.lexsort((k, cost))[:N_BEST]          # cheapest first; ties: earlier in the bank
+            cands.append([(int(x), int(x) + 1) for x in k[best]])
+            costs.append(cost[best])
+            continue
+        left = b.matches(a[0])             # no such diphone in the bank: halves from different places
+        right = sorted(b.matches(c[0]))[:6]
+        opts = sorted((1.0 + c1 + c2, k1, k2) for c1, k1 in sorted(left)[:6] for c2, k2 in right)[:N_BEST]
+        if not opts:
+            raise ValueError(f"the voice bank {b.name} cannot say {a[0]!r} {c[0]!r}")
         cands.append([(l_, r_) for _, l_, r_ in opts])
         costs.append(np.array([c_ for c_, _, _ in opts]))
     acc, back = costs[0], []

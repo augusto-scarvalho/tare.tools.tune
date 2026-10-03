@@ -110,6 +110,100 @@ def test_selection_prefers_contiguous_pieces():
     assert isinstance(Spoken("pt/alex", [(0, 4, 4)]).duration, float)
 
 
+def _select_reference(b, seq, pitch=None):
+    """select() as it was first written, one candidate at a time: the vectorised one must choose exactly the same
+    pieces (and a port to another language can be checked against this)."""
+    from tare.tools.tune.speech.concat import (
+        F0_JOIN,
+        F0_TARGET,
+        FRAME,
+        JOIN,
+        JOIN_CLASS,
+        N_BEST,
+        SONORANT,
+        VOICING,
+        VOWEL,
+        klass,
+        substitution,
+    )
+    n = len(seq)
+    pitch = pitch or [0.0] * n
+    cands, costs = [], []
+    for i in range(n - 1):
+        a, c = seq[i], seq[i + 1]
+        left = b.matches(a[0])
+        opts = []
+        for cost_a, k in left:
+            if k + 1 >= len(b.ph) or b.ph[k + 1][4] != b.ph[k][4]:
+                continue
+            cost_c = substitution(c[0], b.ph[k + 1][0])
+            if not np.isfinite(cost_c):
+                continue
+            cost = cost_a + cost_c
+            if a[0] in VOWEL and (b.ph[k][3] > 0) != (a[2] > 0):
+                cost += 0.15
+            if c[0] in VOWEL and (b.ph[k + 1][3] > 0) != (c[2] > 0):
+                cost += 0.15
+            if i > 0 and k > 0:
+                cost += 0.1 * min(substitution(seq[i - 1][0], b.ph[k - 1][0]), 1.0)
+            if i + 2 < n and k + 2 < len(b.ph):
+                cost += 0.1 * min(substitution(seq[i + 2][0], b.ph[k + 2][0]), 1.0)
+            for want, kk, f in ((a, k, pitch[i]), (c, k + 1, pitch[i + 1])):
+                have = b.ph[kk]
+                cost += 0.15 * abs(np.log(max(have[2] - have[1], 1) * FRAME / max(want[1], 0.01)))
+                if f > 0 and b.ph_f0[kk] > 0:
+                    cost += F0_TARGET * abs(np.log2(b.ph_f0[kk] / f))
+                if want[0] in SONORANT:
+                    cost += VOICING * (1.0 - b.ph_voiced[kk])
+                elif want[0] == "_":
+                    cost += VOICING * b.ph_voiced[kk]
+            opts.append((cost, k, k + 1))
+        if not opts:
+            right = sorted(b.matches(c[0]))[:6]
+            opts = [(1.0 + c1 + c2, k1, k2) for c1, k1 in sorted(left)[:6] for c2, k2 in right]
+        opts.sort()
+        opts = opts[:N_BEST]
+        cands.append([(l_, r_) for _, l_, r_ in opts])
+        costs.append(np.array([c_ for c_, _, _ in opts]))
+    acc, back = costs[0], []
+    for i in range(1, len(cands)):
+        prev_r = np.array([r for _, r in cands[i - 1]])
+        cur_l = np.array([l_ for l_, _ in cands[i]])
+        d = np.abs(b.mid_env[prev_r][:, None, :] - b.mid_env[cur_l][None, :, :]).mean(-1) / 10 + JOIN
+        fa, fb = b.ph_f0[prev_r][:, None], b.ph_f0[cur_l][None, :]
+        both = (fa > 0) & (fb > 0)
+        d = d + F0_JOIN * np.where(both, np.abs(np.log2(np.maximum(fa, 1) / np.maximum(fb, 1))), 0.0)
+        d = d * JOIN_CLASS.get(klass(seq[i][0]), 1.0)
+        d[prev_r[:, None] == cur_l[None, :]] = 0.0
+        total = acc[:, None] + d
+        back.append(np.argmin(total, 0))
+        acc = total.min(0) + costs[i]
+    path = [int(np.argmin(acc))]
+    for bp in reversed(back):
+        path.append(int(bp[path[-1]]))
+    path.reverse()
+    return [cands[i][j] for i, j in enumerate(path)]
+
+
+@pytest.mark.parametrize("pitch, tract", [(120, 1.0), (180, 1.15)])
+def test_fast_selection_chooses_exactly_what_the_reference_does(pitch, tract, monkeypatch):
+    from tare.tools.tune.speech import concat
+    seen, fast = [], concat.select
+
+    def spy(b, seq, pitch=None):
+        seen.append((b, [list(p) for p in seq], list(pitch) if pitch else None))
+        return fast(b, seq, pitch)
+    monkeypatch.setattr(concat, "select", spy)
+    sp = Speaker(pitch=pitch, tract=tract, engine="natural")
+    for text in ("Bem-vindo à forja, viajante!", "Você trouxe o minério que eu pedi?", "Onde fica a taverna?",
+                 "Sério?!", "Eu não sei...", "Custa 350 moedas.", "Cuidado, o chão da ponte está podre.",
+                 "[raiva] Saiam daqui agora!", "Nhenhém, lhama, xícara, quilombo, pneu."):
+        sp.spoken(text, "pt")
+    assert len(seen) == 9
+    for b, seq, f0 in seen:
+        assert fast(b, seq, f0) == _select_reference(b, seq, f0), " ".join(p[0] for p in seq)
+
+
 def test_learned_intonation_rises_for_questions_and_falls_for_statements():
     sp = Speaker(pitch=120, engine="natural")
     q = np.array(sp.spoken("Você viu o dragão?", "pt").f0)
