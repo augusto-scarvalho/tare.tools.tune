@@ -108,3 +108,22 @@ def test_tactics_cues_keep_to_ffta2(monkeypatch):
             leaps = np.mean([abs(y[1] - x[1]) >= 5 for x, y in zip(tune, tune[1:], strict=False) if y[0] > x[0]])
             assert leaps > 0.25                                        # the darkest tunes leap the most
     assert Cue("recruit", seed=1, sr=SR).end > 0                       # a jingle, not a loop
+
+
+def test_a_loop_is_seamless_and_says_so(tmp_path):
+    import wave
+
+    from tare.tools.tune.audio_io import wav_loop
+    from tare.tools.tune.cli import main
+    c = Cue("tavern", "snes", seed=2, sr=SR)
+    y = c.render().astype(float)
+    twice = np.concatenate([y, y])
+    step = np.abs(np.diff(twice, axis=0)).max(axis=1)
+    assert step[len(y) - 1] <= np.percentile(step, 99.9)                # the seam is no jump at all
+    out = tmp_path / "tavern.wav"
+    main(["music", "tavern", "--style", "snes", "--seed", "2", "--sr", str(SR), "-o", str(out)])
+    with wave.open(str(out)) as w:
+        n = w.getnframes()
+    assert n == len(y) and wav_loop(out) == (0, n - 1)                   # engines loop it with no setup
+    main(["music", "victory", "--sr", str(SR), "-o", str(tmp_path / "victory.wav")])
+    assert wav_loop(tmp_path / "victory.wav") is None                    # a jingle just ends

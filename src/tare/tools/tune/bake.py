@@ -154,7 +154,7 @@ def _bake_sound(job):
     stem = f"{name}/{event}_{take:02d}"
     voice = sfx.voice(event, take)
     audio = render(voice, sr)
-    write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
+    write_wav(Path(out_dir) / f"{stem}.wav", audio, sr, loop=voice.loop > 0)
     entry = {"file": f"{stem}.wav", "duration": round(len(audio) / sr, 4),
              "peak": round(float(np.max(np.abs(audio))), 4)}
     if voice.loop:

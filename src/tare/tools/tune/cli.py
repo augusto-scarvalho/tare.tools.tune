@@ -41,9 +41,9 @@ def _creature(a) -> Creature:
                     individual=a.individual, variation=a.variation, genes=genes)
 
 
-def _write(audio, path, sr, png=False):
-    write_wav(path, audio, sr)
-    print(f"{path}  ({len(audio) / sr:.2f}s)")
+def _write(audio, path, sr, png=False, loop=False):
+    write_wav(path, audio, sr, loop=loop)
+    print(f"{path}  ({len(audio) / sr:.2f}s{', seamless loop' if loop else ''})")
     if png:
         from .plot import spectrogram  # optional dependency: pip install tare.tools.tune[plot]
         spectrogram(audio, sr, Path(path).with_suffix(".png"))
@@ -177,7 +177,14 @@ def cmd_sfx(a):
     if a.spec:
         Path(a.spec).write_text(voice.to_json(indent=1), encoding="utf-8")
     out = a.output or f"{a.kind}_{sx.style}_{event}.wav"
-    _write(render(voice, a.sr), out, a.sr, a.png)
+    _write(render(voice, a.sr), out, a.sr, a.png, loop=voice.loop > 0)
+
+
+def cmd_music(a):
+    from .music import Cue
+    cue = Cue(a.kind, a.style, a.seed, a.sr)
+    out = a.output or f"{a.kind}_{a.style}_{a.seed}.wav"
+    _write(cue.render(), out, a.sr, a.png, loop=cue.length > 0)
 
 
 def cmd_sounds(a):
@@ -287,6 +294,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--png", action="store_true")
     p.add_argument("--sr", type=int, default=DEFAULT_SR)
     p.set_defaults(fn=cmd_sfx)
+
+    from .music import CUES
+    from .music import STYLES as MUSIC_STYLES
+    p = sub.add_parser("music", help="compose a cue from a seed: a jingle, or a loop that repeats without a seam")
+    p.add_argument("kind", choices=list(CUES))
+    p.add_argument("--style", default="orchestral", choices=list(MUSIC_STYLES),
+                   help="orchestral, snes (16-bit) or chip")
+    p.add_argument("--seed", type=int, default=0, help="which piece: the same seed is always the same music")
+    p.add_argument("-o", "--output")
+    p.add_argument("--png", action="store_true")
+    p.add_argument("--sr", type=int, default=DEFAULT_SR)
+    p.set_defaults(fn=cmd_music)
 
     p = sub.add_parser("sounds", help="sound effect kinds, styles and events")
     p.add_argument("--knobs", action="store_true", help="also list the knobs, their ranges and what they do")
