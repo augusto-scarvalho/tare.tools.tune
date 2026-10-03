@@ -129,7 +129,7 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
 | Chuva, vento, fogo, riacho, caverna, floresta, noite, tempestade, mar, masmorra | todos | tem: `ambience` | B |
-| Campo de batalha, acampamento, salão de castelo, cidade e mercado, planície, deserto, neve e montanha, pântano, ruínas e templo, convés de navio | todos | falta | B |
+| Campo de batalha, acampamento, salão de castelo, cidade e mercado, planície, deserto, neve e montanha, pântano, ruínas e templo, convés de navio | todos | medido no TS e no TO: `ambience` battlefield, camp, castle, town, plains, deck; desenhado: desert, snow, swamp, ruins | B |
 
 ## 10. Música
 
@@ -158,7 +158,7 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Móveis: cadeira, sentar, mesa, gaveta, cama | todos | medido: `furniture` | B |
 | Sinos: igreja e casamento, mão, loja, navio | todos | medido: `bell` | B |
 | Cartas e encomendas passadas de mão em mão; roupa (ajoelhar, reverência) | TS | medido: `item` letter, `gear` cloth | B |
-| Um salão de jantar, uma taverna cheia | TS | falta (um ambiente) | C |
+| Um salão de jantar, uma taverna cheia | TS | medido no TS: `ambience` dinner, tavern | C |
 
 ## Ordem proposta
 

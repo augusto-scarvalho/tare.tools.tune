@@ -218,7 +218,7 @@ audio = rei.render("Salve o reino!")
 | `explosion` | fire, stone, magic | blast, distant, debris |
 | `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal, water, wind, earth, poison, gravity, meteor | charge, cast, travel (loop), impact |
 | `summon` (invocações) | fire, ice, thunder, earth, holy, dark, dragon | arrive, strike, leave |
-| `ambience` | rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon | loop (16 s, sem emenda), accent |
+| `ambience` | rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon; e os lugares de uma história: battlefield, camp, castle, town, tavern, dinner, plains, desert, snow, swamp, ruins, deck | loop (16 s, sem emenda), accent |
 
 **Época (`era`).** Qualquer efeito pode vir vestido como uma geração de jogos, medida nos próprios jogos:
 

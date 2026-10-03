@@ -448,6 +448,19 @@ Sem gravação: servir (`pour`: o ar do copo subindo de tom enquanto enche, bolh
 
 Sem gravação: as andaduras (o passo em quatro tempos iguais, o trote em dois, o meio-galope em três e uma suspensão, o galope em quatro rápidos e as quatro patas no ar), o relincho comum, o relincho baixinho (`nicker`), o pouso e o pairar das asas, a marcha das tropas. As andaduras, o pairar e a marcha são loops sem emenda: o último casco (batida, passo) de cada loop morre antes do ponto de volta, então o loop nem precisa de crossfade.
 
+**Os lugares de uma história (`sfx/places.py`, estilos de `ambience`: battlefield, camp, castle, town, tavern, dinner, plains, desert, snow, swamp, ruins, deck).** Medidos nos loops de ambiente de *Triangle Strategy* e no clima de *Tactics Ogre: Reborn* (cópias do usuário); só análise. Bandas de oitava em relação à mais forte:
+
+| medido | o que é | estilo |
+|---|---|---|
+| uma batalha ao longe | mais forte em 0,5–1 kHz, -6 dB em 2 kHz, -16 em 4k, -21 em 8k; o nível mexe ~11 dB | `battlefield`: um exército gritando (vozes mais agudas e abertas), aço e escudos, os pés, tambores de guerra; ±7 dB do TS |
+| gente conversando | (um bar, soldados, cinco pessoas) mais forte em 500 Hz, -3 a -5 dB em 1 kHz, -8 a -13 em 2k, -16 a -22 em 4k | `tavern`, `town`, `camp`: ±5 dB do TS |
+| um jantar | claro: mais forte em 4 kHz (talheres, ~2 por segundo), a conversa 15–20 dB abaixo | `dinner` |
+| planície | vento e pássaros: de 250 Hz a 8 kHz dentro de ~6 dB, o nível mexendo ~15 dB | `plains`: ±4 dB do TS |
+| um navio no cais | ondas mais fortes em 500 Hz, gaivotas perto de 1 kHz | `deck` |
+| fogueira | um rugido grave (63–125 Hz), os estalos uns 12 dB abaixo, planos acima de 500 Hz | a fogueira de `camp`, a lareira de `tavern` |
+
+As multidões são vozes sem palavras: cada frase de cada pessoa é uma sílaba só, com a boca abrindo e fechando 4–6 vezes por segundo enquanto a vogal muda, o tom subindo um pouco e caindo no fim (algumas perguntam); uma taverna cheia são umas 70 camadas. Os lugares usam os sons que já existem: a fogueira, o vento e o mar medidos, os grilos e os sapos do bestiário, os cascos, o bufo do cavalo, o sino do navio, os rangidos de madeira. Sem gravação: o deserto (vento quente, areia chiando a cada rajada), a neve (o vento uivando nas pedras), o pântano (sapos, rãs-touro, lama borbulhando, mosquitos) e as ruínas (o vento cantando nas pedras quebradas, gotas, sininhos).
+
 **Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
 - **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.
 - **Tocha:** acende com um raspado e uma labareda que vira crepitar (larga, 1–6 kHz, ~1 s). Apagar é um chiado.

@@ -104,15 +104,23 @@ def owl(start: float, pitch: float) -> list[Syllable]:
     return out
 
 
+from .places import PLACES  # noqa: E402  (the places build on the helpers above)
+
+
 @recipe("ambience", ("loop", "accent"),
-        ("rain", "wind", "fire", "stream", "cave", "forest", "night", "storm", "sea", "dungeon"), loops=("loop",))
+        ("rain", "wind", "fire", "stream", "cave", "forest", "night", "storm", "sea", "dungeon", *PLACES),
+        loops=("loop",))
 def ambience(fx: Fx):
-    """Places: rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon (loop + accent)."""
+    """Places: rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon, and where a story goes (battlefield,
+    camp, castle, town, tavern, dinner, plains, desert, snow, swamp, ruins, deck): loop + accent."""
     st, s, p, e = fx.style, fx.size, fx.power, fx.event
     L, extra = [], {}
     loop = e == "loop"
 
-    if st in ("rain", "storm"):
+    if st in PLACES:
+        L, extra = PLACES[st](fx, loop)
+
+    elif st in ("rain", "storm"):
         heavy = p if st == "rain" else max(p, 0.7)
         if loop:
             bed = 1.0 if st == "rain" else 0.45   # in a storm the thunder takes over

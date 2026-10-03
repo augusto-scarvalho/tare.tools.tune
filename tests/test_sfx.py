@@ -201,6 +201,25 @@ def test_mounts_and_flight_keep_to_the_games():
     assert Sfx("warp", "retro").voice("out").duration < 0.6                               # TO: ~0.4 s
 
 
+def test_places_keep_to_the_games():
+    from tare.tools.tune.sfx.places import PLACES
+    assert set(PLACES) <= set(RECIPES["ambience"].styles)
+    tavern = Sfx("ambience", "tavern", species=2).voice("loop")
+    talk = [s for s in tavern.syllables if len(s.amp) > 4]
+    assert tavern.loop and len(talk) > 40                                    # a room full of people
+    assert all(150 < s.formants[0][0] < 1000 for s in talk)                # voices: their energy near 500 Hz
+    army = Sfx("ambience", "battlefield", species=2).voice("loop")
+    assert np.median([s.pitch[0][1] for s in army.syllables]) > 180        # shouting, raised voices
+    dinner = Sfx("ambience", "dinner", species=2)
+    cutlery = dinner.voice("loop").modal[0]
+    assert 1.5 < len(cutlery.hits) / 16 < 2.5                               # TS: ~2 clinks a second
+    y = dinner.render("loop", 0, SR).astype(float)
+    spec = np.abs(np.fft.rfft(y)) ** 2
+    f = np.fft.rfftfreq(len(y), 1 / SR)
+    octave = lambda c: spec[(f >= c / 2 ** 0.5) & (f < c * 2 ** 0.5)].sum()  # noqa: E731
+    assert octave(4000) > 10 * octave(500)                                  # bright: the cutlery over the talk
+
+
 def test_knobs_vary_a_sound_within_its_character():
     base = Sfx("ui", "crystal", species=3)
     assert np.array_equal(base.render("confirm", 0, SR),                                  # defaults: untouched
