@@ -13,7 +13,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from .units import Phrase, Syllable, Word, is_vowel, transcription
+from .units import Phrase, Syllable, Word, is_vowel, phrase_kind, transcription
 
 VOWEL_LETTERS = set("aeiouáéíóúâêôãõàü")
 ACUTE_OR_CIRC = set("áéíóúâêô")
@@ -32,6 +32,11 @@ X_AS_S = ("proxim", "maxim", "auxili", "trouxe", "trouxer", "sintax", "aproxim")
 X_AS_KS = ("taxi", "fixo", "fixa", "fixar", "afix", "prefix", "sufix", "crucifix", "sexo", "sexu", "complex", "reflex",
            "flexi", "flexa", "anex", "conex", "nexo", "oxig", "oxid", "toxic", "intoxic", "axil", "axiom", "lexic",
            "fluxo", "influx", "maxila", "boxe", "xerox", "paradox", "ortodox", "convex", "saxof", "onix", "fenix")
+# questions that start with a question word fall at the end instead of rising
+WH_WORDS = {"quem", "onde", "aonde", "quando", "como", "qual", "quais", "quanto", "quanta", "quantos", "quantas",
+            "porque", "que", "cadê"}
+WH_PAIRS = {"por que", "o que", "pra que", "para que", "por quê", "o quê", "de que", "com quem", "de quem",
+            "pra onde", "para onde", "de onde", "por onde", "em que", "até quando", "desde quando"}
 CLITICS = {"o", "a", "os", "as", "um", "uns", "de", "da", "do", "das", "dos", "e", "que", "se", "em", "me",
            "te", "lhe", "nos", "vos", "por", "com", "na", "no", "nas", "ao", "aos", "à", "às", "pra", "pro",
            "lhes", "sem", "mas", "nem", "num", "numa"}
@@ -69,12 +74,12 @@ def number_to_words(n: int) -> str:
 
 def normalize(text: str) -> list[tuple[list[str], str]]:
     text = re.sub(r"\d+", lambda m: f" {number_to_words(int(m.group()))} ", text.lower())
-    text = text.replace("-", " ").replace("—", ",").replace("…", ".")
+    text = text.replace("-", " ").replace("—", ",")
     phrases, words = [], []
-    for token in re.findall(r"[a-zçáéíóúâêôãõàüy]+|[.!?,;:]", text):
-        if token in ".!?,;:":
+    for token in re.findall(r"[a-zçáéíóúâêôãõàüy]+|[.!?…]{2,}|[.!?,;:…]", text):
+        if token[0] in ".!?,;:…":
             if words:
-                phrases.append((words, {";": ",", ":": ","}.get(token, token)))
+                phrases.append((words, phrase_kind(token)))
                 words = []
         else:
             words.append(token)
@@ -333,7 +338,8 @@ def text_to_phrases(text: str) -> list[Phrase]:
             if a.syllables and b.syllables and a.syllables[-1].phones[-1] == "s" and \
                     is_vowel(b.syllables[0].phones[0]):
                 a.syllables[-1].phones[-1] = "z"
-        phrases.append(Phrase([w for w in ws if w.syllables], kind))
+        wh = kind in ("?", "?!") and (words[0] in WH_WORDS or " ".join(words[:2]) in WH_PAIRS)
+        phrases.append(Phrase([w for w in ws if w.syllables], kind, wh=wh))
     return [p for p in phrases if p.words]
 
 

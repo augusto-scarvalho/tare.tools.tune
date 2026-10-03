@@ -50,8 +50,9 @@ class Speaker:
         return transcription(_frontend(lang).text_to_phrases(text))
 
     def _plan(self, text: str, lang: str, style: str):
+        from .emotion import TAG
         g2p = _frontend(lang)
-        phrases = g2p.text_to_phrases(text)
+        phrases = g2p.text_to_phrases(TAG.sub(" ", text))           # emotion tags are handled by voice()
         if not phrases:
             raise ValueError("nothing to say")
         if style not in babble.STYLES:
@@ -77,7 +78,7 @@ class Speaker:
         "mumble" (see babble.py)."""
         phrases, pitch, rate, range_, notes = self._plan(text, lang, style)
         tracks = frames(phrases, lang, pitch=pitch, tract=self.tract, range_=range_, rate=rate,
-                        breath=self.breath, melody=notes)
+                        breath=max(self.breath, 0.0), melody=notes)
         if self.whisper:
             av = np.asarray(tracks["av"])
             tracks["ah"] = [round(float(x), 4) for x in np.asarray(tracks["ah"]) + self.whisper * av * 0.9]
@@ -86,27 +87,44 @@ class Speaker:
                              rough=(self.rough, 32.0), sub=self.sub, text=text, lang=lang,
                              phonemes=transcription(phrases))
 
-    def spoken(self, text: str, lang: str = "pt", style: str = "speech") -> Spoken:
-        """The natural engine's layer: pieces of the nearest voice bank, our timing and intonation, this voice."""
+    def spoken(self, text: str, lang: str = "pt", style: str = "speech", final: float = 0.0,
+               pause: float = 1.0) -> Spoken:
+        """The natural engine's layer: pieces of the nearest voice bank, our timing and intonation, this voice.
+        `final`: semitones at the end of statements; `pause`: x the pauses between phrases (see emotion.py)."""
         from . import concat
         phrases, pitch, rate, range_, notes = self._plan(text, lang, style)
         name = self.bank if self.bank.startswith(lang + "/") else concat.closest(lang, self.tract)
         b = concat.bank(name)
         parts, joins, f0, phones = concat.plan(phrases, lang, name, pitch, range_, rate, notes, jitter=self.jitter,
-                                               seed=rng.seed32("spoken", text, repr(self)))
+                                               seed=rng.seed32("spoken", text, repr(self)), final=final, pause=pause)
         return Spoken(name, parts, joins, f0, warp=round(float(np.clip(self.tract / b.tract, 0.75, 1.35)), 4),
-                      breath=round(min(max(1.5 * (self.breath - 0.05), self.whisper), 1.0), 4),
+                      breath=round(float(np.clip(max(1.5 * (self.breath - 0.05), self.whisper or -1.0), -1, 1)), 4),
                       tilt=round(3 * float(np.log2(self.tilt / 3000)), 3), text=text, lang=lang, phonemes=phones)
 
-    def voice(self, text: str, lang: str = "pt", seed: int | None = None, style: str = "speech") -> Voice:
-        seed = rng.seed32("speech", text, lang, repr(self), style) if seed is None else seed
-        layer = {"spoken": [self.spoken(text, lang, style)]} if self.natural(lang) else \
-            {"speech": [self.speech(text, lang, style)]}
-        return Voice(**layer, crush=self.crush, drive=self.drive, space=self.space, wet=0.18, seed=seed,
-                     meta={"speaker": self.name, "text": text, "lang": lang, "style": style, "engine": self.engine})
+    def voice(self, text: str, lang: str = "pt", seed: int | None = None, style: str = "speech",
+              emotion=None) -> Voice:
+        """The spec of a line. `emotion` ("alegria", "raiva", "tristeza", "medo", "surpresa", "sussurro"...; see
+        emotion.py) colours all of it; [emotion] or [emotion:0.5] tags in the text change it as the line goes on."""
+        from .emotion import apply, split
+        seed = rng.seed32("speech", text, lang, repr(self), style, str(emotion)) if seed is None else seed
+        segments = split(text, emotion)
+        if not segments:
+            raise ValueError("nothing to say")
+        natural, layers, start = self.natural(lang), [], 0.0
+        for e, part in segments:           # one layer per stretch of feeling, one after the other
+            spk = apply(self, e)
+            layer = spk.spoken(part, lang, style, e.final, e.pause) if natural else spk.speech(part, lang, style)
+            layer.start = round(start, 4)
+            start += layer.duration + (0.3 * e.pause if part[-1] in ".!?…" else 0.05)
+            layers.append(layer)
+        return Voice(**{"spoken" if natural else "speech": layers}, crush=self.crush, drive=self.drive,
+                     space=self.space, wet=0.18, seed=seed,
+                     meta={"speaker": self.name, "text": text, "lang": lang, "style": style, "engine": self.engine,
+                           **({"emotion": str(emotion)} if emotion else {})})
 
-    def render(self, text: str, lang: str = "pt", sr: int = DEFAULT_SR, style: str = "speech") -> np.ndarray:
-        return render(self.voice(text, lang, style=style), sr)
+    def render(self, text: str, lang: str = "pt", sr: int = DEFAULT_SR, style: str = "speech",
+               emotion=None) -> np.ndarray:
+        return render(self.voice(text, lang, style=style, emotion=emotion), sr)
 
     def emote(self, kind: str, style: str = "grunt", intensity: float = 0.7, take: int = 0,
               sr: int = DEFAULT_SR) -> np.ndarray:

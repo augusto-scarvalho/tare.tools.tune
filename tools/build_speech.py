@@ -257,8 +257,9 @@ def build(lang: str):
         voiced = np.concatenate(f0s)
         model = fit_durations(phones)
         meta = {"lang": lang, "name": name, "teacher": f"Kokoro-82M {voice} (Apache-2.0)", "tract": tract,
-                "pitch": round(float(np.median(voiced[voiced > 0])), 1), "durations": model, "env_delta": True,
-                "intonation": intonation(lang, items, phones, voiced)}
+                "pitch": round(float(np.median(voiced[voiced > 0])), 1), "env_delta": True}
+        (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(
+            {"durations": model, "intonation": intonation(lang, items, phones, voiced)}))
         env = np.clip(np.round((np.concatenate(envs) - ENV_FLOOR) * 2), 0, 255).astype(np.uint8)
         env = np.diff(env, axis=0, prepend=np.zeros((1, env.shape[1]), np.uint8))   # frame-to-frame, mod 256
         out = OUT / f"bank_{lang}_{name}.npz"
@@ -268,7 +269,7 @@ def build(lang: str):
                             meta=np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8))
         print(f"{lang}/{name}: labels moved {np.median(shifts) * FRAME * 1000:.0f} ms (median), "
               f"{len(phones)} phones, {base * FRAME / 60:.1f} min, duration model r = {model['fit'][0]}, "
-              f"intonation r = {meta['intonation']['fit']} -> {out} ({out.stat().st_size / 1e6:.1f} MB)")
+              f"-> {out} ({out.stat().st_size / 1e6:.1f} MB)")
 
 
 def intonation(lang: str, items: list[dict], phones: list, f0: np.ndarray) -> dict:
@@ -303,19 +304,17 @@ def intonation(lang: str, items: list[dict], phones: list, f0: np.ndarray) -> di
 
 
 def fit(lang: str):
-    """Refit the duration and intonation models of the banks, without analysing the recordings again."""
+    """Refit the duration and intonation models of the banks (bank_<lang>_<voice>.json, next to the frames), without
+    analysing the recordings again or rewriting the banks."""
     for name in VOICES[lang]:
-        path = OUT / f"bank_{lang}_{name}.npz"
-        d = dict(np.load(path))
-        meta = json.loads(bytes(d["meta"]).decode())
+        d = np.load(OUT / f"bank_{lang}_{name}.npz")
         phones = json.loads(bytes(d["phones"]).decode())
         items = json.loads((CACHE / f"speech_{lang}_{name}.json").read_text())
-        meta["durations"] = fit_durations(phones)
-        meta["intonation"] = intonation(lang, items, phones, d["f0"].astype(np.float64))
-        d["meta"] = np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8)
-        np.savez_compressed(path, **d)
-        print(f"{lang}/{name}: duration model r = {meta['durations']['fit'][0]}, "
-              f"intonation r = {meta['intonation']['fit']}")
+        models = {"durations": fit_durations(phones),
+                  "intonation": intonation(lang, items, phones, d["f0"].astype(np.float64))}
+        (OUT / f"bank_{lang}_{name}.json").write_text(json.dumps(models))
+        print(f"{lang}/{name}: duration model r = {models['durations']['fit'][0]}, "
+              f"intonation r = {models['intonation']['fit']}")
 
 
 if __name__ == "__main__":

@@ -165,6 +165,9 @@ class Bank:
     def __init__(self, path: Path):
         d = np.load(path)
         self.meta = json.loads(bytes(d["meta"]).decode())
+        models = path.with_suffix(".json")          # duration and intonation models, refitted without the frames
+        if models.exists():
+            self.meta.update(json.loads(models.read_text()))
         self.name = f"{self.meta['lang']}/{self.meta['name']}"
         self.tract, self.pitch = self.meta["tract"], self.meta["pitch"]
         self.f0 = d["f0"].astype(np.float64)
@@ -452,6 +455,83 @@ def render_spoken(sp, sr: int, seed: int) -> np.ndarray:
     return sp.gain * y / (np.max(np.abs(y)) + 1e-12)
 
 
+# -- phrase-final tunes ------------------------------------------------------------------------------------------------
+# The teacher does not make Brazilian Portuguese question tunes: measured over its corpus, its yes/no questions end
+# like statements (last two vowels -8.7 and -6.4 semitones from the sentence's median, statements -8.5 and -8.0).
+# These replace what the regression learned for the last stressed vowel and what follows it, in semitones from the
+# median, after descriptions of Brazilian Portuguese intonation (Moraes 2008; Frota et al. 2015):
+#   ?    yes/no question, L+H* L%: the last stressed vowel rises from low to high, what follows falls back down;
+#        a last stressed syllable at the very end keeps the rise
+#   ?!   surprise ("Sério?!", "O quê?!"): the same, higher and longer
+#   …    trailing off: left hanging, level and slow
+# A wh-question ("Onde...?") falls like a statement (the regression has it), with the question word raised.
+TUNES = {
+    "?": {"nuc": (-1.5, 7.0), "post": (4.0, -2.0), "end": 6.0, "stretch": 1.1},
+    "?!": {"nuc": (0.0, 11.0), "post": (7.0, 0.0), "end": 10.0, "stretch": 1.3},
+    "…": {"nuc": (-0.5, -1.0), "post": (-1.0, -1.5), "end": -1.0, "stretch": 1.45},
+}
+WH_RAISE = 1.5                    # semitones on a wh-question's first vowel (the regression already starts high)
+EXCLAIM = 1.25                    # an exclamation's pitch movements, wider
+
+
+def phrase_nuclei(seq: list) -> list[tuple[list[int], int]]:
+    """Per phrase of `seq` (split at pauses): the indices of its syllable nuclei and of its last stressed one."""
+    out, cur = [], []
+    for i, p in enumerate([*seq, ["_", 0, 0, 0]]):
+        if p[0] == "_":
+            if cur:
+                stressed = [k for k in cur if seq[k][2] > 0]
+                out.append((cur, stressed[-1] if stressed else cur[-1]))
+            cur = []
+        elif p[0] in NUCLEI:
+            cur.append(i)
+    return out
+
+
+def stretch_finals(seq: list, phrases) -> None:
+    """Lengthen, in place, the end of the phrases whose tune asks for it (from the last stressed vowel on)."""
+    for (idx, nuclear), ph in zip(phrase_nuclei(seq), phrases, strict=False):
+        factor = TUNES.get(ph.kind, {}).get("stretch", 1.0)
+        if factor != 1.0:
+            last = idx[-1]
+            while last + 1 < len(seq) and seq[last + 1][0] != "_":
+                last += 1
+            for k in range(nuclear, last + 1):
+                seq[k][1] *= factor
+
+
+def tunes(learned, seq: list, phrases, final: float = 0.0):
+    """The learned targets with the phrase-final tunes laid over them (log2 units). `final`: semitones added to
+    the last vowels of statements and exclamations (an emotion's end: anger falls further, sadness less)."""
+    targets, where = learned
+    targets = np.array(targets, dtype=float)
+    pos = {i: k for k, i in enumerate(where)}
+    for (idx, nuclear), ph in zip(phrase_nuclei(seq), phrases, strict=False):
+        tune = TUNES.get(ph.kind)
+        if ph.kind == "?" and ph.wh:
+            tune = None                                      # wh-questions fall: keep the learned tune
+            targets[pos[idx[0]]] += WH_RAISE / 12
+        if ph.kind == "!":
+            mean = targets[[pos[i] for i in idx]].mean()
+            for i in idx:
+                targets[pos[i]] = mean + EXCLAIM * (targets[pos[i]] - mean)
+        if tune:
+            post = [i for i in idx if i > nuclear]
+            if post:
+                targets[pos[nuclear]] = np.array(tune["nuc"]) / 12
+                ends = np.linspace(tune["post"][0], tune["post"][1], 2 * len(post))
+                for k, i in enumerate(post):
+                    targets[pos[i]] = ends[2 * k:2 * k + 2] / 12
+            else:
+                targets[pos[nuclear]] = np.array([tune["nuc"][0], tune["end"]]) / 12
+        elif final and ph.kind in (".", "!", ","):
+            tail = [i for i in idx if i >= nuclear]
+            for k, i in enumerate(tail):
+                w = (k + 1) / len(tail)
+                targets[pos[i]] += np.array([w * 0.5, w]) * final / 12
+    return targets, where
+
+
 def _contour(learned, edges, n: int, pitch: float, range_: float, melody) -> np.ndarray:
     """Nucleus targets (start and end of each vowel, a quarter in) -> pitch per output frame, smoothed (50 ms)."""
     targets, where = learned
@@ -471,7 +551,8 @@ def _contour(learned, edges, n: int, pitch: float, range_: float, melody) -> np.
 
 
 def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate: float = 1.0,
-         melody: list[float] | None = None, jitter: float = 0.0, seed: int = 0) -> tuple[list, list, list, str]:
+         melody: list[float] | None = None, jitter: float = 0.0, seed: int = 0, final: float = 0.0,
+         pause: float = 1.0) -> tuple[list, list, list, str]:
     """Phrases (from a g2p front-end) -> (pieces, joins, f0 per output frame, the teacher-accent transcription)."""
     from .phonetics import _intonation, segments
     b = bank(name)
@@ -494,12 +575,16 @@ def plan(phrases, lang: str, name: str, pitch: float, range_: float = 1.0, rate:
     for p, d in zip(seq, b.durations([(p[0], p[2], p[3]) for p in seq]), strict=True):
         if p[0] != "_":
             p[1] = d / rate
+    stretch_finals(seq, phrases)
+    for i in range(1, len(seq) - 1):
+        if seq[i][0] == "_":
+            seq[i][1] *= pause
     new = np.cumsum([0.0] + [2 * max(int(round(p[1] / 2 / FRAME)), 1) * FRAME for p in seq])
     n = int(round(new[-1] / FRAME))
     f0 = np.interp(np.interp(np.arange(n) * FRAME, new, ours), t_ours, f0_ours)
     learned = b.intonation([(p[0], p[2], p[3]) for p in seq], [(ph.kind, ph.wh) for ph in phrases])
     if learned is not None:            # the teacher's intonation, for our phones, timing and pitch
-        f0 = _contour(learned, new / FRAME, n, pitch, range_, melody)
+        f0 = _contour(tunes(learned, seq, phrases, final), new / FRAME, n, pitch, range_, melody)
     middles = np.clip(((new[:-1] + new[1:]) / 2 / FRAME).astype(int), 0, n - 1)
     units = select(b, seq, [float(f0[m]) if p[0] in VOWEL or p[0] in VOICED else 0.0
                             for p, m in zip(seq, middles, strict=True)])

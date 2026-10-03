@@ -99,7 +99,7 @@ PHONES: dict[str, Phone] = {
     "h": Phone("h", 65, voiced=False, place="glot"),
     "R": Phone("h", 80, voiced=False, place="glot"),
 }
-PAUSES = {",": 0.18, ".": 0.38, "!": 0.38, "?": 0.38}
+PAUSES = {",": 0.18, ".": 0.38, "!": 0.38, "?": 0.38, "?!": 0.42, "…": 0.6}
 
 # Per-language adjustments on top of PHONES: {lang: {phone: {field: value}}}
 LANG_PHONES: dict[str, dict[str, dict]] = {"pt": {}}
@@ -280,6 +280,8 @@ def _intonation(segs: list[_Seg], sylls: list[dict], t: np.ndarray, pitch: float
         accents = [i for i in idx if sylls[i]["accent"]] or [idx[-1]]
         nuclear = accents[-1]
         kind = sylls[idx[0]]["kind"]
+        R = rng_ * (1.6 if kind == "?!" else 1.0)          # surprise: a question, wider
+        kind = {"?!": "?", "…": ","}.get(kind, kind)          # trailing off: left hanging, like a comma
         if kind == "?" and sylls[idx[0]]["wh"]:
             kind = "."
         nuclear_end = pitch

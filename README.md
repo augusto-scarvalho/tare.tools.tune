@@ -96,6 +96,27 @@ npc = Speaker.random(42).but(engine="natural")                    # uma voz natu
 
 No inglês, os formantes ficam entre 0,04 e 0,06 conforme a voz.
 
+### Entonação e emoções
+
+O fim da frase segue a pontuação, com as melodias do português do Brasil:
+- `.` afirmação: cai no fim;
+- `?` pergunta de sim/não: sobe na última sílaba tônica e cai depois dela ("Você comprou a es**pa**da?"); se a tônica é a última sílaba, termina lá em cima ("Você viu o dra**gão**?");
+- pergunta com "quem", "onde", "o que", "por que"...: cai, como uma afirmação, com a palavra interrogativa mais alta;
+- `?!` surpresa ("Sério?!", "O quê?!"): a pergunta, mais alta e mais longa;
+- `!` exclamação: movimentos de tom mais largos;
+- `...` ou `…` reticências: fica suspensa, devagar, com pausa maior;
+- `,` continuação.
+
+**Emoções** mudam a voz inteira ou um trecho da fala, nos dois motores:
+
+```python
+rei.render("Saia daqui!", emotion="raiva")
+rei.render("[alegria] Que bom te ver! [tristeza] Mas eu preciso partir...")
+rei.render("[medo:0.5] Você ouviu isso?")      # intensidade de 0 a 1 (padrão 0,8)
+```
+
+`alegria`, `raiva`, `tristeza`, `medo`, `surpresa`, `sussurro` e `neutro` (também `feliz`, `triste`, `bravo`, `assustado`, `happy`, `angry`, `sad`...). Alegria, raiva e tristeza foram medidas em atores brasileiros do [emoUERJ](https://doi.org/10.5281/zenodo.5427549) (CC BY 4.0): a alegria sobe 6,3 semitons e alarga a melodia 27%; a raiva sobe 4,6, clareia o timbre e cai mais no fim; a tristeza fica 8% mais lenta, mais soprosa, com o fim menos caído e mais pausas.
+
 ### Interjeições (jogos sem dublagem completa)
 
 Muitos jogos não são dublados: o personagem só solta um "hyah!", um "ugh", um "hm?" ou uma risada, e o texto faz o resto. `Speaker.emote` gera essas interjeições sem palavras **na voz do próprio personagem**.
@@ -429,6 +450,8 @@ O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som 
 ## Créditos
 
 A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (licença BSD, incluída em `src/tare/tools/tune/speech/data/LICENSE-cmudict`). O sintetizador de fala segue o desenho cascata/paralelo de Dennis Klatt.
+
+As medidas das emoções vêm do emoUERJ, de Rodrigo G. Bastos Germano, Michel Pompeu Tcheou, Felipe da Rocha Henriques e Sergio Pinto Gomes Junior (UERJ, 2021, [CC BY 4.0](https://doi.org/10.5281/zenodo.5427549)); as gravações serviram só para medir.
 
 Os bancos de voz natural vêm de leituras do [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), feitas offline; o pacote leva só os números medidos nelas.
 

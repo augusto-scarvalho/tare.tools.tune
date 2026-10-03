@@ -8,7 +8,7 @@ import re
 from functools import cache
 from importlib.resources import files
 
-from .units import Phrase, Syllable, Word, is_vowel, transcription
+from .units import Phrase, Syllable, Word, is_vowel, phrase_kind, transcription
 
 ARPA = {
     "AA": ["A"], "AE": ["{"], "AO": ["O"], "AW": ["a", "w"], "AY": ["a", "j"], "EH": ["E"], "ER": ["3`"],
@@ -188,12 +188,12 @@ def word_to_phonemes(word: str, clitic: bool = False) -> Word:
 
 def normalize(text: str) -> list[tuple[list[str], str]]:
     text = re.sub(r"\d+", lambda m: f" {number_to_words(int(m.group()))} ", text.lower())
-    text = text.replace("-", " ").replace("—", ",").replace("…", ".").replace("’", "'")
+    text = text.replace("-", " ").replace("—", ",").replace("’", "'")
     phrases, words = [], []
-    for token in re.findall(r"[a-z]+(?:'[a-z]+)?|[.!?,;:]", text):
-        if token in ".!?,;:":
+    for token in re.findall(r"[a-z]+(?:'[a-z]+)?|[.!?…]{2,}|[.!?,;:…]", text):
+        if token[0] in ".!?,;:…":
             if words:
-                phrases.append((words, {";": ",", ":": ","}.get(token, token)))
+                phrases.append((words, phrase_kind(token)))
                 words = []
         else:
             words.append(token)
@@ -206,7 +206,7 @@ def text_to_phrases(text: str) -> list[Phrase]:
     phrases = []
     for words, kind in normalize(text):
         ws = [word_to_phonemes(w, clitic=w in FUNCTION_WORDS and len(words) > 1) for w in words]
-        phrases.append(Phrase([w for w in ws if w.syllables], kind, wh=kind == "?" and words[0] in WH_WORDS))
+        phrases.append(Phrase([w for w in ws if w.syllables], kind, wh=kind in ("?", "?!") and words[0] in WH_WORDS))
     return [p for p in phrases if p.words]
 
 

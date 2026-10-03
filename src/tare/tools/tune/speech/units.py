@@ -29,8 +29,22 @@ class Word:
 @dataclass
 class Phrase:
     words: list[Word]
-    kind: str                 # "." statement, "?" question, "!" exclamation, "," continuation
+    kind: str                 # "." statement, "?" question, "!" exclamation, "," continuation,
+                              # "?!" surprise ("Sério?!", "O quê?!"), "…" trailing off ("Eu não sei...")
     wh: bool = False          # question that starts with a question word (falls instead of rising)
+
+
+KINDS = (".", "?", "!", ",", "?!", "…")
+
+
+def phrase_kind(punctuation: str) -> str:
+    """The kind of phrase a run of punctuation ends: "?!" or "!?" surprise, "..." or "…" trailing off, ";" and ":"
+    a continuation, doubled marks as single ones."""
+    if "?" in punctuation and "!" in punctuation:
+        return "?!"
+    if "…" in punctuation or punctuation.count(".") >= 2:
+        return "…"
+    return {";": ",", ":": ","}.get(punctuation[0], punctuation[0])
 
 
 def transcription(phrases: list[Phrase]) -> str:

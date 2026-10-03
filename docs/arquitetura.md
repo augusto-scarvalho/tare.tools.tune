@@ -626,7 +626,7 @@ A distância está no envelope espectral quadro a quadro, nas vogais e nas conso
 
 Síntese concatenativa com o nosso vocoder: o envelope espectral vem de gravações, as regras dão o resto (fonemas, ritmo, entonação). O Kokoro é só o professor: lê um corpus uma vez, offline, e o que fica são números.
 
-**Banco de voz.** 1000 frases por voz, ~45 min: as 60 de calibração, 180 de diálogo de jogo escritas à mão e 760 de uma pequena gramática de diálogo de jogo (`tools/corpus_pt.py`, determinística), nenhuma das frases de teste. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 64 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. **O som do Kokoro vem ~60 ms antes da grade de durações dele** (mediana 65 ms na voz masculina, 60 na feminina; de 55 a 75 ms entre frases). Sem corrigir, o rótulo de um [s] caía quase todo na vogal seguinte: "próxima" saía "pró-fi-ma". Por isso, em cada frase, os rótulos andam o quanto faz as fricativas chiarem mais e as vogais ficarem mais fortes que o fechamento das oclusivas (busca de −100 a +20 ms). Depois, cada fronteira anda até a maior mudança espectral em ±15 ms. Dentro dos rótulos de [s] e [ʃ], a energia acima de 4 kHz passou de 13 dB abaixo para 14 dB acima da energia abaixo de 1,2 kHz. Dois bancos em português: `pt/alex` (masculino, trato 1,0, 130 Hz) e `pt/dora` (feminino, 1,15, 173 Hz), ~21 MB cada (envelope guardado como diferença entre quadros, que comprime melhor).
+**Banco de voz.** 1000 frases por voz, ~45 min: as 60 de calibração, 180 de diálogo de jogo escritas à mão e 760 de uma pequena gramática de diálogo de jogo (`tools/corpus_pt.py`, determinística), nenhuma das frases de teste. Cada leitura passa pelo WORLD (5 ms: tom, envelope em 64 faixas, aperiodicidade em 5) e é rotulada fonema a fonema pelo alinhamento do próprio Kokoro (passos de 25 ms), mapeado para os nossos símbolos: ditongos do misaki ("A" = [ej], "I" = [aj], "W" = [aw], "O" = [ow]) partidos em dois, vogal antes de [ŋ] nasal, [y]/[ɪ]/[ʊ] depois de vogal como semivogal. **O som do Kokoro vem ~60 ms antes da grade de durações dele** (mediana 65 ms na voz masculina, 60 na feminina; de 55 a 75 ms entre frases). Sem corrigir, o rótulo de um [s] caía quase todo na vogal seguinte: "próxima" saía "pró-fi-ma". Por isso, em cada frase, os rótulos andam o quanto faz as fricativas chiarem mais e as vogais ficarem mais fortes que o fechamento das oclusivas (busca de −100 a +20 ms). Depois, cada fronteira anda até a maior mudança espectral em ±15 ms. Dentro dos rótulos de [s] e [ʃ], a energia acima de 4 kHz passou de 13 dB abaixo para 14 dB acima da energia abaixo de 1,2 kHz. Dois bancos em português: `pt/alex` (masculino, trato 1,0, 130 Hz) e `pt/dora` (feminino, 1,15, 173 Hz), ~21 MB cada (envelope guardado como diferença entre quadros, que comprime melhor). Os modelos de duração e de entonação ficam ao lado, em `bank_<idioma>_<voz>.json` (alguns kB): reajustá-los (`build_speech.py fit`) não reescreve os bancos.
 
 **Montagem de uma frase nova:**
 1. A nossa frente (g2p + `phonetics.segments`, que agora marca começo e fim de palavra) dá fonemas, tônicas e a entonação.
@@ -670,6 +670,41 @@ O que se aprendeu com ela:
 - **Altura:** o UTMOS cai quando a voz é levada para longe do tom do banco (feminina: 2,61 a 173 Hz, 2,38 a 190, 2,22 a 210).
 
 Sistema inteiro, 32 frases fora do corpus: voz masculina (115 Hz) UTMOS 2,37 → 2,71 e CER 0,045 → 0,058; feminina a 210 Hz 2,00 → 2,20 e CER 0,042 → 0,038 (no tom do banco, 173 Hz, 2,61 nas 16 frases de teste).
+
+### Fim de frase e emoções (`speech/concat.py`, `speech/emotion.py`)
+
+**Tipos de frase.** O front-end (os dois idiomas) reconhece `.`, `?`, `!`, `,` (também `;` e `:`), `?!`/`!?` (surpresa) e `...`/`…` (reticências), e marca as perguntas com palavra interrogativa ("quem", "onde", "quando", "como", "qual", "quanto", "que", "o que", "por que", "pra onde"...).
+
+**O professor não faz as perguntas do português do Brasil.** Medido no corpus dele (o tom das três últimas vogais, em semitons a partir da mediana da frase, começo e fim de cada uma):
+
+| | n | antepenúltima | penúltima | última |
+|---|---|---|---|---|
+| afirmação | 404 | −0,1 / −2,1 | −4,2 / −7,0 | −8,5 / −8,0 |
+| pergunta sim/não | 40 | 0,2 / −1,7 | −4,1 / −7,0 | −8,7 / −6,4 |
+| pergunta com "quem/onde..." | 151 | 0,4 / −1,4 | −2,1 / −4,5 | −8,7 / −7,2 |
+| exclamação | 29 | 3,3 / 0,0 | −5,0 / −8,3 | −8,1 / −6,5 |
+
+A pergunta de sim/não dele cai como a afirmação; a regressão aprendeu isso. Por isso, depois dela, a última tônica e o que vem depois recebem as melodias descritas para o português do Brasil (Moraes 2008; Frota et al. 2015), em semitons a partir da mediana:
+
+| | tônica (começo → fim) | depois dela | tônica no fim | duração do fim |
+|---|---|---|---|---|
+| `?` sim/não (L+H\* L%) | −1,5 → +7 | +4 → −2 | −1,5 → +6 | ×1,1 |
+| `?!` surpresa | 0 → +11 | +7 → 0 | 0 → +10 | ×1,3 |
+| `…` reticências | −0,5 → −1 | −1 → −1,5 | −0,5 → −1 | ×1,45 |
+
+A pergunta com palavra interrogativa fica com o que a regressão aprendeu (cai) e a primeira vogal sobe 1,5 semitom; a exclamação alarga 25% os movimentos da frase. O modelo de entonação agora separa as perguntas com palavra interrogativa (`?wh`). Pausas: `?!` 0,42 s, `…` 0,6 s. O motor de formantes trata `?!` como pergunta com 60% mais alcance e `…` como vírgula.
+
+**Emoções** (`emotion.py`). Medidas no emoUERJ (UERJ, 2021, CC BY 4.0; 8 atores, 377 gravações; só análise): cada emoção contra a leitura neutra do mesmo ator, média dos atores. Tom e faixa do tom pelo WORLD (harvest); velocidade por núcleos silábicos (picos de energia vozeada) por segundo de fala; brilho = energia de 2 a 5 kHz menos a de 0,1 a 1 kHz; sopro = aperiodicidade de 1 a 4 kHz na voz; fim = inclinação do tom nos últimos 300 ms de voz.
+
+| | tom | faixa | velocidade | brilho | sopro | fim |
+|---|---|---|---|---|---|---|
+| alegria | +6,3 st | ×1,27 | ×0,98 | +3,5 dB | ×0,89 | −1,4 st |
+| raiva | +4,6 st | ×1,27 | ×1,05 | +3,7 dB | ×1,0 | −3,5 st |
+| tristeza | −0,2 st | ×0,97 | ×0,92 | +0,8 dB | ×1,13 | +1,5 st |
+
+O emoUERJ não tem medo nem surpresa: seguem as direções de Murray e Arnott (1993), no tamanho das medidas (medo: +5 st, faixa ×1,15, ×1,12 mais rápido, mais sopro, tremor; surpresa: +4 st, faixa ×1,5). `sussurro` é sopro total. Uma emoção vira mudanças no `Speaker` (tom, `range`, `rate`, `tilt`: +1 dB/oitava = `tilt` × 2^(1/3), `breath`, `jitter`), e no motor natural também o fim das afirmações (`final`) e as pausas. A intensidade (0 a 1, padrão 0,8, porque os atores eram teatrais) escala tudo a partir do neutro.
+
+**Marcas no texto.** `[emoção]` ou `[emoção:0,5]` mudam a emoção dali em diante; cada trecho vira uma camada do spec (`Spoken` ou `SpeechProgram`), uma depois da outra, com 0,3 s entre trechos que terminam em pontuação. O Whisper entende as falas emotivas quase tão bem quanto as neutras (8 frases, voz masculina: neutro 0,056, tristeza 0,038, sussurro 0,038, alegria 0,073, surpresa 0,074, raiva 0,084, medo 0,100).
 
 **Balbucio** (`speech/babble.py`). Depois do g2p, as sílabas podem ser trocadas antes da prosódia, e por isso o ritmo, as tônicas e o tipo de frase continuam os do texto:
 - `gibberish`: cada sílaba vira ataque + vogal sorteados do inventário do idioma, às vezes com coda no fim da palavra; a semente é a fala + o nome do personagem.
