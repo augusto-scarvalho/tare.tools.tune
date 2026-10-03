@@ -194,7 +194,7 @@ audio = rei.render("Salve o reino!")
 | `chest` (baús) | wood, iron | open, close, locked, unlock |
 | `item` (itens) | coins, potion, scroll, gem | pickup, use, drop |
 | `breakable` (coisas para quebrar) | crate, barrel, pot, glass | hit, break |
-| `ui` (interface) | fantasy, retro | click, open, close, levelup, quest, error |
+| `ui` (interface) | fantasy, crystal, wood, retro | click, open, close, levelup, quest, error; para tactics: cursor, hover, target, select, confirm, cancel, scroll, range, text, advance, turn, enemy_turn, learn, battle |
 | `lever` (alavancas) | iron, wood | pull, push |
 | `trap` (armadilhas) | darts, spikes, blade | trigger, fire |
 | `torch` (fogo) | torch, brazier | ignite, extinguish |

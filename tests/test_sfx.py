@@ -65,6 +65,29 @@ def test_every_recipe_style_and_event_renders(kind):
             assert v.meta["event"] == event and v.meta["style"] == style
 
 
+def notes(v: Voice) -> list[tuple[float, float]]:
+    """(start, Hz) of each note of a ui voice: a struck body's lowest mode, a blip's first pitch."""
+    out = [(m.start, m.modes[0][0]) for m in v.modal] + [(s.start, s.pitch[0][1]) for s in v.syllables]
+    return sorted(out)
+
+
+@pytest.mark.parametrize("style", RECIPES["ui"].styles)
+def test_tactics_ui_follows_the_measured_shapes(style):
+    ui = Sfx("ui", style, species=2)
+    up = [f for _, f in notes(ui.voice("confirm"))]
+    assert len(up) >= 4 and all(b > a for a, b in zip(up, up[1:], strict=False))       # climbs (60 ms a note)
+    assert max(f for _, f in notes(ui.voice("cancel"))) < min(f for _, f in notes(ui.voice("select")))
+    mean = lambda e: np.mean([np.log2(f) for _, f in notes(ui.voice(e))])  # noqa: E731
+    assert mean("enemy_turn") < mean("turn")
+    cursor = [ui.render("cursor", take, SR) for take in range(4)]
+    assert all(len(y) < 0.1 * SR for y in cursor)                                      # a tick
+    assert not any(np.array_equal(cursor[0], y) for y in cursor[1:])                   # never quite the same
+    scroll = [notes(ui.voice("scroll", take))[0][1] for take in range(4)]
+    assert scroll[0] < scroll[1] < scroll[2] > scroll[3]                              # a cycle down a list
+    letters = lambda size: np.mean([notes(ui.but(size=size).voice("text", k))[0][1] for k in range(12)])  # noqa: E731
+    assert letters(1.0) < letters(0.0)                                                 # big speakers, low blips
+
+
 def test_identity_takes_and_validation():
     sword = Sfx("blade", "steel", species=3)
     assert np.array_equal(sword.render("clash", 0, SR), sword.render("clash", 0, SR))

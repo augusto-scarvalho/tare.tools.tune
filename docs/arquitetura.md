@@ -321,6 +321,24 @@ As partes:
 - **Estilos:** `fantasy`, com sinos de barra (modos 1 : 2,76 : 5,40 : 8,93), pano e madeira; `retro`, com notas de onda quadrada como num console de 8 bits.
 - **Tom:** cada espécie (cada jogo) fica num tom perto de Dó5.
 
+**Interface de tactics (os mesmos `ui`, 14 eventos a mais).** Medida em 200 sons CC0 de interface (os pacotes Interface Sounds, UI Audio e RPG Audio do Kenney; só análise): duração até −40 dB, ataque, decaimento, a frequência dominante e se ela sobe ou desce, os parciais (a razão entre eles diz o material) e quanto é tom e quanto é ruído.
+
+| categoria medida | o que é | evento |
+|---|---|---|
+| tick | 10–54 ms, um clique com anel harmônico (800 Hz × 3, 4, 5, 6, 7, 12) ou um cacho em 3,6 kHz | `cursor` (passar de casa em casa), `scroll` (rolar lista: o mesmo tique, num ciclo de 4 alturas de um take para o outro) |
+| rollover | 52–174 ms, suave, 600–1400 Hz | `hover` (uma unidade sob o cursor); `target` (um inimigo: uma nota grave roçando no semitom acima) |
+| select | 34–186 ms, um tom batido brilhante (1–3 kHz) com a oitava, caindo um pouco | `select` |
+| confirmation | 280–500 ms, notas puras subindo em quinta e oitava (1, 1,5, 2, 3), 60 ms cada | `confirm` |
+| back | ~60 ms, grave (110–260 Hz), um "tum" curto | `cancel` (desce uma quarta) |
+| question | três notas de ~100 ms, descendo (Sol, Fá♯, Mi) ou subindo | `turn` (a vez de uma unidade: tríade maior subindo), `enemy_turn` (mais grave, caindo um semitom e depois uma terça) |
+| maximize, minimize | um tom puro deslizando 10–13 semitons em ~250 ms | `open`, `close` no timbre `crystal`; `range` (o alcance aparecendo: uma escala pentatônica rápida subindo, com brilho) |
+| bookFlip | ~380 ms de farfalhar entre 1,6 e 7 kHz | `advance` (a próxima página de uma fala) |
+| glass | um anel quase puro (~2 kHz) batendo contra um parceiro 2–4% acima | o timbre `crystal` |
+
+Mais `text` (uma letra aparecendo: 35 ms numa escala pentatônica; `size` engrossa a voz), `learn` (habilidade aprendida, classe liberada: o acorde subindo até a 12ª, com brilho, ~1 s) e `battle` (início de batalha, ~1,6 s: um rufo crescendo por 0,6 s e um acorde batido sobre um golpe grave).
+
+Quatro timbres, um por gosto de jogo: `fantasy` (glockenspiel, medido no VSCO-2), `crystal` (vidro, como o "glass" medido), `wood` (marimba e blocos de madeira, macio) e `retro` (onda quadrada). As notas usam os instrumentos medidos da música, abafadas depois de quanto devem soar. No início de batalha, `fantasy` toca caixa, tímpano, trompetes e trompas; `crystal`, triângulo, sino tubular e celesta; `wood`, tambor de mão, tambor de fenda e marimba; `retro`, os instrumentos de chip. Cada take muda alguns cents, até 1,5 dB e uns milissegundos, para o cursor, ouvido centenas de vezes numa batalha, não cansar. O nível de cada evento segue o quanto ele é ouvido: cursor, rolagem e texto mais baixos; confirmação e vez da unidade no meio; início de batalha mais alto.
+
 **Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
 - **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.
 - **Tocha:** acende com um raspado e uma labareda que vira crepitar (larga, 1–6 kHz, ~1 s). Apagar é um chiado.

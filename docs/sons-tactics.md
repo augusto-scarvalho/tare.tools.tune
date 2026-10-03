@@ -4,6 +4,7 @@ O que um tactics RPG no espírito de Final Fantasy Tactics, FFTA, FFTA2, Tactics
 
 **Hoje:**
 - **tem:** já sai, com a receita entre crases;
+- **medido:** feito a partir de gravações medidas, falta ouvir e aprovar;
 - **parcial:** algo parecido existe, mas não é o som certo;
 - **falta:** ainda não existe.
 
@@ -20,14 +21,14 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
-| Cursor andando de casa em casa | todos | falta | A |
-| Cursor sobre uma unidade (aliada, inimiga) | todos | falta | A |
-| Selecionar unidade, confirmar, cancelar | todos | parcial: `ui` click | A |
+| Cursor andando de casa em casa | todos | medido: `ui` cursor | A |
+| Cursor sobre uma unidade (aliada, inimiga) | todos | medido: `ui` hover, target | A |
+| Selecionar unidade, confirmar, cancelar | todos | medido: `ui` select, confirm, cancel | A |
 | Ação impossível (fora do alcance, sem MP) | todos | tem: `ui` error | A |
-| Abrir e fechar menu, rolar lista, trocar aba | todos | parcial: `ui` open, close | A |
-| Mostrar o alcance de movimento ou de ataque no chão | todos | falta | A |
-| Texto aparecendo letra a letra, com a cor da voz de quem fala | FFTA, TO | parcial: balbucio `animalese` | A |
-| Avançar o diálogo | todos | falta | A |
+| Abrir e fechar menu, rolar lista, trocar aba | todos | medido: `ui` open, close, scroll | A |
+| Mostrar o alcance de movimento ou de ataque no chão | todos | medido: `ui` range | A |
+| Texto aparecendo letra a letra, com a cor da voz de quem fala | FFTA, TO | medido: `ui` text (`size` engrossa a voz); balbucio `animalese` | A |
+| Avançar o diálogo | todos | medido: `ui` advance | A |
 | Escolher para onde a unidade fica virada | FFT, FFTA, TO | falta | B |
 | Comprar e vender, equipar, trocar de classe | todos | parcial: `item` coins, `gear` equip | B |
 | Salvar e carregar | todos | falta | C |
@@ -36,11 +37,11 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
-| Fase ou turno do jogador, do inimigo, de aliados | FFTA, TO, UO, TS | falta | A |
-| Vez de uma unidade, contagem do CT | FFT, TO | falta | A |
-| Início da batalha | todos | falta | B |
+| Fase ou turno do jogador, do inimigo, de aliados | FFTA, TO, UO, TS | medido: `ui` turn, enemy_turn | A |
+| Vez de uma unidade, contagem do CT | FFT, TO | medido: `ui` turn, enemy_turn | A |
+| Início da batalha | todos | medido: `ui` battle | B |
 | Vitória, derrota, subir de nível, objetivo cumprido | todos | tem: `Cue` victory, gameover, levelup, quest | B |
-| Aprender habilidade, liberar classe nova | FFT, FFTA, TO | falta | B |
+| Aprender habilidade, liberar classe nova | FFT, FFTA, TO | medido: `ui` learn | B |
 | Reforços chegando | todos | falta | C |
 | Item raro, tesouro, o cristal de quem caiu | FFT, TO | parcial: `item` gem, `chest` | C |
 | Contagem regressiva de unidade caída | FFT, TO | falta | C |
