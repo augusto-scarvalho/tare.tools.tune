@@ -543,6 +543,16 @@ Na engine, cada chamado vira um "random container" (FMOD/Wwise) ou um array de c
 2. **Engine nativa tocando specs:** o design fica no Python (specs vão junto do jogo, são pequenos) e a engine só porta o `render`, cerca de 170 linhas de DSP simples.
 3. **Engine nativa 100% procedural:** porta também `rng`, `genome`, `calls` e os arquétipos, que são só aritmética. Aí o jogo inventa criaturas novas em tempo real (spawn procedural, mutações, evoluções), com o mesmo spec que o Python geraria.
 
+### Núcleo nativo (`native/`, `tools/build_native.py`)
+
+O vocoder da voz natural em C++17, para engines que não rodam Python (primeiro o Godot). O Python planeja a fala (texto → fonemas → melodia → pedaços do banco) num `Spoken` de 5 a 10 KB; o núcleo faz dele o som. O plano fica em Python até a afinação da voz assentar: é nele que caem quase todos os ajustes (melodias de pergunta, vozeamento, ditongos, pausas), e portá-lo agora dobraria cada ajuste. Enquanto isso, o jogo toca falas planejadas antes.
+
+- Interface C (`native/include/tare_tune.h`), sem arquivo nenhum: arrays entram (quadros do banco, peças, emendas, tom) e áudio sai. Ler bancos e specs é trabalho de quem embrulha (a GDExtension, os testes).
+- `tt_render_spoken` reproduz `concat.render_spoken` (`frames` + `vocoder.synthesize`); `tt_finish`, o acabamento de uma voz (passa-alta de 40 Hz, crush, drive, fade, pico em −1 dBFS). A reverberação (`space`) fica com a engine (um bus de efeito no Godot).
+- FFT da pocketfft (BSD-3), a mesma que o numpy usa; aleatoriedade SplitMix64 + FNV-1a (`rng.hpp`), como `rng.py`. As constantes (faixas do envelope, do sopro, a janela que tira o DC de cada pulso) saem do próprio Python, em hexadecimal exato, para `native/src/tables.hpp` (`build_native.py tables`; o CI confere que não divergem).
+- `tests/test_native.py` carrega a biblioteca por ctypes e compara com o Python: as chaves aleatórias, cada camada (duas vozes, 48 e 22,05 kHz) e uma voz inteira com várias camadas, crush e drive. A maior diferença numa amostra é 3·10⁻¹⁵ (o pico vale 1): só a ordem das somas. Gera 1 s de fala em ~44 ms (o numpy, ~75).
+- No Windows com o Controle Inteligente de Aplicativos ligado, compiladores sem assinatura (MinGW) não rodam; o núcleo é compilado e testado no WSL (Linux) ou com as ferramentas de build do Visual Studio.
+
 ## Fala humana
 
 ```
@@ -791,7 +801,7 @@ A verificação contra o motor TypeScript original está em `tests/test_chip.py`
 
 ## Próximos passos
 
-- Renderizador nativo: C# (Unity), GDExtension/C++ (Godot) ou JS/WebAudio (editor web), validado pelos goldens do `bake`.
+- Godot: GDExtension sobre o núcleo nativo (bancos num formato binário simples, `Spoken` → `AudioStreamWAV`); depois o plano em C++, quando a afinação da voz assentar. Unity (plugin nativo do mesmo núcleo) e JS/WebAudio (editor web) em seguida.
 - Editor visual: sliders de genes e traços, espectrograma e "evoluir" ao vivo.
 - Qualidade: fonte glotal LF, IRs de reverb reais, normalização por loudness (LUFS) nos pacotes.
 - Mais arquétipos (aquático, dragão dedicado, enxame) e mistura entre arquétipos (híbridos).

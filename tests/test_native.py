@@ -1,0 +1,107 @@
+"""The native core (native/, the vocoder for Godot) against the Python reference: same random numbers, same sound.
+Skipped unless it is built: python tools/build_native.py build (or point TARE_TOOLS_TUNE_NATIVE at the library)."""
+import ctypes
+import os
+import platform
+from ctypes import POINTER, c_char_p, c_double, c_float, c_int32, c_int64, c_uint8, c_uint64, c_void_p
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from tare.tools.tune import rng
+from tare.tools.tune.render import render
+from tare.tools.tune.speech import Speaker, concat
+
+NAME = {"Windows": "tare_tune.dll", "Darwin": "libtare_tune.dylib"}.get(platform.system(), "libtare_tune.so")
+PATH = Path(os.environ.get("TARE_TOOLS_TUNE_NATIVE", Path(__file__).parent.parent / "native" / "build" / NAME))
+pytestmark = pytest.mark.skipif(not PATH.exists(), reason="the native core is not built")
+
+
+@pytest.fixture(scope="module")
+def lib():
+    lib = ctypes.CDLL(str(PATH))
+    lib.tt_bank_new.restype = c_void_p
+    lib.tt_bank_new.argtypes = [c_int32, c_int32, POINTER(c_float), POINTER(c_uint8), POINTER(c_uint8)]
+    lib.tt_bank_free.argtypes = [c_void_p]
+    lib.tt_key.restype = c_uint64
+    lib.tt_key.argtypes = [c_uint64, c_char_p, c_int64]
+    lib.tt_render_spoken.restype = c_int32
+    lib.tt_render_spoken.argtypes = [c_void_p, POINTER(c_double), c_int32, POINTER(c_int32), c_int32,
+                                     POINTER(c_double), c_int32, c_double, c_double, c_double, c_double, c_uint64,
+                                     c_int32, POINTER(POINTER(c_double)), POINTER(c_int32)]
+    lib.tt_finish.restype = c_int32
+    lib.tt_finish.argtypes = [POINTER(c_double), c_int32, c_int32, c_double, c_double, c_double]
+    lib.tt_free.argtypes = [c_void_p]
+    return lib
+
+
+@pytest.fixture(scope="module")
+def banks(lib):
+    out = {}
+    for name in concat.banks("pt"):
+        b = concat.bank(name)
+        f0 = np.ascontiguousarray(b.f0, np.float32)                  # stored as float16: exact in float32
+        env = np.ascontiguousarray(b._env8, np.uint8)
+        ap = np.ascontiguousarray(np.round(b.ap * 255), np.uint8)
+        out[name] = (lib.tt_bank_new(len(f0), env.shape[1], f0.ctypes.data_as(POINTER(c_float)),
+                                     env.ctypes.data_as(POINTER(c_uint8)), ap.ctypes.data_as(POINTER(c_uint8))),
+                     (f0, env, ap))
+    yield {name: handle for name, (handle, _keep) in out.items()}
+    for handle, _keep in out.values():
+        lib.tt_bank_free(handle)
+
+
+def native_layer(lib, banks, layer, seed: int, sr: int) -> np.ndarray:
+    pieces = np.ascontiguousarray(layer.pieces, np.float64)
+    joins = np.ascontiguousarray(layer.joins, np.int32)
+    f0 = np.ascontiguousarray(layer.f0, np.float64)
+    out, n = POINTER(c_double)(), c_int32()
+    status = lib.tt_render_spoken(banks[layer.bank], pieces.ctypes.data_as(POINTER(c_double)), len(pieces),
+                                  joins.ctypes.data_as(POINTER(c_int32)), len(joins),
+                                  f0.ctypes.data_as(POINTER(c_double)), len(f0), layer.warp, layer.breath, layer.tilt,
+                                  layer.gain, seed, sr, ctypes.byref(out), ctypes.byref(n))
+    assert status == 0
+    y = np.ctypeslib.as_array(out, (n.value,)).copy()
+    lib.tt_free(out)
+    return y
+
+
+def test_random_keys_match(lib):
+    for seed, label, index in ((0, "spoken", 0), (12345, "spoken", 3), (2 ** 63 + 7, "breath", -1), (99, "", -1)):
+        expected = rng.key(seed, label) if index < 0 else rng.key(seed, label, index)
+        assert lib.tt_key(seed, label.encode(), index) == expected
+
+
+VOICES = [Speaker(pitch=120, tract=1.0, engine="natural"), Speaker(pitch=180, tract=1.15, breath=0.2, tilt=3500,
+                                                                     engine="natural")]
+LINES = ["Bem-vindo à forja, viajante!", "Você trouxe o minério que eu pedi?", "Sério?!", "Eu não sei..."]
+
+
+@pytest.mark.parametrize("sr", [48000, 22050])
+@pytest.mark.parametrize("speaker", VOICES, ids=["male", "female"])
+def test_spoken_layers_sound_the_same(lib, banks, speaker, sr):
+    for text in LINES:
+        voice = speaker.voice(text, "pt")
+        layer, seed = voice.spoken[0], rng.key(voice.seed, "spoken", 0)
+        expected = concat.render_spoken(layer, sr, seed)
+        got = native_layer(lib, banks, layer, seed, sr)
+        assert len(got) == len(expected), text
+        assert np.max(np.abs(got - expected)) < 1e-6, text
+
+
+def test_a_whole_voice_sounds_the_same(lib, banks):
+    sr = 48000
+    speaker = VOICES[0].but(crush=0.2, drive=1.5)
+    voice = speaker.voice("[alegria] Que bom te ver! [tristeza] Mas eu preciso partir...", "pt")
+    assert len(voice.spoken) == 2
+    layers = [(int(v.start * sr), native_layer(lib, banks, v, rng.key(voice.seed, "spoken", i), sr))
+              for i, v in enumerate(voice.spoken)]
+    mix = np.zeros(max(k + len(y) for k, y in layers))
+    for k, y in layers:
+        mix[k:k + len(y)] += y
+    assert lib.tt_finish(mix.ctypes.data_as(POINTER(c_double)), len(mix), sr, voice.gain, voice.crush,
+                         voice.drive) == 0
+    expected = render(voice, sr)
+    assert len(mix) == len(expected)
+    assert np.max(np.abs(mix - expected)) < 1e-5

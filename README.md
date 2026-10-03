@@ -435,6 +435,7 @@ python tools/build_speech.py render pt        # o professor lê o corpus (cache 
 python tools/build_speech.py build pt         # análise -> bancos de voz em src/tare/tools/tune/speech/data
 python tools/build_speech.py label pt         # refaz os rótulos e os modelos dos bancos, sem nova análise
 python tools/real_prosody.py fetch|align|fit # experimental: entonação aprendida de leitores brasileiros reais
+python tools/build_native.py build            # o vocoder em C++ (native/), para o Godot; tests/test_native.py o compara
 python tools/teacher_calibration.py render    # fala natural do Kokoro como "professor" do português
 python tools/teacher_calibration.py measure   # formantes, durações e fricativas medidos por fonema
 python tools/structure_analysis.py compare    # espectros quadro a quadro contra o professor, por classe de fonema
@@ -456,6 +457,8 @@ A pronúncia do inglês vem do [CMU Pronouncing Dictionary](https://github.com/c
 As medidas das emoções vêm do emoUERJ, de Rodrigo G. Bastos Germano, Michel Pompeu Tcheou, Felipe da Rocha Henriques e Sergio Pinto Gomes Junior (UERJ, 2021, [CC BY 4.0](https://doi.org/10.5281/zenodo.5427549)); as gravações serviram só para medir.
 
 Os bancos de voz natural vêm de leituras do [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0), feitas offline; o pacote leva só os números medidos nelas.
+
+O núcleo nativo (`native/`) usa a [pocketfft](https://gitlab.mpcdf.mpg.de/mtr/pocketfft), de Martin Reinecke e Peter Bell (Max-Planck-Society, BSD-3), a mesma FFT do numpy.
 
 A ferramenta experimental de entonação (`tools/real_prosody.py`) mede fala real do [TTS-Portuguese Corpus](https://github.com/Edresson/TTS-Portuguese-Corpus), de Edresson Casanova e colegas (CC BY 4.0), e da parte em português do [CML-TTS](https://www.openslr.org/146/), de Frederico S. Oliveira e colegas, sobre audiolivros do LibriVox (CC BY 4.0), alinhada com o [Montreal Forced Aligner](https://montreal-forced-aligner.readthedocs.io/) e o modelo português dele (CC BY 4.0). Nada disso vai no pacote.
 
