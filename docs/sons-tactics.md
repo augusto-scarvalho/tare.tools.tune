@@ -17,18 +17,18 @@ Siglas: FFT, FFTA (inclui o FFTA2), TO (Tactics Ogre), UO (Unicorn Overlord), TS
 
 ## 1. Grade e menus
 
-O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno, então precisa de variações discretas que não cansem.
+O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno, então precisa de variações discretas que não cansem. Os quatro timbres de `ui` (fantasy, crystal, wood, retro) foram aprovados de ouvido e ficam à escolha de quem monta o jogo.
 
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
-| Cursor andando de casa em casa | todos | medido: `ui` cursor | A |
-| Cursor sobre uma unidade (aliada, inimiga) | todos | medido: `ui` hover, target | A |
-| Selecionar unidade, confirmar, cancelar | todos | medido: `ui` select, confirm, cancel | A |
+| Cursor andando de casa em casa | todos | tem: `ui` cursor | A |
+| Cursor sobre uma unidade (aliada, inimiga) | todos | tem: `ui` hover, target | A |
+| Selecionar unidade, confirmar, cancelar | todos | tem: `ui` select, confirm, cancel | A |
 | Ação impossível (fora do alcance, sem MP) | todos | tem: `ui` error | A |
-| Abrir e fechar menu, rolar lista, trocar aba | todos | medido: `ui` open, close, scroll | A |
-| Mostrar o alcance de movimento ou de ataque no chão | todos | medido: `ui` range | A |
-| Texto aparecendo letra a letra, com a cor da voz de quem fala | FFTA, TO | medido: `ui` text (`size` engrossa a voz); balbucio `animalese` | A |
-| Avançar o diálogo | todos | medido: `ui` advance | A |
+| Abrir e fechar menu, rolar lista, trocar aba | todos | tem: `ui` open, close, scroll | A |
+| Mostrar o alcance de movimento ou de ataque no chão | todos | tem: `ui` range | A |
+| Texto aparecendo letra a letra, com a cor da voz de quem fala | FFTA, TO | tem: `ui` text (`size` engrossa a voz); balbucio `animalese` | A |
+| Avançar o diálogo | todos | tem: `ui` advance | A |
 | Escolher para onde a unidade fica virada | FFT, FFTA, TO | falta | B |
 | Comprar e vender, equipar, trocar de classe | todos | parcial: `item` coins, `gear` equip | B |
 | Salvar e carregar | todos | falta | C |
@@ -37,11 +37,11 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
-| Fase ou turno do jogador, do inimigo, de aliados | FFTA, TO, UO, TS | medido: `ui` turn, enemy_turn | A |
-| Vez de uma unidade, contagem do CT | FFT, TO | medido: `ui` turn, enemy_turn | A |
-| Início da batalha | todos | medido: `ui` battle | B |
+| Fase ou turno do jogador, do inimigo, de aliados | FFTA, TO, UO, TS | tem: `ui` turn, enemy_turn | A |
+| Vez de uma unidade, contagem do CT | FFT, TO | tem: `ui` turn, enemy_turn | A |
+| Início da batalha | todos | tem: `ui` battle | B |
 | Vitória, derrota, subir de nível, objetivo cumprido | todos | tem: `Cue` victory, gameover, levelup, quest | B |
-| Aprender habilidade, liberar classe nova | FFT, FFTA, TO | medido: `ui` learn | B |
+| Aprender habilidade, liberar classe nova | FFT, FFTA, TO | tem: `ui` learn | B |
 | Reforços chegando | todos | falta | C |
 | Item raro, tesouro, o cristal de quem caiu | FFT, TO | parcial: `item` gem, `chest` | C |
 | Contagem regressiva de unidade caída | FFT, TO | falta | C |
