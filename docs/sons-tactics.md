@@ -16,7 +16,7 @@ O que um tactics RPG no espírito de Final Fantasy Tactics, FFTA, FFTA2, Tactics
 
 Siglas: FFT, FFTA (inclui o FFTA2), TO (Tactics Ogre), UO (Unicorn Overlord), TS (Triangle Strategy), OT (Octopath Traveler).
 
-**Época.** Todo som pode sair em três épocas (`Sfx(..., era=...)`), medidas nos próprios jogos: `hd` (TS, OT), `16bit` (TO, FFTA2) e o desenho como está. O 8 bits é o estilo `retro`.
+**Época.** Todo som pode sair em três épocas (`Sfx(..., era=...)`), medidas nos próprios jogos: `hd` (TS, OT), `16bit` (TO, FFTA2) e o desenho como está. O 8 bits é o estilo `retro`. Com `dry=True` o som sai sem sala nem cauda, para o jogo pôr a reverberação de cada mapa.
 
 **Botões.** Dentro de cada som, `knobs` variam registro, andamento, duração, anel, brilho, cintilância e o tom do jogo (`tare.tools.tune sounds --knobs`).
 

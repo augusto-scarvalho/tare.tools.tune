@@ -175,6 +175,7 @@ class Sfx:
     genes: tuple[tuple[str, float], ...] = field(default=())
     name: str = ""
     era: str = ""                   # "", "hd" or "16bit" (ERAS)
+    dry: bool = False               # no room, no tail: the game's reverb (one per map, on its bus) gives the space
     knobs: tuple[tuple[str, float], ...] = field(default=())    # name -> value (see knob_info)
 
     def __post_init__(self):
@@ -210,6 +211,8 @@ class Sfx:
         if event not in r.events:
             raise ValueError(f"{self.kind} has no event {event!r}; choose from {', '.join(r.events)}")
         v = ERAS[self.era](apply_knobs(r.design(Fx(self, event, take)), dict(self.knobs)))
+        if self.dry:            # the era's and the recipe's rooms and tails left to the engine
+            v.space, v.room = 0.0, 0.0
         v.seed = rng.seed32(self.kind, self.style, self.species, take, event)
         v.meta.update({"kind": self.kind, "style": self.style, "event": event, "species": self.species,
                        "take": take, "size": self.size, "power": self.power})
@@ -217,6 +220,8 @@ class Sfx:
             v.meta["name"] = self.name
         if self.era:
             v.meta["era"] = self.era
+        if self.dry:
+            v.meta["dry"] = True
         if self.knobs:
             v.meta["knobs"] = dict(self.knobs)
         return v

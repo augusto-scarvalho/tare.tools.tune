@@ -308,3 +308,16 @@ def test_cli_sfx(tmp_path, capsys):
     assert out.exists() and Voice.from_json(spec.read_text(encoding="utf-8")).modal
     assert main(["sounds"]) == 0 and "ambience" in capsys.readouterr().out
     assert main(["sfx", "blade", "plasma"]) == 1
+
+
+def test_dry_leaves_the_room_to_the_game():
+    for kind, style, event in (("ui", "crystal", "confirm"), ("spell", "fire", "impact"),
+                               ("ambience", "castle", "accent")):
+        wet = Sfx(kind, style, species=2, era="hd").voice(event)
+        dry = Sfx(kind, style, species=2, era="hd", dry=True).voice(event)
+        assert wet.space > 0 and dry.space == 0 and dry.room == 0 and dry.meta["dry"]
+        assert [n.freq for n in dry.noise] == [n.freq for n in wet.noise]            # the same sound, only drier
+        y = render(dry, SR)
+        assert np.isfinite(y).all() and len(y) < len(render(wet, SR))                 # no tail
+    s = Sfx("blade", "steel", era="hd", dry=True)
+    assert Sfx.from_dict(json.loads(json.dumps(s.to_dict()))) == s

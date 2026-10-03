@@ -167,7 +167,7 @@ def _sfx(a):
     from .sfx import Sfx
     genes = {name: float(value) for name, value in (g.split("=", 1) for g in a.gene)}
     knobs = {name: float(value) for name, value in (k.split("=", 1) for k in a.knob)}
-    return Sfx(a.kind, a.style or "", a.species, a.size, a.power, genes=genes, era=a.era, knobs=knobs)
+    return Sfx(a.kind, a.style or "", a.species, a.size, a.power, genes=genes, era=a.era, knobs=knobs, dry=a.dry)
 
 
 def cmd_sfx(a):
@@ -279,6 +279,8 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("sfx", help="render a sound effect: weapons, footsteps, explosions, magic, ambience")
     p.add_argument("--era", default="", choices=["", "hd", "16bit"],
                    help="dress it as a generation: hd (HD-2D, wide and reverberant) or 16bit (PSP/DS samples)")
+    p.add_argument("--dry", action="store_true",
+                   help="no room and no tail, for a game that puts its own reverb on each map")
     p.add_argument("kind", choices=list(RECIPES))
     p.add_argument("style", nargs="?", help="material, element or place (see 'sounds')")
     p.add_argument("--event", help="swing, clash, cast, impact, loop... (default: the first)")

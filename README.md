@@ -235,6 +235,14 @@ Sfx("blade", "steel", era="16bit").render("clash")      # tare.tools.tune sfx bl
 
 O timbre retrô de 8 bits continua sendo o estilo `retro` de `ui` e `status`.
 
+**Seco (`dry`).** O `"hd"` e várias receitas (magias, invocações, caverna, castelo) gravam uma sala e uma cauda dentro do som: o eco é o mesmo em qualquer lugar, as caudas de vários sons se somam e, se o motor também puser reverberação, ela dobra. Num jogo com mapas diferentes, peça o som seco e deixe o motor dar o espaço de cada mapa (no Godot, um `AudioEffectReverb` no barramento de áudio do mapa):
+
+```python
+Sfx("ui", "crystal", era="hd", dry=True).render("confirm")   # o timbre do hd, sem sala nem cauda
+```
+
+No bestiário, `"dry": true` na entrada do som; na linha de comando, `--dry`. O `"16bit"` já é seco.
+
 **Botões (`knobs`).** Dentro do caráter de uma receita, qualquer som varia por botões com nome, faixa e descrição, que uma pessoa ou um agente lista (`tare.tools.tune sounds --knobs`, `Sfx.knob_info()`) e combina. No padrão, o som sai exatamente como foi desenhado.
 
 | botão | faixa | o que faz |
