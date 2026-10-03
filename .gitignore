@@ -15,5 +15,7 @@ dist/
 /baked/
 /zoo/
 /gen1/
-/teacher
-/real/
+/teacher/*.npz
+/real/*
+!/real/prosody_pt.json
+!/real/dialect.json
