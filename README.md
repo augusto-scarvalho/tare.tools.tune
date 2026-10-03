@@ -388,6 +388,18 @@ Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por ch
   fala = bank.line(Speaker.preset("child"), "Oi!")    # falas também, com cache
   ```
 
+- **Godot** (em construção, `native/godot`): a extensão `tare_tune` traz o vocoder da voz natural em C++. O Python planeja as falas em specs pequenos (5 a 10 KB cada; `Speaker.voice(texto).to_json()`), e o jogo os transforma em som na hora, a partir dos bancos de voz exportados (`tare.tools.tune.speech.tvb.export`, ~21 MB por voz):
+
+  ```gdscript
+  var banco := TareVoiceBank.new()
+  banco.load("res://voices/pt_alex.tvb")
+  var fala := TareSpeech.new()
+  fala.add_bank(banco)
+  $AudioStreamPlayer.stream = fala.render(JSON.parse_string(FileAccess.get_file_as_string("res://lines/00.json")))
+  ```
+
+  Uma fala de 3 s sai em ~0,13 s; o projeto de exemplo (`native/godot/demo`) gera a próxima numa thread enquanto a atual toca. Montar: `python tools/build_native.py godot` e `python tools/build_native.py demo`. Por enquanto o texto é planejado no Python, antes; o plano em C++ (texto novo dentro do jogo) vem quando a afinação da voz assentar.
+
 - **Outras engines:** o som é descrito por um **spec JSON** portável. A aleatoriedade é SplitMix64 + FNV-1a, com vetores de teste, e o renderizador usa só blocos simples (PolyBLEP, biquads, one-pole). Um renderizador nativo em C#, GDScript ou C++ pode tocar specs gerados aqui ou, portando também os arquétipos, inventar criaturas novas em tempo real. O contrato de portabilidade está em [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ## Linha de comando

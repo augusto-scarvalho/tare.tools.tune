@@ -9,12 +9,16 @@
 
 #include <stdint.h>
 
-#if defined(_WIN32) && defined(TARE_TUNE_BUILD)
+#if defined(TARE_TUNE_STATIC)   /* compiled into something else (the Godot extension) */
+#define TT_API
+#elif defined(_WIN32) && defined(TARE_TUNE_BUILD)
 #define TT_API __declspec(dllexport)
-#elif defined(_WIN32) && !defined(TARE_TUNE_STATIC)
+#elif defined(_WIN32)
 #define TT_API __declspec(dllimport)
-#else
+#elif defined(__GNUC__)
 #define TT_API __attribute__((visibility("default")))
+#else
+#define TT_API
 #endif
 
 #ifdef __cplusplus

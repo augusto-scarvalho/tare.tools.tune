@@ -553,6 +553,14 @@ O vocoder da voz natural em C++17, para engines que não rodam Python (primeiro 
 - `tests/test_native.py` carrega a biblioteca por ctypes e compara com o Python: as chaves aleatórias, cada camada (duas vozes, 48 e 22,05 kHz) e uma voz inteira com várias camadas, crush e drive. A maior diferença numa amostra é 3·10⁻¹⁵ (o pico vale 1): só a ordem das somas. Gera 1 s de fala em ~44 ms (o numpy, ~75).
 - No Windows com o Controle Inteligente de Aplicativos ligado, compiladores sem assinatura (MinGW) não rodam; o núcleo é compilado e testado no WSL (Linux) ou com as ferramentas de build do Visual Studio.
 
+**Bancos para engines (`.tvb`, `speech/tvb.py`).** O `.npz` é um zip de arrays do numpy, ruim de ler fora do Python. `tvb.export("pt/alex", caminho)` escreve `TVB1`, o tamanho de um cabeçalho JSON (nome, trato, quadros, faixas, seções), o cabeçalho e três seções comprimidas com zlib (que o Godot abre com `PackedByteArray.decompress(..., COMPRESSION_DEFLATE)`): o tom (float32), o envelope (uint8, cada quadro como diferença do anterior, como no `.npz`) e a aperiodicidade (uint8). ~20,7 MB por voz; só os quadros, sem os rótulos (planejar continua no Python).
+
+**Godot (`native/godot`).** Uma GDExtension sobre o núcleo, com a `godot-cpp` 4.5 (roda no Godot 4.5 e posteriores; baixada por `build_native.py godot` em `native/godot/godot-cpp`, compilada com exceções, que a pocketfft usa):
+
+- `TareVoiceBank.load(caminho)`: lê um `.tvb` com o `FileAccess` do Godot.
+- `TareSpeech.add_bank(banco)` e `TareSpeech.render(spec, taxa) -> AudioStreamWAV` (ou `render_samples`, em float): lê as camadas `spoken` de um spec (`Voice.to_json()`, com os mesmos padrões dos campos omitidos), renderiza cada uma com a semente `rng.key(voice.seed, "spoken", i)`, mistura nos inícios e dá o acabamento. Camadas de outros tipos e `space`, `room`, `air`, `lowpass` são avisados e deixados de lado (reverberação: um bus de efeito do Godot).
+- O projeto de exemplo (`native/godot/demo`, preenchido por `build_native.py demo`) toca um diálogo de cinco falas, com emoções, gerando a próxima numa thread enquanto a atual toca. `tests/test_godot.py` roda o Godot sem janela sobre `demo/tests/render.gd` e compara com o Python (pulado sem o Godot ou sem a extensão compilada).
+
 ## Fala humana
 
 ```

@@ -1,0 +1,10 @@
+; tare.tools.tune in Godot: a dialogue voiced by the native vocoder.
+; Fill voices/ and lines/ with: python tools/build_native.py demo
+
+config_version=5
+
+[application]
+
+config/name="tare.tools.tune demo"
+config/features=PackedStringArray("4.5")
+run/main_scene="res://dialogue.tscn"

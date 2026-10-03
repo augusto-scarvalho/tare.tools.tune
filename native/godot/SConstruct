@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+# The Godot extension: native/src (the vocoder) + native/godot/src (the Godot classes), over godot-cpp.
+# Run through tools/build_native.py godot, which fetches godot-cpp into native/godot/godot-cpp first (inside this
+# folder: its thousand object files keep short relative paths, or linking it overflows a Linux command line).
+import os
+
+env = SConscript(os.path.join("godot-cpp", "SConstruct"))
+env.Append(CPPPATH=["src", os.path.join("..", "include"), os.path.join("..", "third_party")],
+           CPPDEFINES=["POCKETFFT_NO_MULTITHREADING", "TARE_TUNE_STATIC"])
+if env["platform"] != "windows" or env.get("use_mingw"):
+    env.Append(CCFLAGS=["-ffp-contract=off"])    # the same sums as the Python reference, on every CPU
+sources = Glob("src/*.cpp") + Glob(os.path.join("..", "src", "*.cpp"))
+library = env.SharedLibrary(os.path.join("demo", "bin", "tare_tune{}{}".format(env["suffix"], env["SHLIBSUFFIX"])),
+                            source=sources)
+Default(library)

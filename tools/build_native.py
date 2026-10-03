@@ -2,12 +2,17 @@
 
     python tools/build_native.py tables    # native/src/tables.hpp: the constants, from the Python reference
     python tools/build_native.py build     # native/build/tare_tune.(dll|so|dylib), for tests/test_native.py
+    python tools/build_native.py godot     # the Godot extension, into native/godot/demo/bin (pip install scons)
+    python tools/build_native.py demo      # the demo's voice banks and a dialogue planned in Python
 
 The constants are written as exact hexadecimal floats, so the port uses the very numbers numpy computed. The build
-needs a C++17 compiler (g++ or clang++; $CXX picks another).
+needs a C++17 compiler (g++ or clang++; $CXX picks another); the Godot extension, what godot-cpp builds with (on
+Windows, the Visual Studio build tools).
 """
+import json
 import os
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +25,13 @@ from tare.tools.tune.speech.vocoder import ap_freqs, band_freqs  # noqa: E402
 
 NATIVE = ROOT / "native"
 LIBRARY = {"Windows": "tare_tune.dll", "Darwin": "libtare_tune.dylib"}.get(platform.system(), "libtare_tune.so")
+GODOT_CPP, GODOT_CPP_TAG = NATIVE / "godot" / "godot-cpp", "godot-4.5-stable"   # runs on Godot 4.5 and later
+DEMO = NATIVE / "godot" / "demo"
+DIALOGUE = [("Ferreiro", "m", "Bem-vindo à forja, viajante!"),
+            ("Viajante", "f", "Preciso de uma espada nova. A minha quebrou na ponte."),
+            ("Ferreiro", "m", "Na ponte?! Você enfrentou o troll sozinha?"),
+            ("Viajante", "f", "[tristeza] Não tive escolha... ele levou o meu irmão."),
+            ("Ferreiro", "m", "[raiva] Aquele monstro! Leve esta espada, e traga o garoto de volta.")]
 
 
 def _array(name: str, values) -> str:
@@ -53,5 +65,29 @@ def build():
     print(f"-> {out}")
 
 
+def godot(target: str = "template_debug"):
+    if not GODOT_CPP.exists():
+        subprocess.run(["git", "clone", "--depth", "1", "--branch", GODOT_CPP_TAG,
+                        "https://github.com/godotengine/godot-cpp", str(GODOT_CPP)], check=True)
+    subprocess.run([sys.executable, "-m", "SCons", "-C", str(NATIVE / "godot"), f"target={target}",
+                    "disable_exceptions=no", f"-j{os.cpu_count() or 2}"], check=True)   # pocketfft throws
+
+
+def demo():
+    from tare.tools.tune.speech import Speaker, concat, tvb
+    (DEMO / "voices").mkdir(exist_ok=True)
+    (DEMO / "lines").mkdir(exist_ok=True)
+    for name in concat.banks("pt"):
+        print(tvb.export(name, DEMO / "voices" / f"{name.replace('/', '_')}.tvb"))
+    voices = {"m": Speaker(pitch=110, tract=1.0, engine="natural"),
+              "f": Speaker(pitch=200, tract=1.15, engine="natural")}
+    index = []
+    for i, (who, voice, text) in enumerate(DIALOGUE):
+        (DEMO / "lines" / f"{i:02d}.json").write_text(voices[voice].voice(text, "pt").to_json(), encoding="utf-8")
+        index.append({"speaker": who, "text": re.sub(r"\[[^\]]*\]\s*", "", text), "spec": f"{i:02d}.json"})
+    (DEMO / "lines" / "dialogue.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"-> {DEMO / 'lines'}: {len(index)} lines")
+
+
 if __name__ == "__main__":
-    {"tables": tables, "build": build}[sys.argv[1]]()
+    {"tables": tables, "build": build, "godot": godot, "demo": demo}[sys.argv[1]](*sys.argv[2:])

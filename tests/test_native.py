@@ -33,6 +33,18 @@ def test_the_native_constants_are_the_python_ones():
         assert np.allclose(tables[name], values, rtol=1e-12, atol=0), name
 
 
+def test_a_voice_bank_file_holds_the_same_frames(tmp_path):
+    from tare.tools.tune.speech import tvb
+    path = tvb.export("pt/dora", tmp_path / "pt_dora.tvb")
+    header, frames = tvb.read(path)
+    b = concat.bank("pt/dora")
+    assert header["name"] == "pt/dora" and header["frames"] == len(b.f0) and header["bands"] == 64
+    assert path.stat().st_size < 25e6                      # about the size of the .npz it comes from
+    assert np.array_equal(frames["f0"], b.f0.astype(np.float32)) and np.array_equal(frames["f0"], b.f0)
+    assert np.array_equal(frames["env"], b._env8)
+    assert np.array_equal(frames["ap"].astype(np.float32) / 255, b.ap)
+
+
 @pytest.fixture(scope="module")
 def lib():
     lib = ctypes.CDLL(str(PATH))
