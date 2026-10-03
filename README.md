@@ -255,7 +255,7 @@ Cada evento é um ponto de escuta:
 | **força 1** | cinema: raspa mais, soa mais, golpe com assobio, corte afiado | as duas coisas |
 
 
-**Os outros sons de RPG** seguem o mesmo método, um por um. A lista e o estado de cada um estão em [`docs/sons-rpg.md`](docs/sons-rpg.md).
+**Os outros sons de RPG** seguem o mesmo método, um por um. A lista e o estado de cada um estão em [`docs/sons-rpg.md`](docs/sons-rpg.md). O que falta para tactics RPGs (no espírito de Final Fantasy Tactics, Tactics Ogre, Unicorn Overlord e Triangle Strategy) está em [`docs/sons-tactics.md`](docs/sons-tactics.md).
 
 **Como soavam, segundo o CLAP** (a primeira versão, desenhada sem gravações). Medimos com o modelo juiz, que não participou de nenhum ajuste, contra 80 descrições em inglês (efeitos, lugares e distratores como fala, música e "som 8-bit"). O acaso ficaria em ~1% para o 1º lugar.
 
