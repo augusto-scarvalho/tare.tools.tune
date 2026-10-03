@@ -178,6 +178,29 @@ def test_everyday_sounds_keep_to_the_references():
     assert len(Sfx("tableware", "pewter", species=2).voice("cutlery").modal) >= 5         # a meal of light ticks
 
 
+def test_mounts_and_flight_keep_to_the_games():
+    step = Sfx("hoof", "stone", species=2).voice("step")
+    hits = sorted({m.start for m in step.modal})
+    assert len(hits) == 2 and 0.05 < hits[1] < 0.09                                       # TS: a pair ~68 ms apart
+    assert min(m.modes[0][0] for m in step.modal) > 500                                   # stone: a knock at 0.5-1 kHz
+    assert Sfx("hoof", "grass", species=2).voice("step").noise[0].freq[0][1] < 300        # grass: a dull thump
+    for gait, per_stride in (("walk", 4), ("gallop", 4)):
+        v = Sfx("hoof", "dirt", species=2).voice(gait)
+        thumps = [n for n in v.noise if n.gain and n.filter == "band" and n.freq[0][1] < 400]
+        assert v.loop and len(thumps) % per_stride == 0
+        assert max(x.start + x.dur for x in [*v.noise, *v.modal, *v.scatter] if x.gain) <= v.duration - v.loop
+    hurt = Sfx("horse", "steed", species=2).voice("hurt").syllables
+    assert 450 < np.median([f for _, f in hurt[0].pitch]) < 650 and hurt[1].pitch[0][1] < 300   # ~550 Hz, then ~250
+    charge = Sfx("horse", "steed", species=2).voice("charge")
+    assert 1.5 < charge.duration < 2.2 and max(n.freq[1][1] for n in charge.noise if n.q >= 2) > 1800
+    feather = Sfx("wings", "feather", species=2)
+    flap, takeoff = feather.voice("flap"), feather.voice("takeoff")
+    assert 0.3 < flap.duration < 0.5 and len([n for n in takeoff.noise if n.q == 0.8]) >= 8      # ~10 beats
+    rise = lambda e: max(s.pitch[-1][1] / s.pitch[0][1] for s in Sfx("warp", "arcane").voice(e).syllables)  # noqa: E731
+    assert rise("out") > 2 ** (12 / 12) and rise("in") < 2 ** (-12 / 12)                  # up ~15, down ~17 semitones
+    assert Sfx("warp", "retro").voice("out").duration < 0.6                               # TO: ~0.4 s
+
+
 def test_knobs_vary_a_sound_within_its_character():
     base = Sfx("ui", "crystal", species=3)
     assert np.array_equal(base.render("confirm", 0, SR),                                  # defaults: untouched

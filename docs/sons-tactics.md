@@ -99,11 +99,11 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
 | Passos em 8 chãos, saltos de altura, armadura | todos | tem: `footstep`, `gear` | A |
-| Cavalaria: cavalo andando, galopando, investida, relincho | TO, UO, TS | falta | A |
-| Voadores: asas (grifo, wyvern, homem-falcão), pouso | TO, UO, FFTA | falta | B |
-| Tropas marchando no mapa | UO | falta | B |
+| Cavalaria: cavalo andando, galopando, investida, relincho | TO, UO, TS | medido no TS: `hoof` (6 chãos, 4 andaduras em loop), `horse` | A |
+| Voadores: asas (grifo, wyvern, homem-falcão), pouso | TO, UO, FFTA | medido no TS e no FFTA2: `wings` feather, leather | B |
+| Tropas marchando no mapa | UO | desenhado: `march` (loop, move, halt) | B |
 | Chocobo e outras montarias | FFT, FFTA | parcial: criatura `bird` | C |
-| Teletransporte | FFT, FFTA | falta | C |
+| Teletransporte | FFT, FFTA | medido no FFTA2 e no TO: `warp` arcane, retro | C |
 
 ## 7. Monstros
 

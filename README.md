@@ -210,6 +210,11 @@ audio = rei.render("Salve o reino!")
 | `torch` (fogo) | torch, brazier | ignite, extinguish |
 | `water` (água) | small, big | splash, dive, drip |
 | `footstep` | stone, wood, metal, gravel, dirt, grass, snow, water | walk, run, land, scuff |
+| `hoof` (cascos de cavalo) | dirt, grass, stone, wood, water, snow | step (um par), walk, trot, canter e gallop (loops sem emenda), halt, land |
+| `horse` (cavalos) | steed, warhorse | neigh, snort, nicker, hurt, charge (a carga de cavalaria), trample |
+| `wings` (asas) | feather, leather | flap, hover (loop), takeoff, land, swoop |
+| `march` (tropas marchando) | infantry, heavy | loop, move, halt |
+| `warp` (teleporte) | arcane, retro | out (some), in (aparece) |
 | `explosion` | fire, stone, magic | blast, distant, debris |
 | `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal, water, wind, earth, poison, gravity, meteor | charge, cast, travel (loop), impact |
 | `summon` (invocações) | fire, ice, thunder, earth, holy, dark, dragon | arrive, strike, leave |

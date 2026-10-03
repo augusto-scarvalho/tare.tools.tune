@@ -434,6 +434,20 @@ Sem gravação, pelo que os clássicos fazem: `gravity` (um tom grave afundando,
 
 Sem gravação: servir (`pour`: o ar do copo subindo de tom enquanto enche, bolhas), mexer (`stir`: um tilintar a cada volta da colher), escrever (`write`: a pena riscando em traços, molhada uma vez no tinteiro), gaveta e sentar.
 
+**Cavalaria, voo, marcha e teleporte (`sfx/mounts.py`: `hoof`, `horse`, `wings`, `march`, `warp`).** Medidos nos efeitos de *Triangle Strategy*, no *FFTA2* e no *Tactics Ogre: Reborn* (cópias do usuário) e num pacote CC0; só análise:
+
+| medido | o que é | evento |
+|---|---|---|
+| cascos | cada passo é um par de cascos a ~68 ms (as patas da frente ou as de trás), ~0,21 s; grama: baque surdo, mais forte em 125–250 Hz; pedra: batida oca em 0,5–1 kHz (centro ~0,9 kHz) e a ferradura até 8 kHz; água rasa: espirro com o corpo em 250 Hz–1 kHz | `hoof` step; grama, pedra e água ficam a ±5 dB do TS por oitava até 8 kHz |
+| investida | ~1,8 s de ar crescendo por ~0,7 s, centro perto de 2 kHz | `horse` charge (com os cascos baixinhos por baixo) |
+| o golpe da investida | um baque grave (125 Hz–1 kHz, ~0,4 s) e depois ~1,5 s de poeira clara (8 kHz) | `horse` trample |
+| relincho de dor | ~1,6 s: ~1 s agudo e firme (f0 ~550 Hz, a energia perto de 2 kHz), depois um sopro grave (~250 Hz) | `horse` hurt |
+| bufo | ~1 s de sopro sem voz, mais forte perto de 1 kHz | `horse` snort |
+| asas | uma batida dura ~0,4 s, mais forte em 250–500 Hz, penas até ~13 kHz, muitas vezes dois golpes a ~0,1 s; um pássaro decolando bate ~10 vezes em 1,6 s, mais claro (centro ~2 kHz) | `wings` flap, takeoff |
+| teleporte | sumir: ~1,2 s crescendo por ~0,8 s e subindo ~15 semitons; aparecer: ~1 s descendo ~17; o do *Tactics Ogre* dura ~0,4 s e é escuro (mais forte em 125 Hz) | `warp` arcane, retro |
+
+Sem gravação: as andaduras (o passo em quatro tempos iguais, o trote em dois, o meio-galope em três e uma suspensão, o galope em quatro rápidos e as quatro patas no ar), o relincho comum, o relincho baixinho (`nicker`), o pouso e o pairar das asas, a marcha das tropas. As andaduras, o pairar e a marcha são loops sem emenda: o último casco (batida, passo) de cada loop morre antes do ponto de volta, então o loop nem precisa de crossfade.
+
 **Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
 - **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.
 - **Tocha:** acende com um raspado e uma labareda que vira crepitar (larga, 1–6 kHz, ~1 s). Apagar é um chiado.
