@@ -35,6 +35,16 @@ def pitch_of(v: Vocoded) -> float:
     return template(v.clip).pitch * v.pitch
 
 
+def test_gasp_keeps_to_tactics_ogre():
+    """Hurt ~0.4 s, death 0.65-0.85 s, both near the speaking voice rather than shouted."""
+    for hero in (Speaker(pitch=110, tract=1.0), Speaker(pitch=210, tract=1.15)):
+        gasps = [emote(hero, "hurt", "gasp", take=k) for k in range(4)]
+        assert all(0.3 < v.duration < 0.55 for v in gasps)
+        assert all(0.55 < emote(hero, "death", "gasp", take=k).duration < 1.2 for k in range(4))
+        shouts = [emote(hero, "hurt", "tactics", take=k) for k in range(4)]
+        assert np.mean([pitch_of(v) for v in gasps]) < 0.8 * np.mean([pitch_of(v) for v in shouts])
+
+
 def test_barks_follow_the_speakers_voice():
     low, high = Speaker(pitch=90, tract=0.95), Speaker(pitch=300, tract=1.3)
     assert pitch_of(emote(high, "hmm")) > 2.5 * pitch_of(emote(low, "hmm"))

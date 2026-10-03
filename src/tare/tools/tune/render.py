@@ -6,7 +6,7 @@ Signal flow per syllable:
     -> time-varying formant bank (parallel band-passes, coefficients updated every 64 samples)
     -> envelope (attack/release, amp curve, growl AM, pulse trains)
 Then for the whole voice: sum syllables + chip programs + speech + vocoded clips + effect layers (layers.py)
--> 40 Hz high-pass -> crush -> saturation -> realism -> reverb -> loop folding -> normalise to `gain`.
+-> 40 Hz high-pass -> crush -> saturation -> grain (bits) -> realism -> reverb -> loop folding -> normalise to `gain`.
 
 Every block is a simple per-sample recurrence (one-pole, biquad, PolyBLEP) or a seeded
 SplitMix64 stream, so engine ports can reproduce it.
@@ -161,6 +161,15 @@ def _crush(x: np.ndarray, amount: float) -> np.ndarray:
     return np.round(x * levels) / levels
 
 
+def _grain(x: np.ndarray, bits: int, sr: int) -> np.ndarray:
+    """An adaptive quantizer of `bits` bits, like the 4-bit ADPCM samples of the DS and the PSP: its step follows the
+    level over ~5 ms, so a loud passage carries a hiss that a quiet one does not."""
+    a = 1 - np.exp(-1 / (0.005 * sr))
+    env = lfilter([a], [1.0, a - 1], np.abs(x))
+    q = np.maximum(env * 2.0 ** (1 - bits), 2.0 ** -15)
+    return np.round(x / q) * q
+
+
 def _reverb(x: np.ndarray, sr: int, seconds: float, wet: float, k: int) -> np.ndarray:
     n = int(seconds * sr)
     ir = rng.noise(k, n) * np.exp(-6.9 * np.arange(n) / n)
@@ -217,6 +226,8 @@ def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
         out = _crush(out, voice.crush)
     if voice.drive:
         out = np.tanh(voice.drive * out) / np.tanh(voice.drive)
+    if voice.bits:
+        out = _grain(out, voice.bits, sr)
     if voice.lowpass:
         out = sosfilt(butter(2, min(voice.lowpass, 0.45 * sr) / (sr / 2), output="sos"), out)
     if voice.room:

@@ -11,9 +11,17 @@ CC0, and of Reemax, CC-BY 3.0; Juhani Junkala's 512 retro sounds, CC0; analysis 
     retro       power-ups: 0.2-0.8 s, square waves sweeping up 8-18 semitones (some 44), held level, then cut;
                 the negative ones fall as far
 
-The ailments with no recording keep to what the classics made of them: poison bubbles, sleep sighs, silence is cut
-short, confusion wobbles and tweets, charm beats like a heart, berserk growls, doom tolls, stone grinds and sets, a
-toad croaks, a zombie groans. Tactics battles are fast, so everything is shorter than the references (0.5-2.5 s).
+And on the games themselves (Tactics Ogre: Reborn and FFTA2 from the user's own copies, Triangle Strategy's sound
+effects; analysis only, nothing of them is kept): a buff swells in over ~0.5 s and lasts 1.5-2.4 s; a debuff falls
+~19 semitones; Tactics Ogre's poison is a low bubbling (all under 1 kHz, a dozen bubbles, falling an octave);
+Triangle Strategy's sleep is a low pure tone (~400 Hz) pulsing ~11 times a second and sinking ~9 semitones, its
+silence drops ~32 semitones, its blindness swells in slowly (~0.4 s) and low (~600 Hz), its paralysis is a bright
+crackle (centre ~7 kHz) falling ~9 semitones, its regeneration a very bright shimmer (~9 kHz) and a status running out
+a bright tone swelling in over 0.3 s and gliding ~16 semitones down (1.5 s).
+
+The ailments with no recording keep to what the classics made of them: confusion wobbles and tweets, charm beats like
+a heart, berserk growls, doom tolls, stone grinds and sets, a toad croaks, a zombie groans. Tactics battles are fast,
+so everything stays between 0.5 and 2.5 s.
 
 Two voices: "fantasy" (bells, glass, voices, air) and "retro" (square waves). The key is the game's, as in `ui`.
 """
@@ -26,7 +34,7 @@ from .physical import burst, splits
 from .ui import blip, glass, hz, key_of, note, play, run, sparkle, tick
 
 EVENTS = ("buff", "debuff", "protect", "shell", "haste", "slow", "stop", "sleep", "poison", "silence", "blind",
-          "confuse", "charm", "berserk", "doom", "stone", "toad", "zombie", "cure")
+          "confuse", "charm", "berserk", "doom", "stone", "toad", "zombie", "paralysis", "regen", "expire", "cure")
 
 
 def sine(start, dur, f0, f1, gain, attack=0.02, release=0.1, **kw) -> Syllable:
@@ -58,24 +66,27 @@ def ticks(fx: Fx, start, first, ratio, until, a, b) -> list:
 @recipe("status", EVENTS, ("fantasy", "retro"))
 def status(fx: Fx):
     """Status effects: buff, debuff, protect, shell, haste, slow, stop, the ailments (sleep, poison, silence, blind,
-    confuse, charm, berserk, doom, stone, toad, zombie) and their cure."""
+    confuse, charm, berserk, doom, stone, toad, zombie, paralysis), regen, a status running out, and the cure."""
     e, key, retro = fx.event, key_of(fx), fx.style == "retro"
     extra = {}
-    if e == "buff":             # up an octave in 0.15 s, the chord, one pure ring ~3 kHz
+    if e == "buff":             # swelling in over ~0.5 s, up an octave, the chord, one pure ring ~3 kHz
         if retro:
-            layers = run(fx, 0.0, key, (0, 4, 7, 12), 0.05, 0.05, 0.05) + [sweep(0.2, 0.3, key + 12, key + 24,
-                                                                                  vibrato=(9.0, 0.3))]
+            layers = [sweep(0.0, 0.45, key - 12, key + 12, 0.5, amp=[(0, 0.2), (1, 1.0)])]
+            layers += run(fx, 0.45, key, (0, 4, 7, 12), 0.05, 0.05, 0.05) + [sweep(0.65, 0.3, key + 12, key + 24,
+                                                                                   vibrato=(9.0, 0.3))]
         else:
-            layers = ([sine(0.0, 0.18, hz(key - 12), hz(key), 0.45, release=0.04)] +
-                      run(fx, 0.12, key + 12, (0, 4, 7, 12), 0.05, 0.2, 1.0, (0.45, 0.6)) +
-                      ring(fx, 0.3, key + 31, 0.5) + sparkle(fx, 0.25, 1.0, key, 30))
+            layers = ([Noise(0.0, 0.6, [(0, 1500), (1, 5000)], "band", 1.2, amp=[(0, 0.0), (0.8, 1.0), (1, 0.6)],
+                             attack=0.02, release=0.1, wobble=(12.0, 0.4), gain=0.45),
+                       sine(0.0, 0.5, hz(key - 12), hz(key), 0.4, attack=0.4, release=0.05)] +
+                      run(fx, 0.45, key + 12, (0, 4, 7, 12), 0.05, 0.2, 1.0, (0.45, 0.6)) +
+                      ring(fx, 0.6, key + 31, 0.5) + sparkle(fx, 0.55, 1.0, key, 30))
         level = 0.7
-    elif e == "debuff":         # a low voice falling from ~180 to ~80 Hz and wavering there; the bells down a dim chord
+    elif e == "debuff":         # a low voice falling ~19 semitones and wavering there; the bells down a dim chord
         if retro:
-            layers = [sweep(0.0, 0.5, key + 7, key - 17, vibrato=(8.0, 0.8)), blip(0.5, key - 17, 0.12, 0.5)]
+            layers = [sweep(0.0, 0.5, key + 2, key - 17, vibrato=(8.0, 0.8)), blip(0.5, key - 17, 0.12, 0.5)]
         else:
-            layers = [Syllable(0.0, 1.4, [(0, round(hz(key - 18), 2)), (0.15, round(hz(key - 31), 2)),
-                                          (1, round(hz(key - 32), 2))], "glottal", brightness=0.3, vibrato=(5.5, 1.2),
+            layers = [Syllable(0.0, 1.4, [(0, round(hz(key - 12), 2)), (0.2, round(hz(key - 29), 2)),
+                                          (1, round(hz(key - 31), 2))], "glottal", brightness=0.3, vibrato=(5.5, 1.2),
                                rough=(0.4, 6.0), formants=[(450, 200, 1.0), (900, 300, 0.4)], attack=0.01,
                                release=0.6, amp=decay_curve(1.5), gain=0.8)]
             layers += run(fx, 0.05, key - 12, (0, -3, -6, -9), 0.12, 0.2, 0.7, (0.25, 0.3))   # the voice leads
@@ -128,40 +139,43 @@ def status(fx: Fx):
                        Noise(0.3, 0.2, [(0, 2000), (1, 8000)], "band", 0.8, amp=[(0, 0.0), (1, 1.0)], attack=0.01,
                              release=0.002, gain=0.4)]
         level = 0.65
-    elif e == "sleep":          # notes falling slowly over a high, still tone, then a sigh
-        layers = run(fx, 0.0, key + 7, (12, 9, 5, 0), 0.27, 0.4, 0.9, (0.35, 0.45))
-        if not retro:
-            layers += [sine(0.0, 1.6, hz(key + 36), hz(key + 36), 0.25, attack=0.2, release=0.8),
-                       Noise(1.0, 0.8, [(0, 1400), (1, 900)], "band", 1.0, amp=bell_curve(0.35, 1.5), attack=0.05,
-                             release=0.2, wobble=(6.0, 0.3), gain=0.25)]
+    elif e == "sleep":          # a low pure tone (~400 Hz) pulsing ~11 times a second, sinking ~9 semitones (Triangle
+        sleep = Syllable(0.0, 1.25, [(0, round(hz(key - 5), 2)), (1, round(hz(key - 14.5), 2))],   # Strategy)
+                         "pulse" if retro else "sine", 0.5, 0.3, attack=0.1, release=0.4, amp=decay_curve(1.2),
+                         pulses=(11.0, 0.97, 5.0), gain=0.8)
+        layers = [sleep] + ([] if retro else [Noise(0.7, 0.6, [(0, 1100), (1, 800)], "band", 1.0,
+                                                    amp=bell_curve(0.4, 1.5), attack=0.05, release=0.2,
+                                                    wobble=(6.0, 0.3), gain=0.15)])          # and a sigh
         level = 0.55
-    elif e == "poison":         # bubbles, and a sickly tone beating against itself, sinking
+    elif e == "poison":         # a low bubbling, all under 1 kHz, a dozen bubbles, sinking an octave (Tactics Ogre)
         if retro:
-            layers = [blip(0.13 * k + 0.04 * fx.rand(f"b{k}"), key - 12 + int(7 * fx.rand(f"p{k}")), 0.05, 0.6, 5)
-                      for k in range(7)] + [sweep(0.0, 0.9, key - 5, key - 8, 0.25, vibrato=(5.0, 0.5))]
+            layers = [blip(0.1 * k + 0.03 * fx.rand(f"b{k}"), key - 19 + int(7 * fx.rand(f"p{k}")) - k, 0.05, 0.6, 5)
+                      for k in range(11)] + [sweep(0.0, 1.1, key - 12, key - 24, 0.25, vibrato=(5.0, 0.5))]
         else:
-            layers = [Scatter(0.0, 1.0, [(0, 30), (0.6, 20), (1, 0)], "drop", (300, 900), (0.01, 0.04), (0.3, 1.0),
-                              0.7),
-                      sine(0.05, 0.9, hz(key - 5), hz(key - 7), 0.35, attack=0.1, release=0.4),
-                      sine(0.05, 0.9, hz(key - 5) * 1.03, hz(key - 7) * 1.03, 0.3, attack=0.1, release=0.4),
-                      Noise(0.0, 0.8, [(0, 350), (1, 300)], "band", 1.5, "brown", attack=0.05, release=0.3,
+            layers = [Scatter(0.0, 1.2, [(0, 12), (0.6, 10), (1, 0)], "drop", (150, 500), (0.015, 0.05), (0.5, 1.0),
+                              1.0),
+                      sine(0.05, 1.1, hz(key - 17), hz(key - 29), 0.15, attack=0.1, release=0.4),
+                      sine(0.05, 1.1, hz(key - 17) * 1.03, hz(key - 29) * 1.03, 0.12, attack=0.1, release=0.4),
+                      Noise(0.0, 1.0, [(0, 260), (1, 180)], "band", 1.5, "brown", attack=0.05, release=0.3,
                             wobble=(8.0, 0.8), gain=0.4)]
         level = 0.6
-    elif e == "silence":        # "shh", muffled at the end, a dull thump
+    elif e == "silence":        # "shh", muffled at the end, over a tone dropping ~32 semitones (Triangle Strategy)
+        drop = (sweep(0.0, 0.7, key + 19, key - 13, 0.4) if retro else
+                sine(0.0, 0.8, hz(key + 19), hz(key - 13), 0.35, attack=0.05, release=0.2))
         if retro:
             layers = [Noise(0.0, 0.25, [(0, 5000), (0.7, 4500), (1, 400)], "band", 0.8, amp=bell_curve(0.5, 1.5),
-                            attack=0.01, release=0.01, gain=0.6), blip(0.28, key - 12, 0.08, 0.6)]
+                            attack=0.01, release=0.01, gain=0.6), blip(0.72, key - 12, 0.08, 0.6), drop]
         else:
             layers = [Noise(0.0, 0.35, [(0, 5000), (0.7, 4500), (1, 400)], "band", 0.8, amp=bell_curve(0.55, 1.5),
-                            attack=0.02, release=0.01, gain=0.7)] + tick(fx, 0.33, key - 17, 0.6)
-            layers += note(fx, 0.33, key - 7, 0.05, 0.4)
+                            attack=0.02, release=0.01, gain=0.7), drop] + tick(fx, 0.8, key - 17, 0.6)
+            layers += note(fx, 0.8, key - 7, 0.05, 0.4)
         level = 0.5
-    elif e == "blind":          # the light going out: air darkening from 4.5 kHz to 250 Hz, a knock, a semitone down
-        layers = [Noise(0.0, 0.7, [(0, 4500), (1, 250)], "band", 1.0, amp=bell_curve(0.2, 1.5), attack=0.01,
-                        release=0.1, gain=0.8)]
-        layers += [blip(0.3, key - 12, 0.12, 0.5), blip(0.42, key - 13, 0.25, 0.5)] if retro else (
-            [boom(0.25, 0.5, 90, 0.5)] + note(fx, 0.3, key - 12, 0.15, 0.45, "a") +
-            note(fx, 0.45, key - 13, 0.4, 0.45, "b"))
+    elif e == "blind":          # the light going out, slowly (Triangle Strategy: ~0.4 s in, low, ~600 Hz)
+        layers = [Noise(0.0, 1.1, [(0, 1400), (1, 250)], "band", 1.0, amp=bell_curve(0.35, 1.5), attack=0.05,
+                        release=0.15, gain=0.8)]
+        layers += [blip(0.45, key - 12, 0.12, 0.5), blip(0.6, key - 13, 0.3, 0.5)] if retro else (
+            [boom(0.4, 0.6, 90, 0.5)] + note(fx, 0.45, key - 12, 0.15, 0.45, "a") +
+            note(fx, 0.6, key - 13, 0.45, 0.45, "b"))
         level = 0.6
     elif e == "confuse":        # dizzy: two tones wobbling wide around each other, birds circling
         if retro:
@@ -244,6 +258,34 @@ def status(fx: Fx):
                                attack=0.15, release=0.4, gain=0.8),
                       sine(0.0, 1.3, hz(key - 36), hz(key - 38), 0.2, attack=0.3, release=0.5)]
         level = 0.65
+    elif e == "paralysis":      # a bright crackle (centre ~7 kHz) falling ~9 semitones, ~0.9 s (Triangle Strategy)
+        if retro:
+            layers = [Noise(0.0, 0.8, [(0, 9000), (1, 5000)], "band", 1.5, amp=decay_curve(2.5), attack=0.01,
+                            release=0.05, wobble=(40.0, 0.9), gain=0.7),
+                      sweep(0.0, 0.6, key + 31, key + 22, 0.3, pulses=(25.0, 0.8, 2.0))]
+        else:
+            layers = [Scatter(0.0, 0.85, [(0, 300), (0.4, 150), (1, 0)], "pop", (3000, 10000), (0.0005, 0.003),
+                              (0.2, 1.0), 0.8),
+                      Noise(0.05, 0.8, [(0, 9000), (1, 5300)], "band", 2.0, amp=decay_curve(2.5), attack=0.2,
+                            release=0.1, wobble=(40.0, 0.9), gain=0.6),
+                      burst(0.0, 0.03, 6000, 0.6)]
+        level = 0.6
+    elif e == "regen":          # a very bright shimmer (~9 kHz), ~1.3 s, a soft tone rising under it (TS)
+        if retro:
+            layers = [blip(0.06 * k, key + (24, 28, 31, 36)[k % 4], 0.05, 0.4) for k in range(16)]
+        else:
+            layers = [Noise(0.0, 1.3, [(0, 8000), (1, 10000)], "band", 1.5, amp=bell_curve(0.3, 1.5), attack=0.05,
+                            release=0.2, wobble=(25.0, 0.6), gain=0.4),
+                      Scatter(0.0, 1.2, [(0, 30), (0.3, 50), (1, 0)], "ping", (6000, 11000), (0.03, 0.1),
+                              (0.2, 0.8), 0.5),
+                      sine(0.0, 1.2, hz(key + 36), hz(key + 43), 0.12, attack=0.3, release=0.5)]
+        level = 0.55
+    elif e == "expire":         # a status running out: a bright tone swelling in over 0.3 s, gliding ~16 semitones down
+        layers = ([sweep(0.0, 0.9, key + 31, key + 15, 0.5, amp=[(0, 0.3), (0.3, 1.0), (1, 0.6)])] if retro else
+                  [sine(0.0, 1.4, hz(key + 36), hz(key + 20), 0.35, attack=0.3, release=0.6),
+                   Noise(0.0, 1.2, [(0, 9000), (1, 5000)], "band", 1.5, amp=bell_curve(0.3, 1.5), attack=0.05,
+                         release=0.2, gain=0.6)] + ring(fx, 0.25, key + 36, 0.3))
+        level = 0.55
     else:                       # cure: a bright sweep up, the chord chiming, a short sparkle
         if retro:
             layers = run(fx, 0.0, key + 12, (0, 4, 7, 12, 16, 19, 24), 0.035, 0.035, 0.2)

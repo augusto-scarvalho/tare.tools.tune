@@ -147,6 +147,7 @@ write_wav("risada.wav", garota.emote("laugh", style="anime", intensity=0.9), 480
   | `anime` | brilhante, mais voz e menos ar, contorno mais vivo | *Rune Factory* |
   | `tactics` | contido: mais curto, mais grave e mais escuro | *Fire Emblem* |
   | `mmo` | gritos cheios, mais longos e fortes | *Final Fantasy XIV* |
+  | `gasp` | mais ar que voz, perto do tom da fala, mais longo (medido no próprio jogo) | *Tactics Ogre* |
 - `intensity` (0 a 1) controla quanto esforço vai no som.
 - O spec guarda o molde e as transformações (`Vocoded`, v5); uma port precisa levar os moldes junto.
 
@@ -195,7 +196,7 @@ audio = rei.render("Salve o reino!")
 | `item` (itens) | coins, potion, scroll, gem | pickup, use, drop |
 | `breakable` (coisas para quebrar) | crate, barrel, pot, glass | hit, break |
 | `ui` (interface) | fantasy, crystal, wood, retro | click, open, close, levelup, quest, error; para tactics: cursor, hover, target, select, confirm, cancel, scroll, range, text, advance, turn, enemy_turn, learn, battle; o que cada golpe fez: critical, miss, damage, heal, mp, ko, revive |
-| `status` (estados) | fantasy, retro | buff, debuff, protect, shell, haste, slow, stop, sleep, poison, silence, blind, confuse, charm, berserk, doom, stone, toad, zombie, cure |
+| `status` (estados) | fantasy, retro | buff, debuff, protect, shell, haste, slow, stop, sleep, poison, silence, blind, confuse, charm, berserk, doom, stone, toad, zombie, paralysis, regen, expire, cure |
 | `lever` (alavancas) | iron, wood | pull, push |
 | `trap` (armadilhas) | darts, spikes, blade | trigger, fire |
 | `torch` (fogo) | torch, brazier | ignite, extinguish |
@@ -204,6 +205,21 @@ audio = rei.render("Salve o reino!")
 | `explosion` | fire, stone, magic | blast, distant, debris |
 | `spell` | fire, ice, lightning, arcane, holy, shadow, nature, heal | charge, cast, travel (loop), impact |
 | `ambience` | rain, wind, fire, stream, cave, forest, night, storm, sea, dungeon | loop (16 s, sem emenda), accent |
+
+**Época (`era`).** Qualquer efeito pode vir vestido como uma geração de jogos, medida nos próprios jogos:
+
+| `era` | como soa | medido em |
+|---|---|---|
+| `""` | como foi desenhado | — |
+| `"hd"` | a banda inteira, uma sala e uma cauda: sons que continuam soando (a interface dura 0,8–1 s) | *Triangle Strategy*, *Octopath Traveler* |
+| `"16bit"` | nada acima de ~5–8 kHz, o granulado das amostras ADPCM de 4 bits, seco (a interface dura 0,2–0,4 s) | *Tactics Ogre* (PSP), *FFTA2* (DS) |
+
+```python
+Sfx("ui", "crystal", era="hd").render("confirm")
+Sfx("blade", "steel", era="16bit").render("clash")      # tare.tools.tune sfx blade steel --era 16bit
+```
+
+O timbre retrô de 8 bits continua sendo o estilo `retro` de `ui` e `status`.
 
 Cada família usa a técnica certa para o tipo de som:
 - **Corpos batidos** (metal, madeira, pedra, vidro, sinos, corda de arco) usam **síntese modal**: um impacto ou uma raspagem faz soar um conjunto de modos. O material define os modos, o tamanho a altura e o decaimento, a força a dureza do contato.

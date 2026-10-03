@@ -29,7 +29,7 @@ from ..instruments import INSTRUMENTS, glockenspiel, marimba
 from ..score import Note
 from ..spec import Modal, Noise, Scatter, Syllable
 from . import Fx, bell_curve, decay_curve, recipe
-from .physical import burst, paper, splits, whoosh
+from .physical import burst, paper, splits
 
 BAR = (1.0, 2.756, 5.404, 8.933)   # a free bar's modes: glockenspiel, celesta
 TACTICS = ("cursor", "hover", "target", "select", "confirm", "cancel", "scroll", "range", "text", "advance", "turn",
@@ -286,25 +286,24 @@ def battle(fx: Fx, key: int) -> list:
 
 def results(fx: Fx, e: str, key: int):
     """What a blow did, laid over the weapon or the spell. Measured: retro hits last 40-110 ms, noisy, low and falling;
-    a smite flashes bright (3.5-6.6 kHz) for ~0.3 s, then rings low; a heal swells for 0.25 s into a shimmer climbing
-    from 5 to 13 kHz; a revive climbs ~17 semitones through seconds of sparkle; a fall drops 10-37 semitones."""
+    a critical rushes up (Tactics Ogre: ~38 semitones in 0.67 s); a miss is two short tones, the second lower (Tactics
+    Ogre, FFTA2: ~0.17 s); a heal swells for 0.25 s into a shimmer climbing from 5 to 13 kHz; a revive climbs ~17
+    semitones through seconds of sparkle; a fall drops 10-37 semitones."""
     retro = fx.style == "retro"
-    if e == "critical":         # a flash over the hit: the voice's double octave and its fifth, a low ring under them
-        if retro:               # a noise crack, a high blip, a square wave falling three octaves (damage2, negative1)
+    if e == "critical":         # a rush up (Tactics Ogre's: ~38 semitones in 0.67 s, mostly bright noise), landing on
+        if retro:               # the voice's double octave and its fifth
             layers = [Noise(0.0, 0.08, [(0, 3000), (1, 1500)], "high", 0.7, amp=decay_curve(5), attack=0.001,
-                            release=0.01, gain=0.8), blip(0.0, key + 24, 0.06, 0.7),
-                      Syllable(0.05, 0.3, [(0, round(hz(key + 19), 2)), (1, round(hz(key - 17), 2))], "pulse", 0.25,
-                               0.8, attack=0.002, release=0.05, gain=0.7)]
+                            release=0.01, gain=0.8),
+                      Syllable(0.0, 0.3, [(0, round(hz(key - 12), 2)), (1, round(hz(key + 26), 2))], "pulse", 0.25,
+                               0.8, attack=0.002, release=0.02, gain=0.7), blip(0.3, key + 24, 0.12, 0.7)]
         else:
-            layers = (note(fx, 0.0, key + 24, 0.5, 0.9, "a") + note(fx, 0.0, key + 31, 0.4, 0.55, "b") +
-                      note(fx, 0.04, key - 12, 0.9, 0.8, "low") + sparkle(fx, 0.02, 0.5, key, 60) +
-                      [Noise(0.0, 0.3, [(0, 5000), (1, 4000)], "high", 0.7, amp=decay_curve(4), attack=0.002,
-                             release=0.05, wobble=(30.0, 0.4), gain=0.7)])
+            layers = ([Noise(0.0, 0.5, [(0, 600), (0.7, 9000), (1, 7000)], "band", 2.0, amp=bell_curve(0.65, 1.5),
+                             attack=0.01, release=0.05, wobble=(30.0, 0.4), gain=1.0)] +
+                      note(fx, 0.3, key + 24, 0.3, 0.5, "a") + note(fx, 0.3, key + 31, 0.25, 0.35, "b") +
+                      sparkle(fx, 0.3, 0.4, key, 60))
         return fx.voice(fx.level(0.8), **splits(layers))
-    if e == "miss":             # the air where the target stood (swings: 75-355 ms, 450-1000 Hz), two soft low notes
-        air = ([Noise(0.0, 0.12, [(0, 600), (0.4, 2500), (1, 900)], "band", 1.5, amp=bell_curve(0.4, 2.0),
-                      attack=0.0, release=0.01, gain=0.7)] if retro else whoosh(fx, 0.0, 0.16, 1100, 1.2, 0.8))
-        layers = air + note(fx, 0.12, key - 5, 0.08, 0.5, "a") + note(fx, 0.2, key - 7, 0.12, 0.45, "b")
+    if e == "miss":             # not the air (the swing carries that): two short notes, the second lower, ~0.17 s
+        layers = note(fx, 0.0, key + 7, 0.05, 0.5, "a") + note(fx, 0.08, key + 2, 0.06, 0.7, "b")
         return fx.voice(fx.level(0.5), **splits(layers))
     if e == "damage":           # the number popping up: a short thump under a low tick
         thump = Noise(0.0, 0.09, [(0, 600), (1, 160)], "low", 0.9, amp=decay_curve(5), attack=0.001, release=0.01,

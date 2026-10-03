@@ -11,6 +11,9 @@ An Sfx is to sound effects what a Creature is to voices: a recipe (``kind``) wit
 (this sword, not swords in general), ``size`` and ``power``, and events that play like
 calls. Recipes design a plain Voice spec, so baking, the runtime bank and engine ports
 work the same way.
+
+``era`` dresses any of them as a generation of games sounded (see ERAS): "hd" as today's
+HD-2D tactics, "16bit" as the sampled sound of the PSP and DS ones, "" as designed.
 """
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
@@ -127,6 +130,27 @@ class Fx:
         return Voice(gain=round(self.level() if gain is None else gain, 4), **layers)
 
 
+def hd(v: Voice) -> Voice:
+    """Today's HD-2D tactics (measured on Triangle Strategy): the whole band (to 16-22 kHz), and sounds that keep
+    sounding: interface sounds of 0.15-2.7 s, swelling in over 50-150 ms, carried by a room and a tail."""
+    v.room = max(v.room, 0.25)
+    if not v.space:
+        v.space, v.wet = 1.2, 0.18
+    return v
+
+
+def sixteen(v: Voice) -> Voice:
+    """The sampled sound of the PSP and DS tactics (measured on Tactics Ogre and FFTA2): samples at 16-33 kHz with
+    nothing much above 5-8 kHz, stored as 4-bit ADPCM (a grain that follows the level), and dry."""
+    v.lowpass = min(v.lowpass or 5000.0, 5000.0)       # a gentle 12 dB/octave: 5 kHz leaves 99 % of it under ~8
+    v.bits = 4
+    v.space = v.room = v.air = 0.0
+    return v
+
+
+ERAS = {"": lambda v: v, "hd": hd, "16bit": sixteen}
+
+
 @dataclass(frozen=True)
 class Sfx:
     kind: str
@@ -137,6 +161,7 @@ class Sfx:
     take_variation: float = 0.12
     genes: tuple[tuple[str, float], ...] = field(default=())
     name: str = ""
+    era: str = ""                   # "", "hd" or "16bit" (ERAS)
 
     def __post_init__(self):
         if self.kind not in RECIPES:
@@ -146,6 +171,8 @@ class Sfx:
             object.__setattr__(self, "style", r.styles[0])
         elif self.style not in r.styles:
             raise ValueError(f"{self.kind} has no style {self.style!r}; choose from {', '.join(r.styles)}")
+        if self.era not in ERAS:
+            raise ValueError(f"unknown era {self.era!r}; choose from {', '.join(repr(e) for e in ERAS)}")
         genes = self.genes.items() if isinstance(self.genes, dict) else self.genes
         object.__setattr__(self, "genes", tuple(sorted(tuple(kv) for kv in genes)))
 
@@ -160,12 +187,14 @@ class Sfx:
         event = event or r.events[0]
         if event not in r.events:
             raise ValueError(f"{self.kind} has no event {event!r}; choose from {', '.join(r.events)}")
-        v = r.design(Fx(self, event, take))
+        v = ERAS[self.era](r.design(Fx(self, event, take)))
         v.seed = rng.seed32(self.kind, self.style, self.species, take, event)
         v.meta.update({"kind": self.kind, "style": self.style, "event": event, "species": self.species,
                        "take": take, "size": self.size, "power": self.power})
         if self.name:
             v.meta["name"] = self.name
+        if self.era:
+            v.meta["era"] = self.era
         return v
 
     def render(self, event: str | None = None, take: int = 0, sr: int = DEFAULT_SR) -> np.ndarray:
@@ -208,5 +237,5 @@ def decay_curve(rate: float = 5.0, points: int = 9):
 
 from . import ambience, magic, physical, status, ui, world  # noqa: E402,F401  (registers the recipes)
 
-__all__ = ["MATERIALS", "RECIPES", "Fx", "Material", "Modal", "Noise", "Recipe", "Scatter", "Sfx", "Syllable",
+__all__ = ["ERAS", "MATERIALS", "RECIPES", "Fx", "Material", "Modal", "Noise", "Recipe", "Scatter", "Sfx", "Syllable",
            "bell_curve", "decay_curve", "recipe"]

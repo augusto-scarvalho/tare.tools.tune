@@ -1,5 +1,6 @@
 import json
 import time
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -9,7 +10,7 @@ from tare.tools.tune.bake import bake, load_bestiary
 from tare.tools.tune.cli import main
 from tare.tools.tune.layers import event_times, render_modal, render_noise, render_scatter
 from tare.tools.tune.runtime import AmbiencePlayer, VoiceBank
-from tare.tools.tune.spec import Modal, Noise, Scatter
+from tare.tools.tune.spec import Modal, Noise, Scatter, Syllable
 
 SR = 22_050
 
@@ -109,6 +110,30 @@ def test_status_effects_go_the_right_way(style):
         return np.diff(t)
     assert clock("haste")[0] > clock("haste")[-1] and clock("slow")[0] < clock("slow")[-1]
     assert all(st.voice(e).duration < 3.0 for e in st.events)                 # a tactics battle does not wait
+
+
+def test_eras_dress_any_sound_as_the_originals_measured():
+    def band99(y):                      # where 99 % of the energy lies below
+        p = np.abs(np.fft.rfft(y)) ** 2
+        return np.fft.rfftfreq(len(y), 1 / 48000)[np.searchsorted(np.cumsum(p) / p.sum(), 0.99)]
+    plain, hd, old = (Sfx("ui", "crystal", species=3, power=0.8, era=e) for e in ("", "hd", "16bit"))
+    assert band99(old.render("cursor", 0, 48000)) < 9000 < band99(plain.render("cursor", 0, 48000))  # PSP/DS: 3-8 kHz
+    assert len(hd.render("confirm", 0, SR)) > len(plain.render("confirm", 0, SR)) + SR // 2           # HD: a tail
+    v = old.voice("cursor")
+    assert v.bits == 4 and v.space == 0 and v.meta["era"] == "16bit" and Voice.from_json(v.to_json()) == v
+    assert Sfx.from_dict(json.loads(json.dumps(old.to_dict()))) == old
+    with pytest.raises(ValueError):
+        Sfx("ui", era="ps5")
+
+
+def test_the_grain_follows_the_level():
+    tone = lambda gain: Voice(syllables=[Syllable(0.0, 0.5, [(0, 440), (1, 440)], "sine", gain=gain)],  # noqa: E731
+                              gain=gain, bits=4)
+    for gain in (1.0, 0.1):
+        y = render(tone(gain), SR)
+        clean = render(replace(tone(gain), bits=0), SR)
+        err = np.sqrt(np.mean((y - clean) ** 2)) / np.sqrt(np.mean(clean ** 2))
+        assert 0.01 < err < 0.2                                     # 4 bits: a hiss 14-40 dB down, at any level
 
 
 def test_identity_takes_and_validation():

@@ -181,6 +181,15 @@ def test_creatures_and_music_sound_the_same(lib):
 
 
 @built
+def test_the_eras_sound_the_same(lib):
+    for era in ("hd", "16bit"):
+        for kind, style, event in (("blade", "steel", "clash"), ("ui", "crystal", "confirm"),
+                                   ("ambience", "rain", "loop")):
+            voice = Sfx(kind, style, species=3, power=0.8, era=era).voice(event)
+            assert same(lib, voice, 22050) < 1e-6, (era, kind)
+
+
+@built
 def test_what_it_cannot_render_it_says(lib):
     assert native_voice(lib, b"{not json", 48000) == (1, "expected '\"' in the JSON")
     status, why = native_voice(lib, Creature("chip", species=3).voice("attack"), 48000)

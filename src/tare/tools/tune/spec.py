@@ -8,8 +8,8 @@ from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "tare.tools.tune.voice"
 OLD_FORMATS = {"creaturesynth.voice"}   # the project's earlier name
-VERSION = 5   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
-              # 5: vocoded clips and natural speech
+VERSION = 6   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
+              # 5: vocoded clips and natural speech; 6: bits (the grain of a console's compressed samples)
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -189,6 +189,7 @@ class Voice:
     room: float = 0.0                 # short early reflections, 0..1 mix (a real space, not a tail)
     lowpass: float = 0.0              # Hz, 0 = off: distance/microphone loss of highs
     loop: float = 0.0                 # seconds of crossfade: > 0 renders a seamless loop (ambience beds)
+    bits: int = 0                     # adaptive quantizer, 0 = off: 4 is the grain of DS and PSP samples (4-bit ADPCM)
     seed: int = 0                     # drives every random stream of the renderer
     meta: dict = field(default_factory=dict)  # informational: archetype, call, traits...
 

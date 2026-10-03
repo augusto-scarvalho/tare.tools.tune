@@ -86,6 +86,7 @@ Os campos com valor padrão são omitidos no JSON (`Voice.to_dict`).
 | `vocoded` | lista de `Vocoded` (performances refeitas pelo vocoder, v5) |
 | `spoken` | lista de `Spoken` (fala do motor natural, v5) |
 | `loop` | segundos de crossfade; > 0 gera um loop sem emenda de `duração − loop` segundos (v4) |
+| `bits` | 0 = desligado; bits de um quantizador adaptativo: 4 é o granulado das amostras do DS e do PSP (v6) |
 | `seed` | semente de todos os fluxos aleatórios |
 | `meta` | informativo (arquétipo, chamado, traços) |
 
@@ -150,6 +151,7 @@ Na voz inteira:
 2. Passa-alta Butterworth de 2ª ordem em 40 Hz, depois normaliza para pico 1.
 3. `crush`: sample-and-hold de `1 + floor(11·crush)` amostras, quantizado em `2^(14 − 10·crush)` níveis.
 4. `drive`: `tanh(d·x)/tanh(d)`.
+   `bits` (v6): um quantizador adaptativo, o granulado das amostras ADPCM de 4 bits: `env` = filtro de 1 polo sobre `|x|` (`a = 1 − e^(−1/(0,005·sr))`, `lfilter([a], [1, a − 1])`), passo `q = max(env·2^(1 − bits), 2^−15)`, saída `round(x/q)·q` (arredondamento para o par).
 5. Realismo (v3), na ordem:
    - `lowpass`: Butterworth de 2ª ordem em `min(lowpass, 0.45·sr)`;
    - `room`: IR de 60 ms com 1 na amostra 0 e 40 reflexões em `floor(uniforms(key(key(seed,"room"),"taps"), 40)·(N−1))`, ganhos `noise(key(key(seed,"room"),"gains"), 40)·e^(−3·tap/N)`; saída `(1−room)·x + room·molhado·pico(x)/pico(molhado)`;
@@ -357,6 +359,31 @@ Quatro timbres, um por gosto de jogo: `fantasy` (glockenspiel, medido no VSCO-2)
 | power-ups retrô | 0,2–0,8 s, onda quadrada subindo 8–18 semitons (às vezes 44), nível parado, depois corte | o timbre `retro` de `buff` e afins |
 
 Sem gravação, pelo que os clássicos fazem: `shell` (vidro subindo o acorde, um sopro), `stop` (tique-taque, depois congelado: vidro e um estalo de gelo), `poison` (bolhas e um tom enjoado batendo contra si mesmo), `silence` ("shh" abafado no fim), `blind` (ar escurecendo de 4,5 kHz a 250 Hz), `confuse` (dois tons oscilando largo, passarinhos rodando), `charm` (um coração batendo e uma sexta doce), `berserk` (um rosnado subindo, saturado), `doom` (um sino grave, com reverberação), `stone` (moendo cada vez mais rápido, depois firme), `toad` (um puf e um coaxar, duas vezes), `zombie` (um gemido afundando) e `cure` (o acorde tocando rápido para cima). As batalhas de tactics são rápidas: tudo fica mais curto que as referências (0,5–2,5 s). Dois timbres: `fantasy` e `retro`. O tom é o do jogo, o mesmo de `ui` para a mesma espécie.
+
+**Os jogos por dentro.** Os números acima vêm de sons genéricos de RPG. Depois, foram medidos os próprios jogos: *Tactics Ogre: Reborn* e *FFTA2* nas cópias do usuário; *Triangle Strategy*, *Octopath Traveler* e as vozes de *Unicorn Overlord* no arquivo The Sounds Resource. Tudo só para análise: nada desses jogos fica no repositório, só os números.
+
+- *Tactics Ogre: Reborn* guarda os efeitos num pacote cifrado (`sound/bin/SECommon.dat`): uma rotação de 3 bits e duas tabelas de XOR (as da ferramenta de modding do Gibbed, licença zlib) revelam um zip com um pacote `pakd` de bancos SEAD (`menu`, `battle`, `weather`, `effect`; HCA a 18–48 kHz), lidos pelo vgmstream. São 247 efeitos com nome, e as vozes de dor e de morte (218 + 588).
+- *FFTA2* (DS) tem 214 pequenos arquivos de som (SDAT) dentro de `master/pc.bin`, cada um com sequências de efeito (SSAR) que tocam amostras IMA-ADPCM de 4 bits a 16–44 kHz. Um tocador mínimo das sequências rendeu 573 efeitos com nome.
+- *Triangle Strategy* traz nome em cada som (`SE_BTL_CMN_STATUS_SLEEP_HIT`...); *Octopath Traveler* só números.
+
+O que separa as gerações (medianas):
+
+| | interface: duração, entrada, banda (99 % da energia abaixo de) | batalha: duração, entrada, banda |
+|---|---|---|
+| *Octopath Traveler* (HD-2D) | 0,78 s, 0,10 s, 11,9 kHz | 1,46 s, 0,23 s, 11,8 kHz |
+| *Triangle Strategy* (HD-2D) | 1,01 s, 0,10 s, 14,2 kHz | 1,27 s, 0,15 s, 13,1 kHz |
+| *Tactics Ogre* (PSP, refeito) | 0,40 s, 0,03 s, 9,4 kHz | 0,63 s, 0,14 s, 7,8 kHz |
+| *FFTA2* (DS) | 0,18 s, 0,04 s, 3,3 kHz | — |
+
+Daí a época (`Sfx(era=...)`): `hd` soma uma sala e uma cauda (1,2 s), `16bit` corta acima de 5 kHz (filtro suave: 99 % da energia fica abaixo de 4–9 kHz), põe o granulado de 4 bits (`bits`, um quantizador cujo passo segue o nível em ~5 ms, como o ADPCM) e tira a reverberação. O 8 bits continua sendo o estilo `retro`.
+
+E o que os jogos corrigiram nos eventos:
+- `critical`: no TO, uma subida de ~38 semitons em 0,67 s, quase toda ruído brilhante. Era um clarão caindo; agora sobe e pousa na nota dupla.
+- `miss`: no TO e no FFTA2, duas notas curtas, a segunda mais baixa (~0,17 s), não um sopro (o sopro é o golpe da arma).
+- `buff`: cresce em ~0,5 s nos dois jogos (TO 1,5 s, TS 2,4 s). `debuff`: cai ~19 semitons nos dois.
+- `poison`: no TO, borbulha grave (tudo abaixo de 1 kHz, uma dúzia de bolhas, descendo uma oitava).
+- No TS: `sleep` é um tom grave puro (~400 Hz) pulsando ~11 vezes por segundo e descendo ~9 semitons; `silence` cai ~32 semitons; `blind` entra devagar (~0,4 s) e grave (~600 Hz). E três estados novos: `paralysis` (um crepitar brilhante, centro em ~7 kHz, caindo ~9 semitons), `regen` (um brilho muito agudo, ~9 kHz) e `expire` (um estado acabando: um tom brilhante que entra em 0,3 s e desliza ~16 semitons para baixo).
+- Gritos: as vozes de dor do TO são arquejos de ~0,4 s, com voz em só um quarto a um terço do tempo e perto do tom da fala (homens ~160 Hz, mulheres ~380 Hz); as de morte, 0,65–0,85 s, largas (13–20 semitons) e caindo ~5. Os gritos de batalha do Octopath ficam só ~7 semitons acima da fala. Daí o estilo `gasp` de `emote`: duração ajustada a cada tipo (dor 0,42 s, morte 0,75 s) e esforço 0,4 (o intérprete gritou com tudo; a voz nova, não).
 
 **Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
 - **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.

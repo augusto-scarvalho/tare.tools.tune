@@ -14,7 +14,9 @@ O que um tactics RPG no espírito de Final Fantasy Tactics, FFTA, FFTA2, Tactics
 - **B:** a cada batalha;
 - **C:** de vez em quando.
 
-Siglas: FFT, FFTA (inclui o FFTA2), TO (Tactics Ogre), UO (Unicorn Overlord), TS (Triangle Strategy).
+Siglas: FFT, FFTA (inclui o FFTA2), TO (Tactics Ogre), UO (Unicorn Overlord), TS (Triangle Strategy), OT (Octopath Traveler).
+
+**Época.** Todo som pode sair em três épocas (`Sfx(..., era=...)`), medidas nos próprios jogos: `hd` (TS, OT), `16bit` (TO, FFTA2) e o desenho como está. O 8 bits é o estilo `retro`.
 
 ## 1. Grade e menus
 
@@ -52,11 +54,11 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
 | Acerto normal (carne, armadura, madeira, pedra) | todos | tem: `blade`, `blunt`, `bow` hit_* | A |
-| Acerto crítico: mais peso e um brilho | todos | medido: `ui` critical, por cima do golpe da arma | A |
-| Errou, esquivou | todos | medido: `ui` miss | A |
+| Acerto crítico: mais peso e um brilho | todos | medido no TO: `ui` critical, por cima do golpe da arma | A |
+| Errou, esquivou | todos | medido no TO e no FFTA2: `ui` miss | A |
 | Bloquear com escudo, aparar com a arma | todos | tem: `shield`, `blade` clash | A |
 | Número de dano aparecendo, número de cura | todos | medido: `ui` damage, heal | A |
-| Estados: veneno, sono, silêncio, cegueira, parar, lentidão e pressa, fúria, charme, confusão, morte anunciada, pedra, sapo, zumbi; e a cura deles | todos | medido: `status` sleep, haste; desenhado: os outros (`status`) | A |
+| Estados: veneno, sono, silêncio, cegueira, parar, lentidão e pressa, fúria, charme, confusão, morte anunciada, pedra, sapo, zumbi, paralisia, regeneração; o fim e a cura deles | todos | medido nos jogos: `status` poison (TO), sleep, silence, blind, stop, paralysis, regen, expire (TS); desenhado: os outros | A |
 | Atributo subindo e descendo, proteção, escudo mágico | todos | medido: `status` buff, debuff, protect; desenhado: shell | A |
 | Unidade caindo, reviver | todos | medido: `body` fall com `ui` ko; `ui` revive | A |
 | Contra-ataque, ataque em conjunto | FFT, TS, UO | parcial | B |
@@ -115,7 +117,7 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
-| Gritos de golpe, dor, morte, comemoração | todos | tem: `emote`, estilo `tactics` | A |
+| Gritos de golpe, dor, morte, comemoração | todos | tem: `emote`, estilos `tactics` e `gasp` (medido no TO) | A |
 | Frases curtas de batalha e diálogos de história em português | todos | tem: voz natural | A |
 | As mesmas falas em inglês | todos | falta: bancos em inglês | B |
 | Monstros e personagens que "falam" sem palavras | FFTA | parcial: balbucio | C |

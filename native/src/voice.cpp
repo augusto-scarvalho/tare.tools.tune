@@ -620,7 +620,7 @@ int32_t tt_render_voice(const char *json, const tt_bank *const *banks, const cha
         const std::string format = voice.text("format", "tare.tools.tune.voice");
         if (format != "tare.tools.tune.voice" && format != "creaturesynth.voice")
             throw std::runtime_error("not a tare.tools.tune.voice document");
-        if (voice.number("version", 5) > 5) throw std::runtime_error("the spec is newer than this core (version 5)");
+        if (voice.number("version", 6) > 6) throw std::runtime_error("the spec is newer than this core (version 6)");
         for (const char *other : {"chips", "speech", "vocoded"})
             if (!voice.list(other).empty())
                 throw Unsupported(std::string("this core does not render ") + other + " layers yet");
@@ -694,6 +694,16 @@ int32_t tt_render_voice(const char *json, const tt_bank *const *banks, const cha
         }
         if (const double drive = voice.number("drive", 0))
             for (double &v : x) v = std::tanh(drive * v) / std::tanh(drive);
+        if (const double bits = voice.number("bits", 0)) {   // render._grain: an adaptive quantizer
+            const double a = 1 - std::exp(-1 / (0.005 * sr));
+            Vec mag(x.size());
+            for (std::size_t i = 0; i < x.size(); ++i) mag[i] = std::abs(x[i]);
+            const Vec env = lfilter({a}, {1.0, a - 1}, mag);
+            for (std::size_t i = 0; i < x.size(); ++i) {
+                const double q = std::max(env[i] * std::pow(2.0, 1 - bits), 0x1p-15);
+                x[i] = std::nearbyint(x[i] / q) * q;
+            }
+        }
         if (const double lowpass = voice.number("lowpass", 0))
             sosfilt(butter(2, std::min(lowpass, 0.45 * sr) / (sr / 2.0), 0, 'l'), x);
         if (const double mix = voice.number("room", 0)) room(x, sr, mix, key(seed, "room"));
