@@ -88,6 +88,29 @@ def test_tactics_ui_follows_the_measured_shapes(style):
     assert letters(1.0) < letters(0.0)                                                 # big speakers, low blips
 
 
+@pytest.mark.parametrize("style", RECIPES["ui"].styles)
+def test_hit_results_rise_and_fall_as_measured(style):
+    ui = Sfx("ui", style, species=2)
+    pitch = lambda e: [f for _, f in notes(ui.voice(e))]  # noqa: E731
+    assert pitch("ko")[0] > pitch("ko")[-1] and pitch("revive")[0] < max(pitch("revive"))
+    assert np.mean(np.log2(pitch("heal"))) > np.mean(np.log2(pitch("damage")))
+    assert ui.voice("damage").duration < 0.15 < ui.voice("critical").duration
+
+
+@pytest.mark.parametrize("style", RECIPES["status"].styles)
+def test_status_effects_go_the_right_way(style):
+    st = Sfx("status", style, species=2)
+    mean = lambda e: np.mean([np.log2(f) for _, f in notes(st.voice(e))])  # noqa: E731
+    assert mean("buff") > mean("debuff")
+
+    def clock(e):   # the gaps between a clock's ticks (the shortest layers)
+        v = st.voice(e)
+        t = sorted([m.start for m in v.modal if m.dur <= 0.06] + [s.start for s in v.syllables if s.dur <= 0.02])
+        return np.diff(t)
+    assert clock("haste")[0] > clock("haste")[-1] and clock("slow")[0] < clock("slow")[-1]
+    assert all(st.voice(e).duration < 3.0 for e in st.events)                 # a tactics battle does not wait
+
+
 def test_identity_takes_and_validation():
     sword = Sfx("blade", "steel", species=3)
     assert np.array_equal(sword.render("clash", 0, SR), sword.render("clash", 0, SR))

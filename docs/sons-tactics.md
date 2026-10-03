@@ -5,6 +5,7 @@ O que um tactics RPG no espírito de Final Fantasy Tactics, FFTA, FFTA2, Tactics
 **Hoje:**
 - **tem:** já sai, com a receita entre crases;
 - **medido:** feito a partir de gravações medidas, falta ouvir e aprovar;
+- **desenhado:** feito sem gravação de referência, pelo que os clássicos fazem; falta ouvir e aprovar;
 - **parcial:** algo parecido existe, mas não é o som certo;
 - **falta:** ainda não existe.
 
@@ -51,15 +52,15 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
 | Acerto normal (carne, armadura, madeira, pedra) | todos | tem: `blade`, `blunt`, `bow` hit_* | A |
-| Acerto crítico: mais peso e um brilho | todos | falta | A |
-| Errou, esquivou | todos | parcial: `blade` swing | A |
+| Acerto crítico: mais peso e um brilho | todos | medido: `ui` critical, por cima do golpe da arma | A |
+| Errou, esquivou | todos | medido: `ui` miss | A |
 | Bloquear com escudo, aparar com a arma | todos | tem: `shield`, `blade` clash | A |
-| Número de dano aparecendo, número de cura | todos | falta | A |
-| Estados: veneno, sono, silêncio, cegueira, parar, lentidão e pressa, fúria, charme, confusão, morte anunciada, pedra, sapo, zumbi | todos | falta | A |
-| Atributo subindo e descendo, proteção, escudo mágico | todos | falta | A |
-| Unidade caindo, reviver | todos | parcial: `body` fall, `spell` heal | A |
+| Número de dano aparecendo, número de cura | todos | medido: `ui` damage, heal | A |
+| Estados: veneno, sono, silêncio, cegueira, parar, lentidão e pressa, fúria, charme, confusão, morte anunciada, pedra, sapo, zumbi; e a cura deles | todos | medido: `status` sleep, haste; desenhado: os outros (`status`) | A |
+| Atributo subindo e descendo, proteção, escudo mágico | todos | medido: `status` buff, debuff, protect; desenhado: shell | A |
+| Unidade caindo, reviver | todos | medido: `body` fall com `ui` ko; `ui` revive | A |
 | Contra-ataque, ataque em conjunto | FFT, TS, UO | parcial | B |
-| MP recuperado | todos | falta | B |
+| MP recuperado | todos | desenhado: `ui` mp | B |
 
 ## 4. Armas por classe
 
@@ -83,7 +84,7 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 | Fogo, gelo, raio, arcano, sagrado, sombra, natureza, cura | todos | tem: `spell` | A |
 | Água, vento, terra e terremoto, veneno | todos | falta | A |
 | Níveis da mesma magia (Fire, Fira, Firaga) | FFT, FFTA | parcial: `power` | A |
-| Tempo: pressa, lentidão, parar, gravidade, meteoro | FFT, FFTA | falta | B |
+| Tempo: pressa, lentidão, parar, gravidade, meteoro | FFT, FFTA | parcial: `status` haste, slow, stop | B |
 | Invocações: chegada, golpe, saída | FFT, FFTA | falta | B |
 | Conjuração carregando por turnos | FFT, TO | parcial: `spell` charge | B |
 | Terreno reagindo: óleo pegando fogo, água eletrificada, gelo, vento empurrando | TS | parcial: `spell`, `torch`, `water` | B |

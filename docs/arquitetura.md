@@ -339,6 +339,25 @@ Mais `text` (uma letra aparecendo: 35 ms numa escala pentatônica; `size` engros
 
 Quatro timbres, um por gosto de jogo: `fantasy` (glockenspiel, medido no VSCO-2), `crystal` (vidro, como o "glass" medido), `wood` (marimba e blocos de madeira, macio) e `retro` (onda quadrada). As notas usam os instrumentos medidos da música, abafadas depois de quanto devem soar. No início de batalha, `fantasy` toca caixa, tímpano, trompetes e trompas; `crystal`, triângulo, sino tubular e celesta; `wood`, tambor de mão, tambor de fenda e marimba; `retro`, os instrumentos de chip. Cada take muda alguns cents, até 1,5 dB e uns milissegundos, para o cursor, ouvido centenas de vezes numa batalha, não cansar. O nível de cada evento segue o quanto ele é ouvido: cursor, rolagem e texto mais baixos; confirmação e vez da unidade no meio; início de batalha mais alto.
 
+**O que cada golpe fez (`ui`, mais 7 eventos) e os estados (`status`, `sfx/status.py`).** Medidos nos sons de cura e buff de RPG ("8 Heals and Buffs SFX", de leohpaz, CC-BY 4.0), nos pacotes de RPG de artisticdude (CC0) e de Reemax (CC-BY 3.0) e nos 512 sons retrô de Juhani Junkala (CC0); só análise:
+
+| medido | o que é | evento |
+|---|---|---|
+| golpe retrô | 40–110 ms, ruído grave (80–700 Hz), ataque instantâneo, caindo | `damage` (o número aparecendo: um baque curto sob um tique grave) |
+| smite | um clarão brilhante (3,5–6,6 kHz) por ~0,3 s, depois um anel grave (100–1400 Hz); cai ~33 semitons | `critical`, por cima do golpe da arma |
+| swing | 75–355 ms de ar, 450–1000 Hz | `miss` (o ar onde o alvo estava, e duas notas baixas) |
+| heal | sobe em 0,25 s até um brilho que vai de 5 a 13 kHz, ~1 s | `heal`; `mp` é mais frio, uma quinta abaixo, e mais lento |
+| revive | ~17 semitons subindo em segundos de brilho | `revive` (o acorde subindo duas oitavas, ~0,11 s por nota, sobre um acorde suave) |
+| negative, curse | caem 10–37 semitons | `ko` (três notas descendo e um tom afundando uma oitava e meia) |
+| atk buff | sobe uma oitava em 0,15 s, depois um anel puro (~3 kHz) que some em 1,5 s | `buff` |
+| debuff | uma voz grave caindo de ~180 a ~75 Hz em 0,25 s, oscilando ali por 2 s | `debuff` |
+| def buff | três pulsos graves (120–300 Hz) a ~0,75 s um do outro, 12 dB acima de um anel constante perto de 1,2 kHz | `protect` |
+| sleep | um tom agudo parado (~4,3 kHz) sobre notas descendo devagar (~0,25 s cada, 1,9 → 0,9 kHz) | `sleep` |
+| speed up | uma voz subindo ~10 semitons, pulsando | `haste` (um relógio acelerando e subindo); `slow` é o contrário |
+| power-ups retrô | 0,2–0,8 s, onda quadrada subindo 8–18 semitons (às vezes 44), nível parado, depois corte | o timbre `retro` de `buff` e afins |
+
+Sem gravação, pelo que os clássicos fazem: `shell` (vidro subindo o acorde, um sopro), `stop` (tique-taque, depois congelado: vidro e um estalo de gelo), `poison` (bolhas e um tom enjoado batendo contra si mesmo), `silence` ("shh" abafado no fim), `blind` (ar escurecendo de 4,5 kHz a 250 Hz), `confuse` (dois tons oscilando largo, passarinhos rodando), `charm` (um coração batendo e uma sexta doce), `berserk` (um rosnado subindo, saturado), `doom` (um sino grave, com reverberação), `stone` (moendo cada vez mais rápido, depois firme), `toad` (um puf e um coaxar, duas vezes), `zombie` (um gemido afundando) e `cure` (o acorde tocando rápido para cima). As batalhas de tactics são rápidas: tudo fica mais curto que as referências (0,5–2,5 s). Dois timbres: `fantasy` e `retro`. O tom é o do jogo, o mesmo de `ui` para a mesma espécie.
+
 **Mundo (`lever`, `trap`, `torch`, `water`, em `sfx/world.py`): medido em gravações.**
 - **Alavanca:** uma catraca de cliques a cada 40–70 ms por 0,3–0,5 s, médios (0,5–3 kHz, modos do mecanismo em ~330–1000 Hz), que termina num baque. Ao puxar, um mecanismo ronca em algum lugar.
 - **Tocha:** acende com um raspado e uma labareda que vira crepitar (larga, 1–6 kHz, ~1 s). Apagar é um chiado.

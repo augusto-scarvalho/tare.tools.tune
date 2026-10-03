@@ -29,7 +29,7 @@ from ..instruments import INSTRUMENTS, glockenspiel, marimba
 from ..score import Note
 from ..spec import Modal, Noise, Scatter, Syllable
 from . import Fx, bell_curve, decay_curve, recipe
-from .physical import burst, paper, splits
+from .physical import burst, paper, splits, whoosh
 
 BAR = (1.0, 2.756, 5.404, 8.933)   # a free bar's modes: glockenspiel, celesta
 TACTICS = ("cursor", "hover", "target", "select", "confirm", "cancel", "scroll", "range", "text", "advance", "turn",
@@ -106,7 +106,7 @@ def run(fx: Fx, start: float, base: float, steps, step: float, ring: float, last
     out = []
     for i, d in enumerate(steps):
         end = i == len(steps) - 1
-        out += note(fx, i * step, base + d, last if end else ring, vel[1] if end else vel[0], f"n{i}")
+        out += note(fx, start + i * step, base + d, last if end else ring, vel[1] if end else vel[0], f"n{i}")
     return out
 
 
@@ -127,16 +127,25 @@ def arpeggio(fx: Fx, notes: list, step: float, hold: float, retro: bool) -> list
 
 
 MENU = ("click", "open", "close", "levelup", "quest", "error")
+RESULTS = ("critical", "miss", "damage", "heal", "mp", "ko", "revive")
 
 
-@recipe("ui", MENU + TACTICS, ("fantasy", "retro", "crystal", "wood"))
+def key_of(fx: Fx) -> int:
+    """Each game its own key, near C5 (the same for every recipe of one species)."""
+    return 72 + int(round(6 * (fx.g.base("key") - 0.5)))
+
+
+@recipe("ui", MENU + TACTICS + RESULTS, ("fantasy", "retro", "crystal", "wood"))
 def ui(fx: Fx):
-    """Interface: menus, a tactics grid (cursor, hover, select, confirm, cancel, range, text) and its battles' rhythm
-    (turns, battle start, ability learned); level up, quest complete, error."""
+    """Interface: menus, a tactics grid (cursor, hover, select, confirm, cancel, range, text), its battles' rhythm
+    (turns, battle start, ability learned) and what each blow did (critical, miss, damage, heal, mp, ko, revive);
+    level up, quest complete, error."""
     e = fx.event
-    key = 72 + int(round(6 * (fx.g.base("key") - 0.5)))      # each game its own key, near C5
+    key = key_of(fx)
     if e in TACTICS:
         return tactics(fx, e, key)
+    if e in RESULTS:
+        return results(fx, e, key)
     if fx.style in ("crystal", "wood"):
         return menu(fx, e, key)
     retro = fx.style == "retro"
@@ -273,3 +282,60 @@ def battle(fx: Fx, key: int) -> list:
     if fx.style == "fantasy":                             # horns under the trumpets
         out += play(fx, "horn", hit, key - 17, 0.8, 0.8, "horn")
     return out + sparkle(fx, hit, 0.8, key, 20)
+
+
+def results(fx: Fx, e: str, key: int):
+    """What a blow did, laid over the weapon or the spell. Measured: retro hits last 40-110 ms, noisy, low and falling;
+    a smite flashes bright (3.5-6.6 kHz) for ~0.3 s, then rings low; a heal swells for 0.25 s into a shimmer climbing
+    from 5 to 13 kHz; a revive climbs ~17 semitones through seconds of sparkle; a fall drops 10-37 semitones."""
+    retro = fx.style == "retro"
+    if e == "critical":         # a flash over the hit: the voice's double octave and its fifth, a low ring under them
+        if retro:               # a noise crack, a high blip, a square wave falling three octaves (damage2, negative1)
+            layers = [Noise(0.0, 0.08, [(0, 3000), (1, 1500)], "high", 0.7, amp=decay_curve(5), attack=0.001,
+                            release=0.01, gain=0.8), blip(0.0, key + 24, 0.06, 0.7),
+                      Syllable(0.05, 0.3, [(0, round(hz(key + 19), 2)), (1, round(hz(key - 17), 2))], "pulse", 0.25,
+                               0.8, attack=0.002, release=0.05, gain=0.7)]
+        else:
+            layers = (note(fx, 0.0, key + 24, 0.5, 0.9, "a") + note(fx, 0.0, key + 31, 0.4, 0.55, "b") +
+                      note(fx, 0.04, key - 12, 0.9, 0.8, "low") + sparkle(fx, 0.02, 0.5, key, 60) +
+                      [Noise(0.0, 0.3, [(0, 5000), (1, 4000)], "high", 0.7, amp=decay_curve(4), attack=0.002,
+                             release=0.05, wobble=(30.0, 0.4), gain=0.7)])
+        return fx.voice(fx.level(0.8), **splits(layers))
+    if e == "miss":             # the air where the target stood (swings: 75-355 ms, 450-1000 Hz), two soft low notes
+        air = ([Noise(0.0, 0.12, [(0, 600), (0.4, 2500), (1, 900)], "band", 1.5, amp=bell_curve(0.4, 2.0),
+                      attack=0.0, release=0.01, gain=0.7)] if retro else whoosh(fx, 0.0, 0.16, 1100, 1.2, 0.8))
+        layers = air + note(fx, 0.12, key - 5, 0.08, 0.5, "a") + note(fx, 0.2, key - 7, 0.12, 0.45, "b")
+        return fx.voice(fx.level(0.5), **splits(layers))
+    if e == "damage":           # the number popping up: a short thump under a low tick
+        thump = Noise(0.0, 0.09, [(0, 600), (1, 160)], "low", 0.9, amp=decay_curve(5), attack=0.001, release=0.01,
+                      gain=0.9)
+        top = [blip(0.0, key - 5, 0.06, 0.6, -7)] if retro else tick(fx, 0.0, key - 5, 0.7)
+        return fx.voice(fx.level(0.55), **splits([thump] + top))
+    if e in ("heal", "mp"):     # up the chord into a shimmer that climbs; mana is cooler, a fifth lower, slower
+        steps, base = ((0, 4, 7, 12), key + 12) if e == "heal" else ((0, 7, 12, 19), key + 7)
+        layers = run(fx, 0.0, base, steps, 0.06 if e == "heal" else 0.08, 0.15, 0.6, (0.4, 0.55))
+        if retro:
+            layers += [blip(0.3 + 0.05 * k, base + (12, 19)[k % 2], 0.045, 0.4) for k in range(6)]
+        else:
+            lo, hi = (6000, 11000) if e == "heal" else (3000, 6000)
+            layers += [Noise(0.0, 0.9, [(0, lo), (1, hi)], "band", 1.2, amp=bell_curve(0.28, 1.5), attack=0.01,
+                             release=0.1, wobble=(30.0 if e == "heal" else 8.0, 0.6), gain=0.35),
+                       Scatter(0.05, 0.9, [(0, 20), (0.25, 70), (1, 0)], "ping", (round(lo * 1.2), round(hi * 1.1)),
+                               (0.03, 0.12), (0.2, 0.8), 0.45)]
+        return fx.voice(fx.level(0.6), **splits(layers))
+    if e == "ko":               # down: three notes, a tone sinking an octave and a half
+        layers = run(fx, 0.0, key, (0, -5, -12), 0.12, 0.12, 0.5, (0.6, 0.7))
+        layers.append(Syllable(0.1, 0.9, [(0, round(hz(key - 12), 2)), (1, round(hz(key - 30), 2))],
+                               "pulse" if retro else "sine", 0.5, 0.3, attack=0.02, release=0.4, amp=decay_curve(2),
+                               gain=0.5))
+        return fx.voice(fx.level(0.6), **splits(layers))
+    # revive: up two octaves of the chord, ~0.11 s a note, through a sparkle that thickens, a soft chord swelling under
+    layers = run(fx, 0.0, key, (0, 4, 7, 12, 16, 19, 24), 0.11, 0.25, 1.4, (0.55, 0.8))
+    if retro:
+        layers += [blip(0.77 + 0.05 * k, key + (24, 28, 31)[k % 3], 0.045, 0.4) for k in range(12)]
+    else:
+        layers += [Scatter(0.0, 2.2, [(0, 10), (0.6, 60), (1, 0)], "ping", (round(hz(key + 24)), round(hz(key + 38))),
+                           (0.04, 0.15), (0.2, 0.7), 0.5)]
+        layers += [Syllable(0.1, 2.0, [(0, round(hz(key - 12 + d), 2)), (1, round(hz(key - 12 + d), 2))], "sine",
+                            attack=0.6, release=0.8, gain=0.25) for d in (0, 4, 7)]
+    return fx.voice(fx.level(0.75), **splits(layers))
