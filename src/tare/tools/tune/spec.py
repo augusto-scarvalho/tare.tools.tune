@@ -133,7 +133,8 @@ class Scatter:
 
 @dataclass
 class Vocoded:
-    """A short performance rebuilt by the vocoder (speech/vocoder.py) from an analysed clip, moved to another voice."""
+    """A short performance moved to another voice (speech/vocoder.py): played from its CC0 recording like tape when it
+    moves little, rebuilt by the vocoder from the analysed clip otherwise."""
 
     clip: str                         # template name, "<kind>/<performer>/<take>", e.g. "attack/adventurer/attack3"
     start: float = 0.0
@@ -149,8 +150,8 @@ class Vocoded:
 
     @property
     def duration(self) -> float:
-        from .speech.vocoder import template  # the vocoder builds on the renderer
-        return template(self.clip).duration * self.stretch
+        from .speech.vocoder import duration  # the vocoder builds on the renderer
+        return duration(self)
 
 
 @dataclass

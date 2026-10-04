@@ -121,7 +121,7 @@ rei.render("[medo:0.5] Você ouviu isso?")      # intensidade de 0 a 1 (padrão 
 
 Muitos jogos não são dublados: o personagem só solta um "hyah!", um "ugh", um "hm?" ou uma risada, e o texto faz o resto. `Speaker.emote` gera essas interjeições sem palavras **na voz do próprio personagem**.
 
-Elas partem de performances reais: gravações CC0 de atores, analisadas uma vez em números (tom, envelope espectral e ar a cada 5 ms; 183 moldes, 951 kB). No jogo, um vocoder nosso, em numpy, refaz o som e o leva para a altura, o trato vocal, o brilho e o sopro do personagem. Não roda nenhum modelo nem IA, e o resultado é determinístico: o mesmo personagem, tipo, estilo e take dão sempre as mesmas amostras.
+Elas partem de performances reais: gravações CC0 de atores (183, 145 s, guardadas a 24 kHz: 6,3 MB), cada uma também medida em números (tom, envelope espectral e ar a cada 5 ms; 951 kB). Quando o grito precisa mexer pouco para chegar à voz do personagem (até 25% na duração e nas formantes), ele toca a própria gravação como fita, um pouco mais rápida e aguda ou mais lenta e grave: de ouvido, soa como a gravação (robótico 2,5 de 5, empatado com ela), e o vocoder não (3,4). Quando precisa mexer mais, sussurrar, ficar rouco ou dobrado, ou caber numa duração (o estilo `gasp`), um vocoder nosso, em numpy, refaz o som a partir dos números e o leva para a altura, o trato vocal, o brilho e o sopro do personagem. Não roda nenhum modelo nem IA, e o resultado é determinístico: o mesmo personagem, tipo, estilo e take dão sempre as mesmas amostras. Cada personagem fica com um intérprete só.
 
 ```python
 from tare.tools.tune.speech import Speaker
@@ -548,7 +548,7 @@ O núcleo nativo (`native/`) usa a [pocketfft](https://gitlab.mpcdf.mpg.de/mtr/p
 
 A ferramenta experimental de entonação (`tools/real_prosody.py`) mede fala real do [TTS-Portuguese Corpus](https://github.com/Edresson/TTS-Portuguese-Corpus), de Edresson Casanova e colegas (CC BY 4.0), e da parte em português do [CML-TTS](https://www.openslr.org/146/), de Frederico S. Oliveira e colegas, sobre audiolivros do LibriVox (CC BY 4.0), alinhada com o [Montreal Forced Aligner](https://montreal-forced-aligner.readthedocs.io/) e o modelo português dele (CC BY 4.0). Nada disso vai no pacote.
 
-As interjeições partem de gravações CC0 do OpenGameArt ("Voice Clip Pack - Male Adventurer RPG", "Female RPG Voice Starter Pack" de Cici Fyre, "Male Grunt/Yelling sounds") e do Freesound (os ids estão em `tools/build_barks.py`). O pacote leva só os números medidos nelas; a síntese segue o desenho do vocoder [WORLD](https://github.com/mmorise/World), de Masanori Morise.
+As interjeições partem de gravações CC0 do OpenGameArt ("Voice Clip Pack - Male Adventurer RPG", "Female RPG Voice Starter Pack" de Cici Fyre, "Male Grunt/Yelling sounds") e do Freesound (os ids estão em `tools/build_barks.py`). O pacote leva as gravações (CC0; o crédito do pacote do aventureiro, que o autor aprecia, é de Brandon Song) e os números medidos nelas; a síntese segue o desenho do vocoder [WORLD](https://github.com/mmorise/World), de Masanori Morise.
 
 Os instrumentos foram medidos nas notas da [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE), da Versilian Studios (CC0). As gravações serviram só para medir e não acompanham o pacote.
 

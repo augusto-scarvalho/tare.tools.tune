@@ -29,6 +29,10 @@ BANDS = 32
 AP_BANDS = 5
 LO, HI = 40.0, 20_000.0
 DATA = Path(__file__).parent / "data" / "barks.npz"
+AUDIO = DATA.with_name("barks_audio.npz")   # the recordings themselves, cut as analysed (16-bit, AUDIO_SR)
+AUDIO_SR = 24_000
+TAPE = 0.25                   # how far a bark may move to be played like tape: its length off what the style asks,
+                              # its formants off its pitch (both move together on tape), at most 25 %
 ENV_FLOOR = -107.5            # envelopes are stored in 0.5 dB steps from here (uint8)
 BREATH = 3 ** 0.5             # uniform noise in -1..1 to unit variance, as WORLD's
 UNVOICED = 500.0              # Hz: the pulse rate where there is no voice (breath only), as WORLD's
@@ -189,8 +193,55 @@ def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stre
     return out[: end[-1] + 1] if len(end) else out[: int(FRAME * sr)]
 
 
+@lru_cache(maxsize=1)
+def _recordings() -> dict[str, np.ndarray]:
+    import json
+    if not AUDIO.exists():
+        return {}
+    d = np.load(AUDIO)
+    meta, audio = json.loads(bytes(d["meta"]).decode()), d["audio"]
+    return {t.name: audio[m["start"]: m["start"] + m["samples"]] for t, m in zip(templates(), meta, strict=True)}
+
+
+def recording(name: str) -> np.ndarray | None:
+    """The clip's own recording (-1..1, AUDIO_SR), if it is kept."""
+    x = _recordings().get(name)
+    return None if x is None else x.astype(np.float64) / 32767
+
+
+def tape(v) -> bool:
+    """Whether a Vocoded bark plays from its recording, like tape a little faster or slower: pitch, formants and length
+    moving together, nothing cut or rebuilt (by ear it sounds as the recording does; the vocoder and PSOLA did not).
+    Only when it moves that way anyway: not whispered, not rough or doubled, its length and formants within TAPE of
+    where tape takes them."""
+    return (v.clip in _recordings() and abs(v.breath) <= 0.3 and not v.rough and not v.sub
+            and abs(v.stretch * v.pitch - 1) <= TAPE and abs(v.warp / v.pitch - 1) <= TAPE)
+
+
+def duration(v) -> float:
+    t = template(v.clip)
+    return t.duration / v.pitch if tape(v) else t.duration * v.stretch
+
+
+def _tape(v, sr: int) -> np.ndarray:
+    from fractions import Fraction
+
+    from scipy.signal import resample_poly
+    ratio = Fraction(sr / (AUDIO_SR * v.pitch)).limit_denominator(1000)     # faster = higher, shorter
+    y = resample_poly(recording(v.clip), ratio.numerator, ratio.denominator)
+    if v.tilt:
+        spec = np.fft.rfft(y)
+        spec *= 10 ** (v.tilt * np.log2(np.maximum(np.fft.rfftfreq(len(y), 1 / sr), 50) / 1000) / 20)
+        y = np.fft.irfft(spec, len(y))
+    return y
+
+
 def render_vocoded(v, sr: int, seed: int) -> np.ndarray:
-    """A spec.Vocoded layer, peak-normalised to its gain."""
-    y = synthesize(template(v.clip), sr, pitch=v.pitch, warp=v.warp, stretch=v.stretch, breath=v.breath,
-                   tilt=v.tilt, swing=v.swing, seed=seed, rough=v.rough, sub=v.sub)
+    """A spec.Vocoded layer, peak-normalised to its gain: from its recording like tape when it moves little, rebuilt by
+    the vocoder otherwise."""
+    if tape(v):
+        y = _tape(v, sr)
+    else:
+        y = synthesize(template(v.clip), sr, pitch=v.pitch, warp=v.warp, stretch=v.stretch, breath=v.breath,
+                       tilt=v.tilt, swing=v.swing, seed=seed, rough=v.rough, sub=v.sub)
     return v.gain * y / (np.max(np.abs(y)) + 1e-12)

@@ -2,8 +2,9 @@
 
 Each recording is analysed once with the WORLD vocoder (pip install pyworld; development only, it never runs in a
 game): pitch every 5 ms, the spectral envelope (kept as 32 mel-spaced bands, dB) and the aperiodicity (5 bands).
-Only these numbers are stored, not the audio. At run time tare.tools.tune.speech.vocoder rebuilds the sound with its
-own deterministic synthesis, moved to each character's pitch and vocal tract.
+At run time tare.tools.tune.speech.vocoder rebuilds the sound with its own deterministic synthesis, moved to each
+character's pitch and vocal tract. The recordings themselves are kept too (barks_audio.npz, 24 kHz): a bark that
+moves little is played from its recording like tape, which by ear sounds like the recording (the vocoder does not).
 
 Sources (all CC0; the recordings are not in the repository):
   OpenGameArt  "Voice Clip Pack - Male Adventurer RPG"   (oga-adventurer)
@@ -11,7 +12,8 @@ Sources (all CC0; the recordings are not in the repository):
                "Male Grunt/Yelling sounds", three voices (oga-yell1..3; CC0 / OGA-BY dual licence, used as CC0)
   Freesound    CC0 clips, by sound id (laughs, sighs, gasps, hums, cheers, pain grunts...)
 
-    python tools/build_barks.py --freesound DIR --oga DIR
+    python tools/build_barks.py --freesound DIR --oga DIR           # the templates (barks.npz)
+    python tools/build_barks.py --freesound DIR --oga DIR --audio   # the recordings, cut as the templates were
 DIR for Freesound holds <id>.mp3 (any sub-folder); DIR for OpenGameArt holds the unzipped packs.
 """
 import argparse
@@ -23,7 +25,16 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
-from tare.tools.tune.speech.vocoder import AP_BANDS, BANDS, ENV_FLOOR, FRAME, encode  # noqa: E402
+from tare.tools.tune.speech.vocoder import (  # noqa: E402
+    AP_BANDS,
+    AUDIO,
+    AUDIO_SR,
+    BANDS,
+    DATA,
+    ENV_FLOOR,
+    FRAME,
+    encode,
+)
 
 SR = 48_000
 MAX_SECONDS = 3.0
@@ -101,20 +112,43 @@ def load(path: Path) -> np.ndarray:
     return y[: int(MAX_SECONDS * SR)]
 
 
+def audio(find):
+    """The recordings behind barks.npz, in its order and cut exactly as they were analysed, as 16-bit at 24 kHz."""
+    from math import gcd
+
+    from scipy.signal import resample_poly
+    meta = json.loads(bytes(np.load(DATA)["meta"]).decode())
+    clips, out = [], []
+    g = gcd(AUDIO_SR, SR)
+    for m in meta:
+        y = resample_poly(load(find(m["source"], m["ref"])), AUDIO_SR // g, SR // g)
+        out.append(dict(start=sum(len(c) for c in clips), samples=len(y)))
+        clips.append(np.round(np.clip(y / (np.abs(y).max() + 1e-12) * 0.99, -1, 1) * 32767).astype(np.int16))
+    np.savez_compressed(AUDIO, audio=np.concatenate(clips), meta=np.frombuffer(json.dumps(out).encode(), np.uint8))
+    print(f"{len(clips)} recordings, {sum(len(c) for c in clips) / AUDIO_SR:.0f} s -> {AUDIO} "
+          f"({AUDIO.stat().st_size / 1e6:.1f} MB)")
+
+
 def main():
-    import pyworld as pw
     ap = argparse.ArgumentParser()
     ap.add_argument("--freesound", type=Path, required=True)
     ap.add_argument("--oga", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=ROOT / "src/tare/tools/tune/speech/data/barks.npz")
+    ap.add_argument("--out", type=Path, default=DATA)
+    ap.add_argument("--audio", action="store_true", help="store the recordings (barks_audio.npz), not the templates")
     args = ap.parse_args()
     fs_files = {p.stem: p for p in args.freesound.rglob("*.mp3")}
-    oga_files = {str(p.relative_to(args.oga)).split("/", 1)[-1]: p for p in args.oga.rglob("*.wav")}
+    oga_files = {p.relative_to(args.oga).as_posix(): p for p in args.oga.rglob("*.wav")}
+
+    def find(source, ref):
+        return fs_files.get(ref) if source == "freesound" else next(
+            (p for k, p in oga_files.items() if k.endswith(ref)), None)
+    if args.audio:
+        return audio(find)
+    import pyworld as pw
     f0s, envs, aps, meta = [], [], [], []
     for kind, items in MANIFEST.items():
         for source, ref, voice, tract in items:
-            path = fs_files.get(ref) if source == "freesound" else next(
-                (p for k, p in oga_files.items() if k.endswith(ref)), None)
+            path = find(source, ref)
             if path is None:
                 print("missing", source, ref)
                 continue

@@ -52,8 +52,9 @@ def test_kiai_keeps_to_utawarerumono():
     for hero in (Speaker(pitch=110, tract=1.0), Speaker(pitch=210, tract=1.15)):
         shouts = [emote(hero, "attack", "kiai", take=k) for k in range(4)]
         assert all(0.3 < v.duration < 0.8 for v in shouts)
-        assert np.mean([v.duration for v in shouts]) > 1.1 * np.mean([emote(hero, "attack", take=k).duration
-                                                                     for k in range(4)])
+        grunts = np.mean([emote(hero, "attack", take=k).duration for k in range(4)])
+        assert np.mean([v.duration for v in shouts]) > (1.3 if hero.pitch < 150 else 1.0) * grunts   # the hero has
+        # long takes; the heroine's performer has none, and her shouts are not stretched to fake them
         pain = [emote(hero, "hurt", "kiai", take=k) for k in range(4)]
         assert all(0.3 < v.duration < 0.9 for v in pain)
         assert max(v.tilt for v in pain) < min(v.tilt for v in shouts) and pain[0].breath > shouts[0].breath
@@ -88,7 +89,9 @@ def test_every_kind_has_performances():
 def test_vocoded_layer_round_trips_in_the_spec():
     v = Voice(vocoded=[Vocoded("laugh/male/536811", 0.1, pitch=1.2, warp=1.1, stretch=0.9, breath=-0.2)], seed=3)
     w = Voice.from_json(v.to_json())
-    assert w == v and w.duration == pytest.approx(0.1 + template("laugh/male/536811").duration * 0.9)
+    assert w == v and w.duration == pytest.approx(0.1 + template("laugh/male/536811").duration / 1.2)   # on tape
+    stretched = Voice(vocoded=[Vocoded("laugh/male/536811", pitch=1.2, warp=1.1, stretch=0.5)])   # too far for tape
+    assert stretched.duration == pytest.approx(template("laugh/male/536811").duration * 0.5)
     assert np.array_equal(render(v, SR), render(w, SR))
     with pytest.raises(ValueError):
         render(Voice(vocoded=[Vocoded("dance/nobody/0")]), SR)
@@ -151,3 +154,15 @@ def test_rough_and_sub_make_a_voice_hoarse_and_doubled():
     assert periodicity(plain) > 0.9 > periodicity(hoarse) + 0.2      # each cycle off: no longer one repeating shape
     assert level(doubled, 75) > 10 * level(plain, 75)                  # energy an octave below
     assert np.array_equal(plain, synthesize(steady, sr, seed=3, rough=0.0, sub=0.0))
+
+
+def test_a_bark_that_moves_little_plays_its_recording():
+    from dataclasses import replace
+
+    from tare.tools.tune.speech.vocoder import AUDIO_SR, recording, render_vocoded, tape
+    v = emote(Speaker(pitch=115, tract=1.02), "attack", "kiai", 0.75, 0)
+    x = recording(v.clip)
+    assert tape(v) and abs(len(render_vocoded(v, AUDIO_SR, 1)) - len(x) / v.pitch) < 3   # faster: shorter, higher
+    still = render_vocoded(replace(v, pitch=1.0, warp=1.0, stretch=1.0, tilt=0.0), AUDIO_SR, 1)
+    assert np.allclose(still, x / np.abs(x).max(), atol=1e-6)                             # the recording itself
+    assert not tape(replace(v, breath=1.0)) and not tape(replace(v, rough=0.5))           # whispers, hoarse: vocoder
