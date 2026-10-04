@@ -204,7 +204,7 @@ function stop() {
   cancelAnimationFrame(S.raf); document.querySelectorAll(".seg.playing").forEach(e => e.classList.remove("playing"));
   drawHeads();
 }
-async function play(seg, from = null) {
+async function play(seg, from = null, until = null) {
   const keep = from == null && S.play ? position() : null;
   const b = await decode(seg);
   if (ctx().state === "suspended") await ctx().resume();    // made while decoding, before any click: starts asleep
@@ -214,7 +214,8 @@ async function play(seg, from = null) {
   src.buffer = b; src.loop = S.loop; src.playbackRate.value = S.rate;   // slower = lower too, like tape: nothing added
   gain.gain.value = S.match ? (S.gain[seg.id] ?? 1) : 1;
   src.connect(gain).connect(ctx().destination);
-  src.start(0, t0);
+  if (until != null) src.loop = false;
+  src.start(0, t0, until != null ? Math.max(0.01, until - t0) : undefined);   // a marked stretch plays on its own
   src.onended = () => { if (S.play && S.play.src === src) stop(); };
   S.play = { seg: seg.id, src, at: ctx().currentTime, from: t0, dur: b.duration, rate: S.rate }; S.last = seg;
   document.querySelectorAll(".seg").forEach(e => e.classList.toggle("playing", e.dataset.id === seg.id));
@@ -328,6 +329,7 @@ function drawHeads() {
     g.clearRect(0, 0, c.width, c.height);
     for (const m of (ga().marks || [])) if (m.seg === id) {
       const x = m.t / a.dur * c.width; g.fillStyle = "#4ade80"; g.fillRect(x - 1, 0, 2, c.height);
+      if (m.t2 != null) { const x2 = m.t2 / a.dur * c.width; g.fillRect(x2 - 1, 0, 2, c.height); g.fillStyle = "#4ade8040"; g.fillRect(x, 0, x2 - x, c.height); }
     }
     if (S.play && S.play.seg === id) { const x = position() / a.dur * c.width; g.fillStyle = "#fff"; g.fillRect(x - 1, 0, 2, c.height); }
   });
@@ -394,15 +396,27 @@ function render() {
     h("span", { class: "grow" }), h("span", { class: "status", id: "status" }, ""));
   const cards = segs.map((s, i) => {
     const a = S.ana[s.id], isRef = ref && s.id === ref.id;
-    const viz = h("div", { class: "viz", "data-id": s.id, title: "clique: tocar daqui · shift+clique: marcar um momento" },
+    const viz = h("div", { class: "viz", "data-id": s.id, title: "clique: tocar daqui · shift+clique: marcar um momento · shift+arrastar: marcar um trecho" },
       h("canvas", { class: "spec" }), h("canvas", { class: "head" }),
       h("span", { class: "tag" }, `${a.dur.toFixed(2)} s${isRef && !blind(g) ? " · referência" : ""}` +
         (S.view === "diff" && ref && !isRef ? " · vermelho: mais forte que a referência, azul: mais fraco (±15 dB)" : "")));
-    viz.addEventListener("click", ev => {
-      const r = viz.getBoundingClientRect(), t = (ev.clientX - r.left) / r.width * a.dur;
-      if (ev.shiftKey && marks) { (A[marks.id] ??= []).push({ seg: s.id, t: +t.toFixed(3), note: "" }); save(); render(); }
-      else play(s, t);
+    const at = ev => { const r = viz.getBoundingClientRect(); return Math.min(Math.max((ev.clientX - r.left) / r.width, 0), 1) * a.dur; };
+    viz.addEventListener("mousedown", ev => {           // shift: mark a moment (click) or a stretch (drag)
+      if (!(ev.shiftKey && marks)) return;
+      ev.preventDefault();
+      const t0 = at(ev), head = viz.querySelector(".head");
+      const move = e => { drawHeads(); const g2 = head.getContext("2d"), x0 = t0 / a.dur * head.width, x1 = at(e) / a.dur * head.width;
+        g2.fillStyle = "#4ade8055"; g2.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), head.height); };
+      const up = e => {
+        window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up);
+        const t1 = at(e), lo = Math.min(t0, t1), hi = Math.max(t0, t1);
+        (A[marks.id] ??= []).push(hi - lo > 0.02 ? { seg: s.id, t: +lo.toFixed(3), t2: +hi.toFixed(3), note: "" }
+                                                 : { seg: s.id, t: +t0.toFixed(3), note: "" });
+        save(); render();
+      };
+      window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
     });
+    viz.addEventListener("click", ev => { if (!ev.shiftKey) play(s, at(ev)); });
     const widgets = h("div", { class: "tasks" },
       pick ? h("button", { class: A[pick.id] === s.id ? "on" : "", onclick: () => { A[pick.id] = A[pick.id] === s.id ? null : s.id; save(); render(); } },
                A[pick.id] === s.id ? "★ o melhor" : "☆ o melhor") : null,
@@ -450,11 +464,13 @@ function render() {
   }
   if (marks) {
     const list = (A[marks.id] || []).map((m, i) => h("li", {},
-      h("button", { onclick: () => play(g.segments.find(s => s.id === m.seg), Math.max(0, m.t - 0.15)) }, `▶ ${nameOf(g, g.segments.find(s => s.id === m.seg))} @ ${m.t.toFixed(2)} s`),
+      h("button", { onclick: () => m.t2 != null ? play(g.segments.find(s => s.id === m.seg), m.t, m.t2)
+                                                 : play(g.segments.find(s => s.id === m.seg), Math.max(0, m.t - 0.15)) },
+        `▶ ${nameOf(g, g.segments.find(s => s.id === m.seg))} @ ${m.t.toFixed(2)}${m.t2 != null ? `–${m.t2.toFixed(2)}` : ""} s`),
       h("input", { value: m.note || "", placeholder: "o que tem aqui?", oninput: ev => { m.note = ev.target.value; save(); } }),
       h("button", { "aria-label": "apagar", onclick: () => { A[marks.id].splice(i, 1); save(); render(); } }, "✕")));
     panels.push(h("div", { class: "panel" }, h("h3", {}, "Momentos marcados"),
-      h("div", { class: "keys" }, "Shift+clique num espectrograma marca o momento; escreva o que ouviu."), h("ul", { class: "marks" }, list)));
+      h("div", { class: "keys" }, "Shift+clique num espectrograma marca um momento; shift+arrastar marca um trecho (ele toca sozinho). Escreva o que ouviu."), h("ul", { class: "marks" }, list)));
   }
   if (notes) panels.push(h("div", { class: "panel" }, h("h3", {}, "Notas"),
     h("textarea", { placeholder: "o que você ouviu, o que incomoda, o que gostou…", oninput: ev => { A[notes.id] = ev.target.value; save(); } }, A[notes.id] || "")));

@@ -21,9 +21,9 @@ Writing a round from a script:
 A round made again under the same name keeps its earlier answers aside (answers-<time>.json).
 
 Tasks: "pick" (the best one, or none), "rate:<what>|<what 1 means>|<what 5 means>" (1-5 per segment),
-"label:<a>|<b>|..." (a category per segment), "abx:<label A>|<label B>" (blind: is X A or B?), "marks" (moments on
-a spectrogram, with a note), "notes" (free text). A blind round hides the labels and the metrics and shuffles the
-order until revealed.
+"label:<a>|<b>|..." (a category per segment), "abx:<label A>|<label B>" (blind: is X A or B?), "marks" (moments or
+stretches on a spectrogram, with a note), "notes" (free text). A blind round hides the labels and the metrics and
+shuffles the order until revealed.
 """
 import argparse
 import hashlib
@@ -235,7 +235,9 @@ def summary(name: str, root: Path = ROOT) -> str:
             elif t["type"] in ("rate", "label"):
                 v = ", ".join(f"{labels.get(s, s)}: {x}" for s, x in v.items())
             elif t["type"] == "marks":
-                v = "; ".join(f"{labels.get(m['seg'], m['seg'])} @ {m['t']:.2f}s {m.get('note', '')}" for m in v)
+                def when(m):
+                    return f"{m['t']:.2f}" + (f"-{m['t2']:.2f}" if m.get("t2") is not None else "")
+                v = "; ".join(f"{labels.get(m['seg'], m['seg'])} @ {when(m)}s {m.get('note', '')}" for m in v)
             elif t["type"] == "abx":
                 v = f"disse X = {labels.get(v.get('answer'), '?')} (X era {labels.get(t['x'])})"
             lines.append(f"   {t['id']}: {v}")
