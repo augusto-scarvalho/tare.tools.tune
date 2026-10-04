@@ -663,6 +663,8 @@ Daí o estilo `kiai` de `emote`: o grito pega as tomadas mais longas do intérpr
 - **Uma voz por personagem.** Cada take escolhia o molde mais barato sozinho, então o mesmo herói saía ora como o aventureiro, ora como um dos homens do pacote de gritos. Agora o personagem fica com um intérprete, o que menos precisa ser movido até a sua voz, e só sai dele quando ele não gravou aquele som.
 - **O tremor do ciclo.** O vocoder dava cada pulso exatamente na altura medida; uma voz real erra um pouco a cada período. Agora cada período varia 12 cents ao acaso (semeado): a oscilação fina da altura vai a 7,5 cents, a dos gritos do jogo é 7,1.
 
+*O chiado que sobra, julgado de ouvido* (rodada "O chiado do vocoder", `tools/curate.py`; robótico de 1 = natural a 5 = robô). Quatro kiai reais refeitos: o original ficou em 1–2; o WORLD completo, a técnica no seu melhor, em 1–3 (3 em três dos quatro); o nosso vocoder com os moldes de hoje (32 bandas de envelope, 5 de ar) em 2–5, e com 64 e 16 bandas em 2–4, quase igual. A resolução dos moldes não é o problema: o robótico vem de analisar e refazer a voz como pulsos e ruído, e gritos (voz áspera, ciclos irregulares) são o caso fraco dessa técnica. Também não se ouviu diferença, nos nossos gritos, de três mudanças que aproximavam as medidas das do grito real: a aperiodicidade ao quadrado (como o WORLD a usa), o ar soprado a cada abertura da glote e os agudos espalhados em fase. Ficaram de fora.
+
 **Composição (`Cue`).**
 - A semente escolhe tom (sol3 a fá♯4) e modo, a progressão (I–IV–V–I, i–VI–VII–i…), os ritmos e o motivo.
 - A melodia segue regras simples:
