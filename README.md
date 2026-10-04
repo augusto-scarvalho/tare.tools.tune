@@ -525,6 +525,13 @@ python tools/structure_analysis.py compare --set klatt.FRIC_GAIN=2 --speaker til
 python tools/build_barks.py --freesound DIR --oga DIR   # refaz os moldes das interjeições (precisa das gravações e do pyworld)
 ```
 
+**Curadoria por ouvido** (`tools/curate.py`): rodadas de sons para comparar, servidas só nesta máquina (127.0.0.1), porque as referências de jogos não saem dela. A página toca cada versão e troca entre elas no mesmo ponto (teclas 1–9), iguala o volume e desenha o espectrograma, a diferença para uma referência e o espectro médio, além das medidas de cada uma. Ela também guarda as respostas em `answers.json` conforme são dadas: o melhor, notas de 1 a 5, uma categoria por som, ABX cego, momentos marcados no espectrograma e notas livres. Uma rodada cega esconde os nomes e embaralha a ordem.
+
+```bash
+python tools/curate.py serve          # abre http://127.0.0.1:8765 com as rodadas
+python tools/curate.py answers NOME   # o que foi respondido numa rodada
+```
+
 O que essas ferramentas mostraram está em [`docs/arquitetura.md`](docs/arquitetura.md): a distância para a voz natural está no envelope espectral quadro a quadro, e nenhum ajuste de parâmetros do motor de formantes a fecha. Por isso o motor natural pega o envelope de gravações (os bancos de voz) e deixa para as regras o resto: fonemas, ritmo e entonação.
 
 O desempenho neste ambiente de desenvolvimento (4 núcleos), a 48 kHz: cada som leva de 20 a 250 ms para gerar, e `bake` produz cerca de 40 sons por segundo.
