@@ -67,6 +67,8 @@ kbd { background: var(--chip); border: 1px solid var(--line); border-radius: 4px
 .rate { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
 .rate span { color: var(--muted); margin-right: 4px; }
 .rate button { padding: 2px 7px; }
+.scale { flex-basis: 100%; display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
+  padding-left: 2px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .chip { background: var(--chip); border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
@@ -401,8 +403,10 @@ function render() {
       pick ? h("button", { class: A[pick.id] === s.id ? "on" : "", onclick: () => { A[pick.id] = A[pick.id] === s.id ? null : s.id; save(); render(); } },
                A[pick.id] === s.id ? "★ o melhor" : "☆ o melhor") : null,
       ...rates.map(t => h("div", { class: "rate" }, h("span", {}, t.what),
-        ...[1, 2, 3, 4, 5].map(n => h("button", { class: (A[t.id] || {})[s.id] === n ? "on" : "", "aria-label": `${t.what} ${n}`,
-          onclick: () => { const v = (A[t.id] ??= {}); v[s.id] = v[s.id] === n ? undefined : n; save(); render(); } }, n)))),
+        ...[1, 2, 3, 4, 5].map(n => h("button", { class: (A[t.id] || {})[s.id] === n ? "on" : "",
+          "aria-label": `${t.what} ${n}`, title: n === 1 ? `1 = ${t.low || "pouco"}` : n === 5 ? `5 = ${t.high || "muito"}` : null,
+          onclick: () => { const v = (A[t.id] ??= {}); v[s.id] = v[s.id] === n ? undefined : n; save(); render(); } }, n)),
+        h("div", { class: "scale" }, h("span", {}, `1 = ${t.low || "pouco"}`), h("span", {}, `5 = ${t.high || "muito"}`)))),
       ...labels.map(t => h("select", { onchange: ev => { (A[t.id] ??= {})[s.id] = ev.target.value || undefined; save(); } },
         h("option", { value: "" }, "— categoria —"), ...t.options.map(o => h("option", { value: o, selected: (A[t.id] || {})[s.id] === o }, o)))));
     const chips = blind(g) ? [] : Object.entries(s.metrics || {}).slice(0, 6).map(([k, v]) => h("span", { class: "chip" }, `${k} ${fmt(v)}`));

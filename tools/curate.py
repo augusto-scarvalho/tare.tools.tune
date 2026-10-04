@@ -20,9 +20,10 @@ Writing a round from a script:
 
 A round made again under the same name keeps its earlier answers aside (answers-<time>.json).
 
-Tasks: "pick" (the best one, or none), "rate:<what>" (1-5 per segment), "label:<a>|<b>|..." (a category per
-segment), "abx:<label A>|<label B>" (blind: is X A or B?), "marks" (moments on a spectrogram, with a note),
-"notes" (free text). A blind round hides the labels and the metrics and shuffles the order until revealed.
+Tasks: "pick" (the best one, or none), "rate:<what>|<what 1 means>|<what 5 means>" (1-5 per segment),
+"label:<a>|<b>|..." (a category per segment), "abx:<label A>|<label B>" (blind: is X A or B?), "marks" (moments on
+a spectrogram, with a note), "notes" (free text). A blind round hides the labels and the metrics and shuffles the
+order until revealed.
 """
 import argparse
 import hashlib
@@ -50,8 +51,9 @@ def task(spec: str) -> dict:
     if kind not in KINDS:
         raise ValueError(f"unknown task {spec!r}; kinds: {', '.join(KINDS)}")
     out = {"id": spec, "type": kind}
-    if kind == "rate":
-        out["what"] = arg or "qualidade"
+    if kind == "rate":                                  # "rate:robótico|natural|robô": what, what 1 and 5 mean
+        what, low, high = (arg.split("|") + ["", "", ""])[:3]
+        out.update(what=what or "qualidade", low=low or "pouco", high=high or "muito")
     elif kind in ("label", "abx"):
         out["options"] = [o for o in arg.split("|") if o]
         if kind == "abx" and len(out["options"]) != 2:
