@@ -99,7 +99,8 @@ class Speaker:
                                                seed=rng.seed32("spoken", text, repr(self)), final=final, pause=pause)
         return Spoken(name, parts, joins, f0, warp=round(float(np.clip(self.tract / b.tract, 0.75, 1.35)), 4),
                       breath=round(float(np.clip(max(1.5 * (self.breath - 0.05), self.whisper or -1.0), -1, 1)), 4),
-                      tilt=round(3 * float(np.log2(self.tilt / 3000)), 3), text=text, lang=lang, phonemes=phones)
+                      tilt=round(3 * float(np.log2(self.tilt / 3000)), 3), text=text, lang=lang, phonemes=phones,
+                      rough=self.rough, sub=self.sub)
 
     def voice(self, text: str, lang: str = "pt", seed: int | None = None, style: str = "speech",
               emotion=None) -> Voice:

@@ -58,7 +58,8 @@ def lib():
     lib.tt_key.argtypes = [c_uint64, c_char_p, c_int64]
     lib.tt_render_spoken.restype = c_int32
     lib.tt_render_spoken.argtypes = [c_void_p, POINTER(c_double), c_int32, POINTER(c_int32), c_int32,
-                                     POINTER(c_double), c_int32, c_double, c_double, c_double, c_double, c_uint64,
+                                     POINTER(c_double), c_int32, c_double, c_double, c_double, c_double, c_double,
+                                     c_double, c_uint64,
                                      c_int32, POINTER(POINTER(c_double)), POINTER(c_int32)]
     lib.tt_render_voice.restype = c_int32
     lib.tt_render_voice.argtypes = [c_char_p, c_char_p, POINTER(c_void_p), POINTER(c_char_p), c_int32, c_int32,
@@ -92,7 +93,7 @@ def native_layer(lib, banks, layer, seed: int, sr: int) -> np.ndarray:
     status = lib.tt_render_spoken(banks[layer.bank], pieces.ctypes.data_as(POINTER(c_double)), len(pieces),
                                   joins.ctypes.data_as(POINTER(c_int32)), len(joins),
                                   f0.ctypes.data_as(POINTER(c_double)), len(f0), layer.warp, layer.breath, layer.tilt,
-                                  layer.gain, seed, sr, ctypes.byref(out), ctypes.byref(n))
+                                  layer.rough, layer.sub, layer.gain, seed, sr, ctypes.byref(out), ctypes.byref(n))
     assert status == 0
     y = np.ctypeslib.as_array(out, (n.value,)).copy()
     lib.tt_free(out)
@@ -107,13 +108,14 @@ def test_random_keys_match(lib):
 
 
 VOICES = [Speaker(pitch=120, tract=1.0, engine="natural"), Speaker(pitch=180, tract=1.15, breath=0.2, tilt=3500,
-                                                                     engine="natural")]
+                                                                     engine="natural"),
+          Speaker(pitch=95, tract=0.9, rough=0.6, sub=0.4, engine="natural")]           # hoarse and doubled
 LINES = ["Bem-vindo à forja, viajante!", "Você trouxe o minério que eu pedi?", "Sério?!", "Eu não sei..."]
 
 
 @built
 @pytest.mark.parametrize("sr", [48000, 22050])
-@pytest.mark.parametrize("speaker", VOICES, ids=["male", "female"])
+@pytest.mark.parametrize("speaker", VOICES, ids=["male", "female", "hoarse"])
 def test_spoken_layers_sound_the_same(lib, banks, speaker, sr):
     for text in LINES:
         voice = speaker.voice(text, "pt")

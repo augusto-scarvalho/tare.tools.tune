@@ -37,12 +37,13 @@ TT_API void tt_bank_free(tt_bank *bank);
 TT_API uint64_t tt_key(uint64_t seed, const char *label, int64_t index);
 
 /* One Spoken layer: `pieces` is n_pieces x (bank frame from, bank frame to, output frames); `joins` the pieces
- * that cross-fade with the one before; `f0` the pitch along the line. Peak-normalised to `gain`. On success
- * returns 0 and a buffer of *n_out samples to release with tt_free. */
+ * that cross-fade with the one before; `f0` the pitch along the line; `rough` and `sub` (0..1) a hoarse voice and
+ * a doubled one. Peak-normalised to `gain`. On success returns 0 and a buffer of *n_out samples to release with
+ * tt_free. */
 TT_API int32_t tt_render_spoken(const tt_bank *bank, const double *pieces, int32_t n_pieces, const int32_t *joins,
                                 int32_t n_joins, const double *f0, int32_t n_f0, double warp, double breath,
-                                double tilt, double gain, uint64_t seed, int32_t sample_rate, double **out,
-                                int32_t *n_out);
+                                double tilt, double rough, double sub, double gain, uint64_t seed,
+                                int32_t sample_rate, double **out, int32_t *n_out);
 
 /* A whole voice spec, as Voice.to_json() writes it: render.render(voice, sample_rate), float samples peaking at
  * -1 dBFS x gain. `knobs` (NULL or "" for none) is a JSON object that turns the general knobs of sfx/knobs.py over

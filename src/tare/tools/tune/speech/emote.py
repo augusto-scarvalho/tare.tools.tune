@@ -169,4 +169,5 @@ def emote(speaker, kind: str, style: str = "grunt", intensity: float = 0.7, take
     tilt = st["tilt"] + (2.0 if effort else 1.0) * more + 3.0 * math.log2(speaker.tilt / 3000)
     swing = st["swing"] * speaker.range ** 0.7
     return Vocoded(t.name, pitch=round(pitch, 4), warp=round(warp, 4), stretch=round(stretch, 4),
-                   breath=round(float(np.clip(breath, -1, 1)), 4), tilt=round(tilt, 3), swing=round(swing, 4))
+                   breath=round(float(np.clip(breath, -1, 1)), 4), tilt=round(tilt, 3), swing=round(swing, 4),
+                   rough=speaker.rough, sub=speaker.sub)

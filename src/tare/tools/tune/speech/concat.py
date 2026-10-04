@@ -499,7 +499,8 @@ def render_spoken(sp, sr: int, seed: int) -> np.ndarray:
     f0 = np.where(voiced, f0, 0.0)
     t = Template(sp.bank, "speech", b.name, b.tract, float(np.median(f0[f0 > 0])) if (f0 > 0).any() else 0.0,
                  f0, env, ap)
-    y = synthesize(t, sr, warp=sp.warp, breath=sp.breath, tilt=sp.tilt, seed=rng.key(seed, "spoken"))
+    y = synthesize(t, sr, warp=sp.warp, breath=sp.breath, tilt=sp.tilt, seed=rng.key(seed, "spoken"), rough=sp.rough,
+                   sub=sp.sub)
     return sp.gain * y / (np.max(np.abs(y)) + 1e-12)
 
 

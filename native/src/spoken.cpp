@@ -121,7 +121,8 @@ uint64_t tt_key(uint64_t seed, const char *label, int64_t index) {
 
 int32_t tt_render_spoken(const tt_bank *bank, const double *pieces, int32_t n_pieces, const int32_t *joins,
                          int32_t n_joins, const double *f0, int32_t n_f0, double warp, double breath, double tilt,
-                         double gain, uint64_t seed, int32_t sr, double **out, int32_t *n_out) {
+                         double rough, double sub, double gain, uint64_t seed, int32_t sr, double **out,
+                         int32_t *n_out) {
     if (!bank || !pieces || n_pieces <= 0 || !f0 || n_f0 <= 0 || !out || !n_out || sr <= 0) return 1;
     for (int32_t q = 0; q < n_joins; ++q)
         if (joins[q] <= 0 || joins[q] > n_pieces) return 1;
@@ -134,7 +135,8 @@ int32_t tt_render_spoken(const tt_bank *bank, const double *pieces, int32_t n_pi
         clip.f0.resize(N);
         for (std::size_t i = 0; i < N; ++i)
             clip.f0[i] = voiced[i] ? interp(static_cast<double>(i), xp.data(), f0, static_cast<std::size_t>(n_f0)) : 0.0;
-        std::vector<double> y = synthesize(clip, sr, 1.0, warp, 1.0, breath, tilt, 1.0, key(seed, "spoken"));
+        std::vector<double> y = synthesize(clip, sr, 1.0, warp, 1.0, breath, tilt, 1.0, key(seed, "spoken"), rough,
+                                           sub);
         const double peak = peak_of(y) + 1e-12;
         auto *buf = static_cast<double *>(std::malloc(y.size() * sizeof(double)));
         if (!buf) return 2;

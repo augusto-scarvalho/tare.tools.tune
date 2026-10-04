@@ -42,6 +42,9 @@ inline std::vector<double> uniforms(uint64_t k, std::size_t n) {
     return out;
 }
 
+// rng.uniform(k): [0, 1), straight from the key
+inline double uniform(uint64_t k) { return static_cast<double>(k >> 11) * 0x1p-53; }
+
 // rng.noise(k, n): white noise in [-1, 1)
 inline void noise(uint64_t k, std::size_t n, std::vector<double> &out) {
     out = uniforms(k, n);

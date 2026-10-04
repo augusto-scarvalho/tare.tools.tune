@@ -785,7 +785,7 @@ int32_t tt_render_voice(const char *json, const char *knobs, const tt_bank *cons
         const std::string format = voice.text("format", "tare.tools.tune.voice");
         if (format != "tare.tools.tune.voice" && format != "creaturesynth.voice")
             throw std::runtime_error("not a tare.tools.tune.voice document");
-        if (voice.number("version", 7) > 7) throw std::runtime_error("the spec is newer than this core (version 7)");
+        if (voice.number("version", 8) > 8) throw std::runtime_error("the spec is newer than this core (version 8)");
         for (const char *other : {"chips", "speech", "vocoded"})
             if (!voice.list(other).empty())
                 throw Unsupported(std::string("this core does not render ") + other + " layers yet");
@@ -823,7 +823,8 @@ int32_t tt_render_voice(const char *json, const char *knobs, const tt_bank *cons
             int32_t ny = 0;
             if (tt_render_spoken(bank, flat.data(), static_cast<int32_t>(pieces.size()), joins.data(),
                                  static_cast<int32_t>(joins.size()), f0.data(), static_cast<int32_t>(f0.size()),
-                                 s.num("warp", 1), s.num("breath", 0), s.num("tilt", 0), s.num("gain", 1),
+                                 s.num("warp", 1), s.num("breath", 0), s.num("tilt", 0), s.num("rough", 0),
+                                 s.num("sub", 0), s.num("gain", 1),
                                  key(seed, "spoken", static_cast<uint64_t>(i)), sr, &y, &ny) != 0)
                 throw std::runtime_error("cannot render spoken layer " + std::to_string(i));
             parts.emplace_back(start(s), Vec(y, y + ny));

@@ -129,3 +129,25 @@ def test_unknown_emote_or_style():
         Speaker().emote("dance")
     with pytest.raises(ValueError):
         Speaker().emote("laugh", style="opera")
+
+
+def test_rough_and_sub_make_a_voice_hoarse_and_doubled():
+    t = template("attack/adventurer/attack6")
+    n = 160
+    steady = Template("probe", "attack", "probe", 1.0, 150.0, np.full(n, 150.0),
+                      np.tile(t.env[len(t.env) // 2], (n, 1)), np.zeros((n, t.ap.shape[1])))
+    sr, lag = 16_000, round(16_000 / 150)
+
+    def periodicity(y):
+        y = y[sr // 10: -sr // 10]
+        return float(np.dot(y[:-lag], y[lag:]) / np.dot(y, y))
+
+    def level(y, hz):
+        spec = np.abs(np.fft.rfft(y * np.hanning(len(y))))
+        f = np.fft.rfftfreq(len(y), 1 / sr)
+        return spec[np.abs(f - hz) < 10].max()
+
+    plain, hoarse, doubled = (synthesize(steady, sr, seed=3, **k) for k in ({}, {"rough": 1.0}, {"sub": 1.0}))
+    assert periodicity(plain) > 0.9 > periodicity(hoarse) + 0.2      # each cycle off: no longer one repeating shape
+    assert level(doubled, 75) > 10 * level(plain, 75)                  # energy an octave below
+    assert np.array_equal(plain, synthesize(steady, sr, seed=3, rough=0.0, sub=0.0))

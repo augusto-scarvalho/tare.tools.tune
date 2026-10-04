@@ -65,7 +65,7 @@ void min_phase(const std::vector<double> &mag, std::size_t nfft, std::vector<cd>
 }  // namespace
 
 std::vector<double> synthesize(const Clip &t, int sr, double pitch, double warp, double stretch, double breath,
-                               double tilt, double swing, uint64_t seed) {
+                               double tilt, double swing, uint64_t seed, double rough, double sub) {
     const std::size_t len = t.frames();
     const int B = t.bands;
     const double *bf = B == 64 ? BAND_FREQS_64 : B == 32 ? BAND_FREQS_32 : nullptr;
@@ -140,8 +140,28 @@ std::vector<double> synthesize(const Clip &t, int sr, double pitch, double warp,
         const double f = f0[k] > 0 ? f0[k] : UNVOICED;
         const double pos = when * sr;
         const std::size_t s = static_cast<std::size_t>(pos);
+        double period = 1 / f, amp = 1.0;   // rough: each period and pulse a little off; sub: every other one
+        if (f0[k] > 0 && (rough != 0 || sub != 0)) {
+            const double sqrt12 = std::sqrt(12.0);
+            if (rough != 0) {
+                period *= std::pow(2.0, ROUGH_CENTS * rough *
+                                            (uniform(key(breath_key, "rough", static_cast<uint64_t>(i))) - 0.5) *
+                                            sqrt12 / 1200);
+                amp = std::pow(10.0, ROUGH_DB * rough *
+                                         (uniform(key(breath_key, "shimmer", static_cast<uint64_t>(i))) - 0.5) *
+                                         sqrt12 / 20);
+            }
+            if (sub != 0) {
+                if (i % 2) {
+                    amp *= 1 - SUB_DIP * sub;
+                    period *= 1 - SUB_SHIFT * sub;
+                } else {
+                    period *= 1 + SUB_SHIFT * sub;
+                }
+            }
+        }
         const std::size_t n = static_cast<std::size_t>(
-            std::max<long long>(static_cast<long long>((when + 1 / f) * sr) - static_cast<long long>(s), 1));
+            std::max<long long>(static_cast<long long>((when + period) * sr) - static_cast<long long>(s), 1));
         if (k != cached) {
             filters(k);
             cached = k;
@@ -165,11 +185,11 @@ std::vector<double> synthesize(const Clip &t, int sr, double pitch, double warp,
             double sum = 0.0;
             for (double v : h) sum += v;
             for (std::size_t q = 0; q < nfft / 2; ++q) h[q] -= sum * dc[q];
-            const double gain = std::sqrt(static_cast<double>(n));
+            const double gain = std::sqrt(static_cast<double>(n)) * amp;
             for (std::size_t q = 0; q < nfft; ++q) y[q] += h[q] * gain;
         }
         for (std::size_t q = 0; q < nfft && s + q < out.size(); ++q) out[s + q] += y[q];
-        when += 1 / f;
+        when += period;
         ++i;
     }
     double peak = 0.0;                      // trim the silent tail

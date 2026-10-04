@@ -8,9 +8,10 @@ from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "tare.tools.tune.voice"
 OLD_FORMATS = {"creaturesynth.voice"}   # the project's earlier name
-VERSION = 7   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
+VERSION = 8   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
               # 5: vocoded clips and natural speech; 6: bits (the grain of a console's compressed samples);
-              # 7: a modal body's bend (a koto string pressed after the pluck, a timpani pedal)
+              # 7: a modal body's bend (a koto string pressed after the pluck, a timpani pedal);
+              # 8: rough and sub in vocoded clips and natural speech (a hoarse voice, a creature's doubled one)
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -143,6 +144,8 @@ class Vocoded:
     tilt: float = 0.0                 # brighter (+) or darker (-), dB per octave around 1 kHz
     swing: float = 1.0                # pitch contour: wider (> 1), flatter (< 1), 0 = monotone
     gain: float = 1.0
+    rough: float = 0.0                # 0..1: a hoarse voice, every period and pulse a little off (version 8)
+    sub: float = 0.0                  # 0..1: every other pulse weaker, a voice doubled an octave below (version 8)
 
     @property
     def duration(self) -> float:
@@ -167,6 +170,8 @@ class Spoken:
     text: str = ""
     lang: str = ""
     phonemes: str = ""                # informational: the transcription in the teacher's accent
+    rough: float = 0.0                # as in Vocoded (version 8)
+    sub: float = 0.0                  # as in Vocoded (version 8)
 
     @property
     def duration(self) -> float:
@@ -212,7 +217,8 @@ class Voice:
             return {k: v for k, v in asdict(obj).items()
                     if k in _required(obj) or v != getattr(defaults, k)}
         # stamped with the oldest version that can play it, so a game's older core still plays what it can
-        out = {"format": FORMAT, "version": VERSION if any(m.bend for m in self.modal) else 6}
+        hoarse = any(v.rough or v.sub for v in (*self.vocoded, *self.spoken))
+        out = {"format": FORMAT, "version": 8 if hoarse else 7 if any(m.bend for m in self.modal) else 6}
         out.update(compact(self))
         out["syllables"] = [compact(s) for s in self.syllables]
         out["chips"] = [compact(c) for c in self.chips]

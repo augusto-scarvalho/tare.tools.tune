@@ -15,6 +15,7 @@ octave), `swing` widens or flattens the pitch contour.
 
 No model runs here: the templates are measured numbers, the synthesis is arithmetic on them and seeded noise.
 """
+import math
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -31,6 +32,9 @@ DATA = Path(__file__).parent / "data" / "barks.npz"
 ENV_FLOOR = -107.5            # envelopes are stored in 0.5 dB steps from here (uint8)
 BREATH = 3 ** 0.5             # uniform noise in -1..1 to unit variance, as WORLD's
 UNVOICED = 500.0              # Hz: the pulse rate where there is no voice (breath only), as WORLD's
+ROUGH_CENTS, ROUGH_DB = 80.0, 3.0   # at rough = 1: each period off by ~80 cents, each pulse by ~3 dB (std)
+SUB_DIP, SUB_SHIFT = 0.8, 0.04      # at sub = 1: every other pulse 80 % weaker and 4 % sooner (period doubling)
+SQRT12 = math.sqrt(12)              # a uniform deviate in -0.5..0.5 to unit variance
 
 
 def band_freqs(n: int = BANDS) -> np.ndarray:
@@ -104,8 +108,11 @@ def _min_phase(mag: np.ndarray, nfft: int) -> np.ndarray:
 
 
 def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stretch: float = 1.0,
-               breath: float = 0.0, tilt: float = 0.0, swing: float = 1.0, seed: int = 0) -> np.ndarray:
-    """The template's sound, moved to another voice, deterministic for a seed."""
+               breath: float = 0.0, tilt: float = 0.0, swing: float = 1.0, seed: int = 0, rough: float = 0.0,
+               sub: float = 0.0) -> np.ndarray:
+    """The template's sound, moved to another voice, deterministic for a seed. `rough` (0..1): every glottal
+    period and pulse a little off at random, a hoarse, growling voice; `sub` (0..1): every other pulse weaker and
+    sooner, a voice doubled an octave below, as a creature's."""
     n_frames = max(int(round(len(t.f0) * stretch)), 2)
     src = np.minimum(np.arange(n_frames) / stretch, len(t.f0) - 1)
     lo = np.floor(src).astype(int)
@@ -153,7 +160,18 @@ def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stre
         f = f0[k] if f0[k] > 0 else UNVOICED
         pos = when * sr
         s = int(pos)
-        n = max(int((when + 1 / f) * sr) - s, 1)
+        period, amp = 1 / f, 1.0
+        if f0[k] > 0 and (rough or sub):
+            if rough:
+                period *= 2 ** (ROUGH_CENTS * rough * (rng.uniform(rng.key(key, "rough", i)) - 0.5) * SQRT12 / 1200)
+                amp = 10 ** (ROUGH_DB * rough * (rng.uniform(rng.key(key, "shimmer", i)) - 0.5) * SQRT12 / 20)
+            if sub:
+                if i % 2:
+                    amp *= 1 - SUB_DIP * sub
+                    period *= 1 - SUB_SHIFT * sub
+                else:
+                    period *= 1 + SUB_SHIFT * sub
+        n = max(int((when + period) * sr) - s, 1)
         if k not in cache:
             cache[k] = filters(k)
         voice, air = cache[k]
@@ -162,9 +180,9 @@ def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stre
         if voice is not None:                       # voice: a minimum-phase pulse, between samples, without DC
             h = np.fft.irfft(voice * np.exp(delay * (pos - s)), nfft)
             h[:nfft // 2] -= h.sum() * dc
-            y += h * np.sqrt(n)
+            y += h * (np.sqrt(n) * amp)
         out[s:s + nfft] += y
-        when += 1 / f
+        when += period
         i += 1
     end = np.flatnonzero(np.abs(out) > 1e-4 * (np.abs(out).max() + 1e-12))
     return out[: end[-1] + 1] if len(end) else out[: int(FRAME * sr)]
@@ -173,5 +191,5 @@ def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stre
 def render_vocoded(v, sr: int, seed: int) -> np.ndarray:
     """A spec.Vocoded layer, peak-normalised to its gain."""
     y = synthesize(template(v.clip), sr, pitch=v.pitch, warp=v.warp, stretch=v.stretch, breath=v.breath,
-                   tilt=v.tilt, swing=v.swing, seed=seed)
+                   tilt=v.tilt, swing=v.swing, seed=seed, rough=v.rough, sub=v.sub)
     return v.gain * y / (np.max(np.abs(y)) + 1e-12)
