@@ -40,6 +40,7 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `instruments.py` | 43 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
 | `music.py` | músicas por semente: `Cue` (jingles e loops, orquestra ou chip) |
 | `music_tactics.py` | os cues de tactics: batalhas, preparação, mapa, cenas, recrutamento |
+| `music_japan.py` | os cues do Japão: santuário, vila, festival, kagura, lamento |
 
 ## Determinismo
 
@@ -552,6 +553,17 @@ Os loops têm 16 s, e o CLAP recorta aleatoriamente áudios com mais de 10 s, en
 
 ## Música e composição
 
+**Música do Japão (`music_japan.py`), na régua das faixas mais elogiadas de *Utawarerumono*** (cópias do usuário; só números, nenhuma melodia):
+
+| medido | no *Utawarerumono* | nos nossos cues |
+|---|---|---|
+| andamento | 63–162 bpm, conforme o clima | `shrine` 66–80, `village` 88–112, `festival` 118–144, `kagura` 126–160, `elegy` 60–76 |
+| pulso | as peças sagradas quase sem pulso (0,09–0,29), a festa e o kagura batendo forte (0,60–0,69) | `shrine` 0,13; `festival` 0,53, `kagura` 0,46 |
+| timbre | quente: o centro do espectro em 260–650 Hz, porque o grave é forte (63–250 Hz a até 9 dB da banda mais forte) | 560–680 Hz (o `elegy`, só com o koto, 740); o `shrine` fica a ~2 dB de "Kamigatari" em cada oitava |
+| dinâmica | nivelada: 1,6–8 dB entre o forte e o fraco | 2–5,6 dB |
+
+E a linguagem: as escalas in (miyako-bushi: 0 1 5 7 8, a do koto solene, o meio tom caindo na tônica), yo (0 2 5 7 9, a das canções folclóricas) e ryukyu (0 4 5 7 11, a das ilhas do sul); o *ma*, o espaço: cada frase termina numa nota longa e num respiro; a heterofonia: o koto toca a melodia do shakuhachi junto, dedilhada, ornamentada e uma oitava abaixo, não em harmonia; a orquestra por baixo em quintas e quartas abertas, sem terças.
+
 **Música de tactics (`music_tactics.py`), medida nas 37 sequências de música do *FFTA2*** (cópia do usuário; a música do DS é partitura, então dá para ler as notas). Só números, nenhuma melodia:
 
 | medido | no FFTA2 | nos nossos cues |
@@ -633,7 +645,7 @@ Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um fil
 | bloco de madeira (VCSL) | um cacho em 1,27–1,46 kHz e 2,7–3,5 kHz, T60 0,3–0,6 s, −20 dB em 0,07–0,1 s | `hyoshigi` |
 | sinos de mão nepaleses (VCSL) | modos a 1 : 2,7 : 3,84 : 4,87, soando 1–3 s | `rin` (mais longo, como uma tigela, com um batimento lento) |
 
-O *oshide* e o *yuri* precisam que a nota mude de altura depois do golpe: um corpo `Modal` aceita uma curva `bend` (semitons ao longo da nota). O anel é lido mais rápido ou mais devagar, como uma fita, e todos os modos sobem juntos, como numa corda quando a tensão muda; o núcleo em C++ faz a mesma conta (spec versão 7).
+O *oshide* e o *yuri* precisam que a nota mude de altura depois do golpe: um corpo `Modal` aceita uma curva `bend` (semitons ao longo da nota). O anel é lido mais rápido ou mais devagar, como uma fita, e todos os modos sobem juntos, como numa corda quando a tensão muda; o núcleo em C++ faz a mesma conta. Um spec pede a versão 7 só quando dobra alguma nota; os outros continuam saindo como versão 6, que um núcleo mais antigo (uma cópia velha da extensão do Godot num jogo) ainda toca.
 
 **Composição (`Cue`).**
 - A semente escolhe tom (sol3 a fá♯4) e modo, a progressão (I–IV–V–I, i–VI–VII–i…), os ritmos e o motivo.

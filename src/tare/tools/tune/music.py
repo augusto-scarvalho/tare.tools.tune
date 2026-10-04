@@ -62,12 +62,19 @@ EXTRA = {   # roles the colour cues add (orchestral and chip get sensible stand-
     "orchestral": {"keys": ("e_piano", 0.4, -0.2, 0.25, {}), "mallet": ("marimba", 0.45, 0.25, 0.25, {}),
                    "music_box": ("music_box", 0.35, 0.3, 0.4, {}), "hat": ("hihat", 0.18, 0.3, 0.05, {}),
                    "open_hat": ("open_hat", 0.15, 0.3, 0.1, {}), "e_bass": ("bass", 0.6, 0.0, 0.05, {}),
-                   "guitar": ("guitar", 0.45, -0.3, 0.25, {}), "block": ("log_drum", 0.4, 0.3, 0.15, {})},
+                   "guitar": ("guitar", 0.45, -0.3, 0.25, {}), "block": ("log_drum", 0.4, 0.3, 0.15, {}),
+                   "koto": ("koto", 0.7, -0.2, 0.3, {}), "shakuhachi": ("shakuhachi", 0.6, 0.2, 0.35, {}),
+                   "taiko": ("taiko", 1.0, 0.0, 0.25, {}), "hyoshigi": ("hyoshigi", 0.45, 0.3, 0.25, {}),
+                   "rin": ("rin", 0.45, 0.15, 0.45, {})},
     "chip": {"keys": ("square", 0.25, -0.2, 0.1, {"crush": 0.25}), "mallet": ("thin_pulse", 0.3, 0.2, 0.1,
                                                                              {"crush": 0.25}),
              "music_box": ("thin_pulse", 0.25, 0.3, 0.1, {"crush": 0.25}), "hat": ("chip_hat", 0.15, 0.2, 0.0, {}),
              "open_hat": ("chip_hat", 0.15, 0.2, 0.0, {}), "e_bass": ("chip_bass", 0.5, 0.0, 0.0, {"crush": 0.25}),
-             "guitar": ("square", 0.3, -0.3, 0.1, {"crush": 0.25}), "block": ("chip_hat", 0.2, 0.3, 0.0, {})},
+             "guitar": ("square", 0.3, -0.3, 0.1, {"crush": 0.25}), "block": ("chip_hat", 0.2, 0.3, 0.0, {}),
+             "koto": ("thin_pulse", 0.3, -0.2, 0.1, {"crush": 0.25}), "shakuhachi": ("square", 0.35, 0.2, 0.1,
+                                                                                    {"crush": 0.25}),
+             "taiko": ("chip_kick", 0.5, 0.0, 0.0, {}), "hyoshigi": ("chip_hat", 0.2, 0.3, 0.0, {}),
+             "rin": ("thin_pulse", 0.25, 0.2, 0.1, {"crush": 0.25})},
 }
 ORCHESTRAL.update(EXTRA["orchestral"])
 CHIP.update(EXTRA["chip"])
@@ -80,6 +87,7 @@ SNES.update({
     "keys": ("e_piano", 0.4, -0.2, 0.15, {}, 0.2), "mallet": ("marimba", 0.45, 0.25, 0.15, {}, 0.25),
     "guitar": ("guitar", 0.45, -0.3, 0.15, {}, 0.2), "pad": ("strings", 0.36, 0.0, 0.25, {}, 0.1),
     "choir": ("choir", 0.38, 0.0, 0.3, {}, 0.1), "e_bass": ("bass", 0.42, 0.0, 0.05, {}, 0.0),
+    "koto": ("koto", 0.7, -0.2, 0.15, {}, 0.25), "shakuhachi": ("shakuhachi", 0.6, 0.2, 0.15, {}, 0.3),
 })
 STYLES = {"orchestral": ORCHESTRAL, "chip": CHIP, "snes": SNES}
 
@@ -720,4 +728,4 @@ CUES: dict[str, Callable[[Cue], None]] = {
     "showdown": showdown,
 }
 
-from . import music_tactics  # noqa: E402,F401  (the tactics cues register themselves)
+from . import music_japan, music_tactics  # noqa: E402,F401  (these cues register themselves)

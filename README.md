@@ -354,6 +354,7 @@ Três peças, uma sobre a outra:
   - Loops: `town`, `explore`, `tavern`, `dungeon`, `battle`.
   - Loops de "harmonia de cor", no jeito das trilhas de RPG de 16 bits (como as de Yasunori Mitsuda): `reverie`, `pastoral`, `timeless`, `grove`, `heroic`, `showdown`. Acordes escolhidos pela cor, não pela função: 7ª e 9ª deslizando em paralelo, trocas por meio tom e por terças, a tônica como pedal, modos dórico, lídio e mixolídio, nunca V → I. A melodia apoia nas 9ª e 13ª e repete o motivo em sequência.
   - Para tactics, no jeito marcial e modal das trilhas de Hitoshi Sakimoto (medido nas 37 músicas do FFTA2): batalhas `skirmish`, `tense`, `boss`, `final`; `prepare` (a formação), `briefing` (o mapa e o plano), `worldmap`; cenas `sorrow`, `intrigue`, `triumph`, `comedy`; e o jingle `recruit` (alguém entra no grupo).
+  - Do Japão, com o koto, o shakuhachi, o taiko, o hyoshigi e o rin, na régua das faixas mais elogiadas de *Utawarerumono*: `shrine` (um santuário, quase sem pulso), `village` (uma vila ao entardecer), `festival` (um matsuri), `kagura` (uma batalha dançada como um kagura), `elegy` (um lamento). Escalas in, yo e ryukyu, frases com respiro (*ma*), o koto tocando a melodia do shakuhachi junto (heterofonia), a orquestra por baixo em quintas e quartas.
   - Estilos: `orchestral`, `snes` (16-bit: o eco do console indo de um lado ao outro, agudos mais escuros) e `chip` (8-bit).
   - A semente escolhe tom, progressão, ritmos e motivo: a mesma semente é sempre a mesma música, e cada semente é outra.
 

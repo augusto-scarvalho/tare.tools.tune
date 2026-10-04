@@ -211,7 +211,8 @@ class Voice:
             defaults = type(obj)(**_required(obj))
             return {k: v for k, v in asdict(obj).items()
                     if k in _required(obj) or v != getattr(defaults, k)}
-        out = {"format": FORMAT, "version": VERSION}
+        # stamped with the oldest version that can play it, so a game's older core still plays what it can
+        out = {"format": FORMAT, "version": VERSION if any(m.bend for m in self.modal) else 6}
         out.update(compact(self))
         out["syllables"] = [compact(s) for s in self.syllables]
         out["chips"] = [compact(c) for c in self.chips]

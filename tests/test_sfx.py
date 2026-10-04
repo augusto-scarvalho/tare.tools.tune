@@ -321,3 +321,12 @@ def test_dry_leaves_the_room_to_the_game():
         assert np.isfinite(y).all() and len(y) < len(render(wet, SR))                 # no tail
     s = Sfx("blade", "steel", era="hd", dry=True)
     assert Sfx.from_dict(json.loads(json.dumps(s.to_dict()))) == s
+
+
+def test_a_spec_asks_only_for_the_version_it_needs():
+    plain = Sfx("blade", "steel").voice("clash").to_dict()
+    assert plain["version"] == 6                                     # an older game core still plays it
+    from tare.tools.tune.instruments import INSTRUMENTS
+    from tare.tools.tune.score import Note
+    bent = Voice(modal=INSTRUMENTS["koto"](Note(0.0, 2.0, 330.0, 0.5, 5)))
+    assert bent.to_dict()["version"] == 7 and Voice.from_json(bent.to_json()) == bent

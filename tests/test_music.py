@@ -127,3 +127,28 @@ def test_a_loop_is_seamless_and_says_so(tmp_path):
     assert n == len(y) and wav_loop(out) == (0, n - 1)                   # engines loop it with no setup
     main(["music", "victory", "--sr", str(SR), "-o", str(tmp_path / "victory.wav")])
     assert wav_loop(tmp_path / "victory.wav") is None                    # a jingle just ends
+
+
+def test_japanese_cues_keep_to_utawarerumono(monkeypatch):
+    from tare.tools.tune import score
+    from tare.tools.tune.music_japan import JAPAN_CUES, SCALES_JP
+    played = []
+    real = score.Track.play
+
+    def play(self, instrument, notes, *a, **k):
+        notes = list(notes)
+        played.append((self.name, notes))
+        return real(self, instrument, notes, *a, **k)
+
+    monkeypatch.setattr(score.Track, "play", play)
+    for kind in JAPAN_CUES:
+        played.clear()
+        c = Cue(kind, seed=3, sr=SR)
+        assert 60 <= c.score.bpm <= 162 and c.length > 25                      # Utawarerumono: 63-162 bpm
+        tune = sorted((b, n, ln) for role, ns in played if role == "shakuhachi" for n, b, ln, *_ in ns)
+        tonic_pcs = [{(n - t) % 12 for _, n, _ in tune} for t in range(12)]
+        assert any(pcs <= set(SCALES_JP[s]) for pcs in tonic_pcs for s in SCALES_JP)   # the tune keeps to one scale
+        ends = [b + ln for b, n, ln in tune]
+        gaps = [nb - e for e, (nb, _, _) in zip(ends, tune[1:], strict=False) if nb - e > 0.2]
+        assert gaps                                                            # ma: breaths between the phrases
+    assert Cue("festival", seed=3, sr=SR).score.tracks["taiko"].layers                # the festival's drums

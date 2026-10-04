@@ -73,7 +73,7 @@ def test_deterministic_and_spec_round_trip():
     assert np.array_equal(render(v, SR), render(s.voice("Cuidado com os lobos!", "pt"), SR))
     again = Voice.from_json(v.to_json())
     assert again == v and np.array_equal(render(again, SR), render(v, SR))
-    assert json.loads(v.to_json())["version"] == VERSION
+    assert json.loads(v.to_json())["version"] == 6 < VERSION        # stamped with the oldest version that plays it
 
 
 def test_spec_v1_documents_still_load():
