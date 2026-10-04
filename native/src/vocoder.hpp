@@ -12,7 +12,7 @@ inline constexpr int AP_BANDS = 5;
 inline constexpr double ENV_FLOOR = -107.5;   // envelopes are stored in 0.5 dB steps from here
 inline constexpr double BREATH = 1.7320508075688772;   // 3 ** 0.5
 inline constexpr double UNVOICED = 500.0;     // Hz: the pulse rate where there is no voice
-inline constexpr double ROUGH_CENTS = 80.0, ROUGH_DB = 3.0;   // rough = 1: periods ~80 cents off, pulses ~3 dB
+inline constexpr double ROUGH_CENTS = 45.0, ROUGH_DB = 1.7;   // rough = 1: periods ~45 cents off, pulses ~1.7 dB
 inline constexpr double SUB_DIP = 0.8, SUB_SHIFT = 0.04;      // sub = 1: every other pulse 80 % weaker, 4 % sooner
 
 // vocoder.Template: what a recording leaves once analysed, every 5 ms

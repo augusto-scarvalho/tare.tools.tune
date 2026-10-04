@@ -32,7 +32,8 @@ DATA = Path(__file__).parent / "data" / "barks.npz"
 ENV_FLOOR = -107.5            # envelopes are stored in 0.5 dB steps from here (uint8)
 BREATH = 3 ** 0.5             # uniform noise in -1..1 to unit variance, as WORLD's
 UNVOICED = 500.0              # Hz: the pulse rate where there is no voice (breath only), as WORLD's
-ROUGH_CENTS, ROUGH_DB = 80.0, 3.0   # at rough = 1: each period off by ~80 cents, each pulse by ~3 dB (std)
+ROUGH_CENTS, ROUGH_DB = 45.0, 1.7   # at rough = 1: each period off by ~45 cents, each pulse by ~1.7 dB (std); by
+                                    # ear (round "rouquidao") the natural voice breaks past ~50 cents
 SUB_DIP, SUB_SHIFT = 0.8, 0.04      # at sub = 1: every other pulse 80 % weaker and 4 % sooner (period doubling)
 SQRT12 = math.sqrt(12)              # a uniform deviate in -0.5..0.5 to unit variance
 
