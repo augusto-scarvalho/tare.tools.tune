@@ -129,7 +129,8 @@ class Speaker:
     def emote(self, kind: str, style: str = "grunt", intensity: float = 0.7, take: int = 0,
               sr: int = DEFAULT_SR) -> np.ndarray:
         """A wordless bark in this voice: "attack", "hurt", "death", "jump", "laugh", "sigh", "hmm", "cheer"... (see
-        emote.EMOTES), in a style: "grunt", "anime", "tactics", "mmo", "gasp". Each `take` is a little different."""
+        emote.EMOTES), in a style: "grunt", "anime", "tactics", "mmo", "gasp", "kiai". Each `take` is a little
+        different."""
         return render(self.emote_voice(kind, style, intensity, take), sr)
 
     def emote_voice(self, kind: str, style: str = "grunt", intensity: float = 0.7, take: int = 0) -> Voice:

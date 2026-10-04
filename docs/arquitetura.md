@@ -648,6 +648,21 @@ Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um fil
 
 O *oshide* e o *yuri* precisam que a nota mude de altura depois do golpe: um corpo `Modal` aceita uma curva `bend` (semitons ao longo da nota). O anel é lido mais rápido ou mais devagar, como uma fita, e todos os modos sobem juntos, como numa corda quando a tensão muda; o núcleo em C++ faz a mesma conta. Um spec pede a versão 7 só quando dobra alguma nota; os outros continuam saindo como versão 6, que um núcleo mais antigo (uma cópia velha da extensão do Godot num jogo) ainda toca.
 
+*As vozes de batalha.* 420 falas dos três jogos (cópias do usuário), transcritas uma vez por um reconhecedor de fala em japonês, só para separá-las pelo que dizem: gritos sem palavra (*kiai*: "ha!", "nuryaa!", "dee!"), golpes ("todome!", "ochiro!"), dor, vitória, derrota; o que traz um nome (como o da montaria "Kokopo"), um tratamento ou uma conversa fica de fora, para não medir nomes no lugar de entonação. Nenhum texto nem áudio fica, só os números:
+
+| medido | grito (*kiai*, 82) | dor (11) |
+|---|---|---|
+| duração | 0,48 s (0,22–1,26) | 0,59 s |
+| sobe ao pico / morre | 125 ms / 190 ms | 80 ms / 160 ms |
+| com voz | ~23% do grito (o resto é ar e aspereza) | ~25% |
+| altura | ~440 Hz, o pico perto de 60% do grito | ~420 Hz, terminando abaixo do começo |
+| brilho (1–4 kHz contra o grave) | −1,9 dB | −7,3 dB |
+
+Daí o estilo `kiai` de `emote`: o grito pega as tomadas mais longas do intérprete do personagem (~0,33 s; o `grunt`, 0,26) sem esticá-las mais que ~1,1×, porque esticada a voz vira robô; a dor fica mais escura (−8 dB) e com mais ar. E duas correções que valem para todos os estilos:
+
+- **Uma voz por personagem.** Cada take escolhia o molde mais barato sozinho, então o mesmo herói saía ora como o aventureiro, ora como um dos homens do pacote de gritos. Agora o personagem fica com um intérprete, o que menos precisa ser movido até a sua voz, e só sai dele quando ele não gravou aquele som.
+- **O tremor do ciclo.** O vocoder dava cada pulso exatamente na altura medida; uma voz real erra um pouco a cada período. Agora cada período varia 12 cents ao acaso (semeado): a oscilação fina da altura vai a 7,5 cents, a dos gritos do jogo é 7,1.
+
 **Composição (`Cue`).**
 - A semente escolhe tom (sol3 a fá♯4) e modo, a progressão (I–IV–V–I, i–VI–VII–i…), os ritmos e o motivo.
 - A melodia segue regras simples:

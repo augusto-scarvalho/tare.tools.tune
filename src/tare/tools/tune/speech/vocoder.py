@@ -31,6 +31,8 @@ DATA = Path(__file__).parent / "data" / "barks.npz"
 ENV_FLOOR = -107.5            # envelopes are stored in 0.5 dB steps from here (uint8)
 BREATH = 3 ** 0.5             # uniform noise in -1..1 to unit variance, as WORLD's
 UNVOICED = 500.0              # Hz: the pulse rate where there is no voice (breath only), as WORLD's
+JITTER = 12.0                 # cents: each glottal period a little off, as a real voice's (pulses exactly on the
+                              # measured pitch sound like a machine; fitted on Utawarerumono's battle shouts)
 
 
 def band_freqs(n: int = BANDS) -> np.ndarray:
@@ -164,7 +166,8 @@ def synthesize(t: Template, sr: int, pitch: float = 1.0, warp: float = 1.0, stre
             h[:nfft // 2] -= h.sum() * dc
             y += h * np.sqrt(n)
         out[s:s + nfft] += y
-        when += 1 / f
+        wobble = (rng.uniform(rng.key(key, "jitter", i)) - 0.5) * 12 ** 0.5 if f0[k] > 0 else 0.0
+        when += 2 ** (JITTER * wobble / 1200) / f
         i += 1
     end = np.flatnonzero(np.abs(out) > 1e-4 * (np.abs(out).max() + 1e-12))
     return out[: end[-1] + 1] if len(end) else out[: int(FRAME * sr)]

@@ -18,6 +18,7 @@ Styles, after the games that use these clips (the clips themselves are other per
     tactics   restrained and pressed: shorter, lower, darker (Fire Emblem)
     mmo       full shouts, longer and stronger (Final Fantasy XIV)
     gasp      breath more than voice, near the speaking pitch, longer (Tactics Ogre)
+    kiai      a full shout, the performer's longest takes unstretched; pain darker, more air (Utawarerumono)
 
 The gasp style is measured on Tactics Ogre: Reborn's own battle voices (the user's copy; analysis only, nothing of
 them is kept): a hurt is a gasp of ~0.4 s (0.28-0.73) with voice in only a quarter to a third of it, near the
@@ -34,7 +35,7 @@ from .vocoder import Template, templates
 
 EMOTES = ("attack", "attack_big", "hurt", "hurt_big", "death", "jump", "tired", "laugh", "giggle", "chuckle",
           "sigh", "gasp", "surprise", "hmm", "huh", "yes", "no", "cheer", "relief", "angry")
-STYLES = ("grunt", "anime", "tactics", "mmo", "gasp")
+STYLES = ("grunt", "anime", "tactics", "mmo", "gasp", "kiai")
 EFFORTS = ("attack", "attack_big", "hurt", "hurt_big", "death", "jump", "cheer")
 # per style: semitones, formant ratio, length, added air, dB/octave, contour width, and the performers it prefers
 STYLE = {
@@ -49,12 +50,18 @@ STYLE = {
     "gasp": dict(pitch=-1.0, warp=1.0, stretch=1.0, breath=0.1, tilt=-1.0, swing=1.5, effort=0.4,
                  length={"hurt": 0.42, "hurt_big": 0.55, "death": 0.75},       # seconds: each clip is fit to them
                  likes={"mature": 0.1, "adventurer": 0.05}),
+    "kiai": dict(pitch=0.0, warp=1.0, stretch=1.0, breath=0.08, tilt=-0.3, swing=1.0,
+                 length={"attack": 0.6, "attack_big": 1.0, "hurt": 0.7, "hurt_big": 0.9},
+                 fit=0.5, give=1.1,    # pick performances already that long: stretched far, a voice turns robotic
+                 kinds={k: dict(tilt=-1.5, breath=0.15) for k in ("hurt", "hurt_big")},   # pain: darker, more air
+                 likes={"adventurer": 0.05, "yell": 0.05}),
 }
 # when no performer of a kind is close to the voice (no woman's big attack, no man's giggle): a related kind, stretched
 # and moved (length ratio, semitones). Moving formants far is what gives a converted voice away, more than pitch.
 KIN = {"attack_big": ("attack", 1.5, 1.0), "hurt_big": ("hurt", 1.4, 1.0), "giggle": ("laugh", 0.75, 4.0),
        "chuckle": ("laugh", 0.8, -2.0), "tired": ("sigh", 1.0, 0.0), "relief": ("sigh", 0.8, 2.0)}
 KIN_COST = 0.25
+OTHER = 0.6                       # a performer other than the character's own: one character, one voice
 # the speaking voice of each performer, guessed from the tract we gave it (pitch Hz)
 SPEAKING = ((1.0, 115.0), (1.1, 190.0), (1.15, 210.0), (1.27, 260.0))
 EFFORT = 0.85                     # how far an effort goes towards the shouting register (fitted, see shout_pitch)
@@ -85,18 +92,45 @@ def moves(speaker, t: Template, kind: str, style: str = "grunt") -> tuple[float,
     return pitch, speaker.tract / t.tract
 
 
+def performer(t: Template) -> str:
+    """Who performed a clip: a pack's voice (the adventurer, each of the three women, each of the three yellers), or
+    the one Freesound clip."""
+    clip = t.name.rsplit("/", 1)[-1]
+    if t.voice == "yell":
+        return f"yell{clip[0]}"
+    return f"{t.voice}/{clip}" if clip.isdigit() else t.voice
+
+
+def _fit(speaker, t: Template, kind: str, style: str) -> float:
+    pitch, warp = moves(speaker, t, kind, style)
+    return abs(math.log(pitch)) + 3.0 * abs(math.log(warp)) - STYLE[style]["likes"].get(t.voice, 0.0)
+
+
+def own_performer(speaker, style: str) -> str:
+    """The character's own performer: of those who gave both shouts and pain, the one who needs the least moving."""
+    clips: dict[str, list[float]] = {}
+    for t in templates():
+        if t.kind in ("attack", "hurt"):
+            clips.setdefault(performer(t), []).append(_fit(speaker, t, t.kind, style))
+    full = {p for p in clips if {t.kind for t in templates() if performer(t) == p} >= {"attack", "hurt"}}
+    return min(sorted(full), key=lambda p: float(np.mean(clips[p])))
+
+
 def candidates(speaker, kind: str, style: str) -> list[tuple[float, Template, float, float]]:
-    """(cost, clip, length ratio, semitones) for the clips of a kind (and its kin), best first: the least pitch and
-    above all the least tract to move, the performers the style prefers."""
+    """(cost, clip, length ratio, semitones) for the clips of a kind (and its kin), best first: the character's own
+    performer, the least pitch and above all the least tract to move, the performers the style prefers."""
     kin, stretch, semis = KIN.get(kind, (None, 1.0, 0.0))
+    own = own_performer(speaker, style)
     out = []
     for t in templates():
         if t.kind not in (kind, kin):
             continue
-        pitch, warp = moves(speaker, t, kind, style)
-        cost = abs(math.log(pitch)) + 3.0 * abs(math.log(warp)) - STYLE[style]["likes"].get(t.voice, 0.0)
+        cost = _fit(speaker, t, kind, style) + (OTHER if performer(t) != own else 0.0)
         if style == "tactics":
             cost += 0.2 * t.duration
+        if "fit" in STYLE[style]:
+            length = t.duration * (1.0 if t.kind == kind else stretch)
+            cost += STYLE[style]["fit"] * abs(math.log(length / STYLE[style]["length"].get(kind, length)))
         if t.kind == kind:
             out.append((cost, t, 1.0, 0.0))
         else:
@@ -118,7 +152,7 @@ def emote(speaker, kind: str, style: str = "grunt", intensity: float = 0.7, take
     best = candidates(speaker, kind, style)
     pool = [c for c in best if c[0] <= best[0][0] + 0.25][:4]          # a take picks among the close ones
     _, t, kin_stretch, kin_semis = pool[int(u("pick") * len(pool)) % len(pool)]
-    st, more = STYLE[style], float(np.clip(intensity, 0, 1)) - 0.7
+    st, more = {**STYLE[style], **STYLE[style].get("kinds", {}).get(kind, {})}, float(np.clip(intensity, 0, 1)) - 0.7
     effort = kind in EFFORTS
     pitch, warp = moves(speaker, t, kind, style)
     semis = kin_semis + st["pitch"] + (3.0 if effort else 1.5) * more + 1.2 * (u("pitch") - 0.5)
@@ -126,7 +160,8 @@ def emote(speaker, kind: str, style: str = "grunt", intensity: float = 0.7, take
     warp = float(np.clip(warp * st["warp"], 0.75, 1.35))
     stretch = kin_stretch * st["stretch"] * (1 + (0.3 if effort else 0.2) * more) * (0.94 + 0.12 * u("stretch"))
     if kind in st.get("length", {}):
-        stretch *= float(np.clip(st["length"][kind] / (t.duration * kin_stretch), 0.5, 2.0))
+        most = st["give"] / kin_stretch if "give" in st else 2.0
+        stretch *= float(np.clip(st["length"][kind] / (t.duration * kin_stretch), min(0.5, most), most))
     stretch /= math.sqrt(speaker.rate)
     breath = st["breath"] + 1.5 * max(speaker.breath - 0.05, 0.0) - (0.2 * more if effort else 0.0)
     if speaker.whisper:

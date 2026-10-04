@@ -148,6 +148,7 @@ write_wav("risada.wav", garota.emote("laugh", style="anime", intensity=0.9), 480
   | `tactics` | contido: mais curto, mais grave e mais escuro | *Fire Emblem* |
   | `mmo` | gritos cheios, mais longos e fortes | *Final Fantasy XIV* |
   | `gasp` | mais ar que voz, perto do tom da fala, mais longo (medido no próprio jogo) | *Tactics Ogre* |
+  | `kiai` | um grito cheio, as tomadas mais longas do intérprete, sem esticar; a dor mais escura e com mais ar (medido no próprio jogo) | *Utawarerumono* |
 - `intensity` (0 a 1) controla quanto esforço vai no som.
 - O spec guarda o molde e as transformações (`Vocoded`, v5); uma port precisa levar os moldes junto.
 

@@ -45,6 +45,22 @@ def test_gasp_keeps_to_tactics_ogre():
         assert np.mean([pitch_of(v) for v in gasps]) < 0.8 * np.mean([pitch_of(v) for v in shouts])
 
 
+def test_kiai_keeps_to_utawarerumono():
+    """A shout that holds (the character's longest takes), pain darker and breathier; one performer per character,
+    and no performance stretched far to get there (a stretched voice turns robotic)."""
+    from tare.tools.tune.speech.emote import performer
+    for hero in (Speaker(pitch=110, tract=1.0), Speaker(pitch=210, tract=1.15)):
+        shouts = [emote(hero, "attack", "kiai", take=k) for k in range(4)]
+        assert all(0.3 < v.duration < 0.8 for v in shouts)
+        assert np.mean([v.duration for v in shouts]) > 1.1 * np.mean([emote(hero, "attack", take=k).duration
+                                                                     for k in range(4)])
+        pain = [emote(hero, "hurt", "kiai", take=k) for k in range(4)]
+        assert all(0.3 < v.duration < 0.9 for v in pain)
+        assert max(v.tilt for v in pain) < min(v.tilt for v in shouts) and pain[0].breath > shouts[0].breath
+        barks = shouts + pain + [emote(hero, "attack_big", "kiai", take=k) for k in range(4)]
+        assert len({performer(template(v.clip)) for v in barks}) == 1 and all(v.stretch < 1.25 for v in barks)
+
+
 def test_barks_follow_the_speakers_voice():
     low, high = Speaker(pitch=90, tract=0.95), Speaker(pitch=300, tract=1.3)
     assert pitch_of(emote(high, "hmm")) > 2.5 * pitch_of(emote(low, "hmm"))
