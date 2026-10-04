@@ -525,7 +525,7 @@ python tools/structure_analysis.py compare --set klatt.FRIC_GAIN=2 --speaker til
 python tools/build_barks.py --freesound DIR --oga DIR   # refaz os moldes das interjeições (precisa das gravações e do pyworld)
 ```
 
-**Curadoria por ouvido** (`tools/curate.py`): rodadas de sons para comparar, servidas só nesta máquina (127.0.0.1), porque as referências de jogos não saem dela. A página toca cada versão e troca entre elas no mesmo ponto (teclas 1–9), iguala o volume e desenha o espectrograma, a diferença para uma referência e o espectro médio, além das medidas de cada uma. Ela também guarda as respostas em `answers.json` conforme são dadas: o melhor, notas de 1 a 5, uma categoria por som, ABX cego, momentos marcados no espectrograma e notas livres. Uma rodada cega esconde os nomes e embaralha a ordem.
+**Curadoria por ouvido** (`tools/curate.py`): rodadas de sons para comparar, servidas só nesta máquina (127.0.0.1), porque as referências de jogos não saem dela. A página toca cada versão e troca entre elas no mesmo ponto (teclas 1–9), toca a ½× ou ¼× como uma fita para achar artefatos (tecla S), iguala o volume e desenha o espectrograma, a diferença para uma referência e o espectro médio, além das medidas de cada uma. Ela também guarda as respostas em `answers.json` conforme são dadas: o melhor, notas de 1 a 5, uma categoria por som, ABX cego, momentos marcados no espectrograma e notas livres. Uma rodada cega esconde os nomes e embaralha a ordem.
 
 ```bash
 python tools/curate.py serve          # abre http://127.0.0.1:8765 com as rodadas

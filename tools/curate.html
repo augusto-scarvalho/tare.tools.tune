@@ -45,6 +45,7 @@ main { padding: 16px 20px 60px; min-width: 0; }
 .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .bar .grow { flex: 1; }
 .status { color: var(--muted); font-size: 12px; }
+.speed { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); font-size: 12px; }
 .intro, .note { color: var(--muted); white-space: pre-wrap; margin: 4px 0 12px; }
 h2 { font-size: 18px; margin: 6px 0 2px; }
 .keys { color: var(--muted); font-size: 12px; }
@@ -107,7 +108,7 @@ textarea { width: 100%; min-height: 70px; resize: vertical; }
 <script>
 "use strict";
 const S = { rounds: [], name: null, m: null, ans: {}, gi: 0, buf: {}, ana: {}, gain: {}, ctx: null, play: null,
-            last: null, loop: false, match: true, view: "spec", revealed: new Set(), saveT: null, raf: 0 };
+            last: null, loop: false, rate: 1, match: true, view: "spec", revealed: new Set(), saveT: null, raf: 0 };
 const $ = (sel, el = document) => el.querySelector(sel);
 const h = (tag, attrs = {}, ...kids) => {
   const e = document.createElement(tag);
@@ -195,7 +196,7 @@ function levels(g) {                // equal loudness: every segment brought to 
 }
 function position() {
   if (!S.play) return 0;
-  const t = ctx().currentTime - S.play.at + S.play.from;
+  const t = (ctx().currentTime - S.play.at) * S.play.rate + S.play.from;
   return S.loop ? t % S.play.dur : Math.min(t, S.play.dur);
 }
 function stop() {
@@ -210,15 +211,16 @@ async function play(seg, from = null) {
   stop();
   const t0 = Math.max(0, Math.min(from ?? keep ?? 0, b.duration - 0.01));
   const src = ctx().createBufferSource(), gain = ctx().createGain();
-  src.buffer = b; src.loop = S.loop;
+  src.buffer = b; src.loop = S.loop; src.playbackRate.value = S.rate;   // slower = lower too, like tape: nothing added
   gain.gain.value = S.match ? (S.gain[seg.id] ?? 1) : 1;
   src.connect(gain).connect(ctx().destination);
   src.start(0, t0);
   src.onended = () => { if (S.play && S.play.src === src) stop(); };
-  S.play = { seg: seg.id, src, at: ctx().currentTime, from: t0, dur: b.duration }; S.last = seg;
+  S.play = { seg: seg.id, src, at: ctx().currentTime, from: t0, dur: b.duration, rate: S.rate }; S.last = seg;
   document.querySelectorAll(".seg").forEach(e => e.classList.toggle("playing", e.dataset.id === seg.id));
   tick();
 }
+function setRate(r) { S.rate = r; if (S.play) play(S.last); render(); }
 function tick() { drawHeads(); if (S.play) S.raf = requestAnimationFrame(tick); }
 
 // ------------------------------------------------------------------ analysis (STFT on a log-frequency axis)
@@ -384,6 +386,8 @@ function render() {
     h("button", { onclick: () => S.gi < S.m.groups.length - 1 && openGroup(S.gi + 1), title: "tecla →" }, "próximo →"),
     toggle("igualar volume", S.match, () => { S.match = !S.match; render(); }, "V"),
     toggle("repetir", S.loop, () => { S.loop = !S.loop; if (S.play) play(S.last); render(); }, "R"),
+    h("span", { class: "speed", title: "tecla S · mais devagar também fica mais grave, como uma fita: o que se ouve é o som, sem algoritmo no meio" },
+      "velocidade", ...[1, 0.5, 0.25].map(r => toggle(r === 1 ? "1×" : r === 0.5 ? "½×" : "¼×", S.rate === r, () => setRate(r)))),
     ref ? toggle(S.view === "diff" ? "vendo: diferença vs referência" : "vendo: espectrograma", S.view === "diff",
                  () => { S.view = S.view === "diff" ? "spec" : "diff"; render(); }, "D") : null,
     S.m.blind ? toggle(blind(g) ? "revelar nomes" : "nomes revelados", !blind(g), () => { S.revealed.add(g.id); render(); }) : null,
@@ -459,7 +463,7 @@ function render() {
     S.gi === 0 && S.m.intro ? h("div", { class: "intro" }, S.m.intro) : null, bar,
     h("h2", {}, g.title), g.note ? h("div", { class: "note" }, g.note) : null,
     h("div", { class: "keys" }, h("kbd", {}, "1–9"), " tocar (troca no mesmo ponto) · ", h("kbd", {}, "espaço"), " parar/voltar · ",
-      h("kbd", {}, "←"), h("kbd", {}, "→"), " grupos · ", h("kbd", {}, "R"), " repetir · ", h("kbd", {}, "V"), " volume igual",
+      h("kbd", {}, "←"), h("kbd", {}, "→"), " grupos · ", h("kbd", {}, "R"), " repetir · ", h("kbd", {}, "V"), " volume igual · ", h("kbd", {}, "S"), " velocidade",
       ref ? [" · ", h("kbd", {}, "D"), " diferença"] : null),
     h("div", { style: "height:10px" }), ...cards, ...panels].filter(Boolean));
   requestAnimationFrame(() => {
@@ -482,6 +486,7 @@ document.addEventListener("keydown", ev => {
   else if (ev.key === "ArrowLeft" && S.gi > 0) openGroup(S.gi - 1);
   else if (ev.key.toLowerCase() === "r") { S.loop = !S.loop; if (S.play) play(S.last); render(); }
   else if (ev.key.toLowerCase() === "v") { S.match = !S.match; render(); }
+  else if (ev.key.toLowerCase() === "s") setRate(S.rate === 1 ? 0.5 : S.rate === 0.5 ? 0.25 : 1);
   else if (ev.key.toLowerCase() === "d" && G().reference) { S.view = S.view === "diff" ? "spec" : "diff"; render(); }
 });
 let resizeT; window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => S.m && render(), 200); });
