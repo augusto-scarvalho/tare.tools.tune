@@ -115,20 +115,25 @@ def shrine(c: Cue):
 def village(c: Cue):
     """A village, an evening, friends: the yo scale at 88-112 bpm; the koto turning a figure in eighths, the
     shakuhachi's tune over it (the koto joins in heterophony in the second half), a warm string pad in fourths and
-    fifths, a pizzicato bass on the tonic and the 5th, a light hand drum."""
-    c.new_score(bpm=88 + 24 * c.r.u(), hall=2.2)
+    fifths, a pizzicato bass on the tonic and the 5th, a hand drum on every beat and a shaker in eighths."""
+    c.new_score(bpm=88 + 24 * c.r.u(), hall=1.8)
     _warm(c)
+    _forward(c, "hand_drum", 0.9)                        # a clear pulse, as in Utawarerumono's everyday tracks
+    _forward(c, "shakuhachi", 0.3)                       # (0.81-0.83): the tune over the village, not in front of it
     t = _key(c)
     scale = SCALES_JP["yo"]
     figure = c.r.pick([[0, 7, 12, 14, 12, 7, 9, 7], [0, 5, 7, 12, 9, 7, 5, 7], [0, 7, 9, 12, 14, 12, 9, 7]])
     for bar in range(16):
         b = 4 * bar
         root = (0, 0, 5, 7)[bar % 4] if bar < 8 else (5, 0, 7, 0)[bar % 4]
-        c.part("koto", [(t - 12 + root + figure[j], b + 0.5 * j, 0.6, 0.35 + 0.1 * (j % 4 == 0)) for j in range(8)])
+        c.part("koto", [(t - 12 + root + figure[j], b + 0.5 * j, 0.6, 0.3 + 0.15 * (j % 2 == 0) + 0.1 * (j == 0))
+                        for j in range(8)])
         c.part("pad", [(_open(t, root, 48)[:3], b, 4)], 0.5)
         c.part("low_strings", [(t - 24 + root, b, 4)], 0.55)
         c.part("bass", [(t - 24 + root, b, 1, 0.8), (t - 24 + root + 7, b + 2, 1, 0.7)])
-        c.part("hand_drum", [(57, b, 0.5, 0.6), (64, b + 2, 0.5, 0.45), (64, b + 3.5, 0.5, 0.35)])
+        c.part("hand_drum", [(57, b, 0.5, 0.7), (64, b + 1, 0.5, 0.4), (57, b + 2, 0.5, 0.55), (64, b + 3, 0.5, 0.4),
+                             (64, b + 3.5, 0.5, 0.3)])
+        c.part("shaker", [(70, b + 0.5 * j, 0.25, 0.5 + 0.2 * (j % 2)) for j in range(8)])
     tune = pentatonic(c.r, t, scale, 16, PHRASES, low=62, high=84)
     c.part("shakuhachi", tune, 0.7)
     _heterophony(c, [x for x in tune if x[1] >= 32], 0.4)
@@ -143,6 +148,7 @@ def festival(c: Cue):
     _warm(c)
     _forward(c, "taiko", 1.6)                            # the pulse is the drums (Utawarerumono: 0.6-0.7)
     _forward(c, "hyoshigi", 0.7)
+    _forward(c, "shakuhachi", 0.3)                       # the flute high over the drums, not in front of them
     t = _key(c)
     scale = SCALES_JP["yo"]
     run = c.r.pick([[0, 2, 7, 9, 12, 9, 7, 2], [0, 7, 9, 12, 14, 12, 9, 7], [0, 5, 7, 9, 12, 9, 7, 5]])
@@ -197,12 +203,13 @@ def elegy(c: Cue):
     scale = SCALES_JP["in"]
     tune = pentatonic(c.r, t, scale, 16, SLOW + PHRASES[:2], low=57, high=79)
     c.part("koto", [(n, b, ln, 0.5) for n, b, ln in tune if b < 32])
-    c.part("shakuhachi", [(n + 12, b, ln, 0.65) for n, b, ln in tune if b >= 32])
+    c.part("shakuhachi", [(n, b, ln, 0.65) for n, b, ln in tune if b >= 32])   # a long flute (2.4), down to A3
     _heterophony(c, [x for x in tune if x[1] >= 32], 0.35)
     for bar in range(16):
         root = (0, 8, 5, 0)[bar % 4]
-        c.part("strings", [(_open(t, root, 48)[:3], 4 * bar, 4)], 0.6)
-        c.part("low_strings", [(t - 24 + root, 4 * bar, 4)], 0.65)
+        swell = 0.6 if bar < 8 else 1.0                      # the koto's half intimate (laments: 7.6-13 dB)
+        c.part("strings", [(_open(t, root, 48)[:3], 4 * bar, 4)], 0.65 * swell)
+        c.part("low_strings", [(t - 24 + root, 4 * bar, 4)], 0.7 * swell)
     c.part("rin", [(t + 24, 60, 4, 0.6)])
     _loop(c, 16)
 

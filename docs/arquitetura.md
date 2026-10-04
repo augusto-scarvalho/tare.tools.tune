@@ -558,9 +558,9 @@ Os loops têm 16 s, e o CLAP recorta aleatoriamente áudios com mais de 10 s, en
 | medido | no *Utawarerumono* | nos nossos cues |
 |---|---|---|
 | andamento | 63–162 bpm, conforme o clima | `shrine` 66–80, `village` 88–112, `festival` 118–144, `kagura` 126–160, `elegy` 60–76 |
-| pulso | as peças sagradas quase sem pulso (0,09–0,29), a festa e o kagura batendo forte (0,60–0,69) | `shrine` 0,13; `festival` 0,53, `kagura` 0,46 |
-| timbre | quente: o centro do espectro em 260–650 Hz, porque o grave é forte (63–250 Hz a até 9 dB da banda mais forte) | 560–680 Hz (o `elegy`, só com o koto, 740); o `shrine` fica a ~2 dB de "Kamigatari" em cada oitava |
-| dinâmica | nivelada: 1,6–8 dB entre o forte e o fraco | 2–5,6 dB |
+| pulso | as peças sagradas quase sem pulso (0,09–0,29); o dia a dia e as festas marcando o tempo (0,81–0,85); os lamentos, 0,34–0,46; as batalhas, 0,54–0,77 ("Ikusa Kagura": 0,60) | `shrine` 0,11–0,12; `village` 0,70–0,82; `festival` 0,80–0,84; `elegy` 0,34–0,46; `kagura` 0,60–0,69. A melodia fica um passo atrás do ritmo: com o shakuhachi na frente, o seu vibrato borrava o pulso do `village` (0,42) |
+| timbre | quente: o centro do espectro em 260–650 Hz, porque o grave é forte (63–250 Hz a até 9 dB da banda mais forte); os lamentos, 386–612; as batalhas, ~500 | `village` 424–498, `elegy` 481–624 (o shakuhachi de flauta longa, 2.4, descendo a lá2), `kagura` 506–589, `festival` 539–618, `shrine` 655–716 |
+| dinâmica | nivelada: 1,6–8 dB entre o forte e o fraco; os lamentos, 7,6–13 | 1,5–5,4 dB; o `elegy` 9–12,6 (a metade do koto, íntima; as cordas crescem quando o shakuhachi entra) |
 
 E a linguagem: as escalas in (miyako-bushi: 0 1 5 7 8, a do koto solene, o meio tom caindo na tônica), yo (0 2 5 7 9, a das canções folclóricas) e ryukyu (0 4 5 7 11, a das ilhas do sul); o *ma*, o espaço: cada frase termina numa nota longa e num respiro; a heterofonia: o koto toca a melodia do shakuhachi junto, dedilhada, ornamentada e uma oitava abaixo, não em harmonia; a orquestra por baixo em quintas e quartas abertas, sem terças.
 
@@ -634,13 +634,14 @@ No trompete, o brilho segue a intensidade, interpolando entre os dois ajustes: u
 
 Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um filtro só por formante.
 
-*Do Japão.* Medidos no đàn tranh e na percussão da VCSL (Versilian Community Sample Library, CC0, a irmã da VSCO-2) e em gravações do Wikimedia Commons (koto: CC BY e CC BY-SA; shakuhachi: "Shika no Tōne", de Araki Kodō III, domínio público); só análise.
+*Do Japão.* Medidos no đàn tranh e na percussão da VCSL (Versilian Community Sample Library, CC0, a irmã da VSCO-2) e em gravações do Wikimedia Commons (koto: CC BY e CC BY-SA; shakuhachi: "Shika no Tōne", de Araki Kodō III, domínio público) e do Freesound (shakuhachi moderno: synthtodd, CC0; UncleSigmund, CC BY 4.0); só análise.
 
 | medido | o que é | instrumento |
 |---|---|---|
 | đàn tranh, a cítara vietnamita prima do koto (48 notas, si2–si5) | grave: a fundamental fraca, os harmônicos 2–4 até 10 dB acima; médio e agudo: a fundamental domina; −20 dB em 0,3–0,9 s, mais rápido e mais brilhante quanto mais forte; o vibrato da mão esquerda (*yuri*) a 6,4–7,1 Hz, 20–63 cents (28 no mf, 39 no ff), começando ~0,15 s depois | o corpo e o *yuri* do `koto` |
 | koto real (2 gravações) | os harmônicos 2 a 6 mais fortes que a fundamental (+6 a +10 dB: tocado perto da ponte), −20 dB em 0,52–0,58 s (seda e tetron caem mais rápido que o aço), 7–19 % das notas sobem depois do ataque (*oshide*) | o `koto` fica a ~3 dB por harmônico e cai −20 dB em 0,46 s |
-| shakuhachi ("Shika no Tōne") | notas longas (2,6–3,5 s, até 11 s), entrando por baixo (~15 cents; às vezes 2,5–5,6 semitons) e saindo para cima (~25 cents, às vezes 2,7 semitons), vibrato lento (5,8 Hz, ~16 cents) que entra tarde | `shakuhachi` (o timbre: desenhado sobre a flauta, com mais ar e o *muraiki*, o sopro no ataque) |
+| shakuhachi ("Shika no Tōne") | notas longas (2,6–3,5 s, até 11 s), entrando por baixo (~15 cents; às vezes 2,5–5,6 semitons) e saindo para cima (~25 cents, às vezes 2,7 semitons), vibrato lento (5,8 Hz, ~16 cents) que entra tarde | os gestos do `shakuhachi`, mais o *muraiki* (o sopro no ataque) |
+| shakuhachi moderno (2 gravações; a de 1930 é um disco de 78 rotações, que esconde o que passa de 2–3 kHz) | rico no grave (a ~260 Hz, o dó central, o 2º e o 3º harmônicos só 6–8 dB abaixo do 1º); quase um seno no agudo (2º a −16..−18 dB, 3º a −21..−26, o 4º mais 12–15 dB abaixo); o sopro 25–33 dB abaixo do tom entre os harmônicos | o timbre do `shakuhachi`, aditivo: os 8 harmônicos medidos, cada um um seno na mesma curva de altura (presos juntos) com o seu próprio tremor, mais o sopro; fica a ~2 dB por harmônico (o de antes tinha o 2º a −3 dB: 13 dB forte demais, o "sintético") |
 | bumbo (VCSL) | os modos da pele: 59, 62, 75, 86, 108 Hz, soando ~2 s | os modos do `taiko`, com baqueta de madeira (*bachi*) |
 | bloco de madeira (VCSL) | um cacho em 1,27–1,46 kHz e 2,7–3,5 kHz, T60 0,3–0,6 s, −20 dB em 0,07–0,1 s | `hyoshigi` |
 | sinos de mão nepaleses (VCSL) | modos a 1 : 2,7 : 3,84 : 4,87, soando 1–3 s | `rin` (mais longo, como uma tigela, com um batimento lento) |

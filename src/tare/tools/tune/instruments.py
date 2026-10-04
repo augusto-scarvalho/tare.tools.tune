@@ -416,13 +416,20 @@ def koto(n: Note) -> list:
     return [replace(ring, bend=bend)] if bend else [ring]
 
 
-SHAKUHACHI = [(1100.0, 2500.0, 1.0), (2600.0, 1500.0, 0.25)]     # designed on the flute's body, a little more air
+SHAKUHACHI = {262: (-8, -6, -20, -27, -29, -30, -36), 524: (-16, -21, -29, -39, -36, -43, -44),
+              760: (-17, -23, -38, -36, -44, -47, -50), 1050: (-18, -26, -38, -42, -48, -51, -55)}
+# harmonics 2-8 vs the first (dB) by the note's Hz, as recorded
+BREATH = 0.2      # the breath: 24-30 dB under the tone between its harmonics (recorded: 25-33)
 
 
 def shakuhachi(n: Note) -> list:
-    """A shakuhachi (Shika no Tone, Araki Kodo III, public domain): long notes (2.6-3.5 s typical) that slide in from
-    below (~15 cents; one in seven from 2-5 semitones under) and lift as they end (~25 cents), a slow yuri (5.8 Hz,
-    ~16 cents) coming in late, breath in the tone and a burst of it (muraiki) on strong attacks."""
+    """A shakuhachi. Its gestures from Shika no Tone (Araki Kodo III, public domain): long notes (2.6-3.5 s typical)
+    that slide in from below (~15 cents; one in seven from 2-5 semitones under) and lift as they end (~25 cents), a
+    slow yuri (5.8 Hz, ~16 cents) coming in late, the breath swelling to 40 % of the note and sinking 5 dB by its end,
+    a burst of breath (muraiki) on strong attacks. Its tone from two modern recordings (Freesound: synthtodd, CC0;
+    UncleSigmund, CC BY 4.0): rich low down (at C4 the 2nd and 3rd harmonics 6-8 dB under the first), nearly a sine
+    up high (2nd -16..-18 dB, 3rd -21..-26, the 4th a further 12-15 dB down), built as those harmonics, each a sine
+    on the same pitch curve (so they stay locked) wobbling on its own, and the breath around them."""
     d, release = n.dur, 0.15
     total = d + release
     slide = -(200 + 300 * n.rand("far")) if d > 0.8 and n.rand("big") < 0.15 else -(15 + 25 * n.rand("in"))
@@ -437,9 +444,18 @@ def shakuhachi(n: Note) -> list:
             cents.append((t, min((t - 0.4) / 0.4, 1.0) * depth * (0, 1, 0, -1)[k % 4]))
     cents += [(max(d - 0.12, cents[-1][0] + 0.01), 0.0), (d, 20 + 30 * n.rand("out")), (total, 20 + 30 * n.rand("out"))]
     pitch = [(round(t / total, 5), round(n.f * 2 ** (c / 1200), 2)) for t, c in cents]
-    out = [Syllable(round(n.start, 4), round(total, 4), pitch, "glottal", brightness=0.15, jitter=0.08, breath=0.35,
-                    formants=SHAKUHACHI, attack=0.06 + 0.1 * (1 - n.vel), release=release,
-                    amp=[(0, 0.7), (0.3, 1.0), (0.85, 0.9), (1, 0.6)], gain=round(n.vel, 4), shimmer=0.04)]
+    attack, amp = 0.06 + 0.1 * (1 - n.vel), [(0, 0.89), (0.4, 1.0), (0.9, 0.56), (1, 0.4)]
+    at = np.log2(sorted(SHAKUHACHI))
+    levels = [1.0] + [10 ** (np.interp(np.log2(n.f), at, [SHAKUHACHI[k][i] for k in sorted(SHAKUHACHI)]) / 20)
+                      for i in range(7)]
+    for h in (2, 4, 6, 8):                                   # a "sine" carries 12 % of its octave: leave it room
+        levels[h - 1] = max(levels[h - 1] - 0.12 * levels[h // 2 - 1], 0.0)
+    levels = [a for h, a in enumerate(levels, start=1) if n.f * h < 16_000]
+    out = [Syllable(round(n.start, 4), round(total, 4), [(t, round(f * h, 2)) for t, f in pitch], "sine",
+                    attack=attack, release=release, amp=amp, gain=round(n.vel * a / sum(levels), 4), shimmer=0.04)
+           for h, a in enumerate(levels, start=1)]
+    out.append(Noise(round(n.start, 4), round(total, 4), [(t, round(2.5 * f, 1)) for t, f in pitch], "band", 0.8,
+                     amp=amp, attack=attack, release=release, gain=round(BREATH * n.vel, 4)))
     if n.vel > 0.7:                                          # muraiki: the breath bursting into the tone
         out.append(Noise(round(n.start, 4), 0.18, [(0, 1800), (1, 1200)], "band", 0.6, amp=[(0, 1), (1, 0)],
                          attack=0.01, release=0.05, gain=round(0.5 * n.vel, 4)))

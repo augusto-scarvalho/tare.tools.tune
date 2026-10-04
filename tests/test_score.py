@@ -117,4 +117,11 @@ def test_a_body_bends_and_the_koto_trembles():
     shaku = INSTRUMENTS["shakuhachi"](Note(0.0, 2.0, 587.0, 0.8, 2))
     pitch = shaku[0].pitch
     assert pitch[0][1] < 587 < pitch[-1][1]                                     # in from below, out lifting
-    assert len(shaku) == 2                                                     # a strong attack: the muraiki
+    tone = [x for x in shaku if not hasattr(x, "filter")]
+    assert len(tone) == 8 and tone[3].pitch[5][1] == round(4 * pitch[5][1], 2)  # harmonics locked to one curve
+    assert len(shaku) == 10                                                    # the breath, and the muraiki
+    y = render(Voice(syllables=tone), sr).astype(float)[int(0.8 * sr):int(0.8 * sr) + 8192]
+    sp = np.abs(np.fft.rfft(y * np.hanning(len(y))))
+    fr = np.fft.rfftfreq(len(y), 1 / sr)
+    h1, h2 = (sp[np.abs(fr - k * 587) < 30].max() for k in (1, 2))
+    assert -21 < 20 * np.log10(h2 / h1) < -11                                   # recorded: -16 at C5
