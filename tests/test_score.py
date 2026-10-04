@@ -99,3 +99,22 @@ def test_damped_note_stops():
     m = Modal(0.0, 1.0, [(220.0, 4.0, 1.0)], [(0.0, 1.0, 0.0)], damp=0.3)
     y = render_modal(m, SR, 1)
     assert np.abs(y[int(0.45 * SR):]).max() < 1e-3 < np.abs(y[int(0.2 * SR):int(0.3 * SR)]).max()
+
+
+def test_a_body_bends_and_the_koto_trembles():
+    from tare.tools.tune import Voice, render
+    from tare.tools.tune.analysis import yin
+    from tare.tools.tune.spec import Modal
+    sr = 44100
+    m = Modal(0.0, 1.5, [(330.0, 3.0, 1.0), (660.0, 2.0, 0.5)], bend=[(0, 0), (0.15, 0), (0.3, 2), (1, 2)])
+    f, _ = yin(render(Voice(modal=[m]), sr).astype(float), sr, 200, 600)
+    assert abs(np.median(f[20:40]) - 330) < 3 and abs(np.median(f[150:250]) - 330 * 2 ** (2 / 12)) < 3   # +2 semitones
+    long = INSTRUMENTS["koto"](Note(0.0, 2.0, 330.0, 0.5, 5))[0]
+    f, _ = yin(render(Voice(modal=[long]), sr).astype(float), sr, 250, 450, frame=0.04, hop=0.005)
+    c = 1200 * np.log2(f[f > 0][80:300] / 330)
+    assert 18 < (np.percentile(c, 95) - np.percentile(c, 5)) / 2 < 40          # yuri: ~28 cents at mf (đàn tranh)
+    assert not INSTRUMENTS["koto"](Note(0.0, 0.3, 330.0, 0.5, 6))[0].bend       # a short note just rings
+    shaku = INSTRUMENTS["shakuhachi"](Note(0.0, 2.0, 587.0, 0.8, 2))
+    pitch = shaku[0].pitch
+    assert pitch[0][1] < 587 < pitch[-1][1]                                     # in from below, out lifting
+    assert len(shaku) == 2                                                     # a strong attack: the muraiki

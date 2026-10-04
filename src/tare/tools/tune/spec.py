@@ -8,8 +8,9 @@ from dataclasses import MISSING, asdict, dataclass, field, fields
 
 FORMAT = "tare.tools.tune.voice"
 OLD_FORMATS = {"creaturesynth.voice"}   # the project's earlier name
-VERSION = 6   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
-              # 5: vocoded clips and natural speech; 6: bits (the grain of a console's compressed samples)
+VERSION = 7   # 2: speech; 3: realism (air, room, lowpass, shimmer); 4: sound effects (modal, noise, scatter, loop);
+              # 5: vocoded clips and natural speech; 6: bits (the grain of a console's compressed samples);
+              # 7: a modal body's bend (a koto string pressed after the pluck, a timpani pedal)
 
 Curve = list[tuple[float, float]]  # (normalised time 0..1, value) breakpoints
 
@@ -94,6 +95,8 @@ class Modal:
     click: float = 0.0                # the contact noise itself, mixed in
     gain: float = 1.0
     damp: float = 0.0                 # s after start when a hand or a damper stops it (-60 dB in 0.1 s); 0 = free
+    bend: Curve = field(default_factory=list)   # semitones over the body's dur (0..1): every mode follows, as when a
+    # string's tension changes (the ring is read faster or slower, like a tape); empty = no bend
 
 
 @dataclass

@@ -183,6 +183,15 @@ def test_creatures_and_music_sound_the_same(lib):
 
 
 @built
+def test_a_bent_body_sounds_the_same(lib):
+    """A string pressed after the pluck (a koto's oshide) and a trembling one (yuri): the ring read faster."""
+    for bend in ([(0, 0), (0.15, 0), (0.3, 2), (1, 2)], [(t / 20, 0.3 * ((t % 2) * 2 - 1)) for t in range(21)]):
+        m = Modal(0.05, 1.5, [(330.0, 3.0, 1.0), (661.0, 2.0, 0.5), (993.0, 1.5, 0.3)], hardness=12000, click=0.1,
+                  bend=bend)
+        assert same(lib, Voice(modal=[m], seed=5), 22050) < 1e-6
+
+
+@built
 def test_the_eras_sound_the_same(lib):
     for era in ("hd", "16bit"):
         for kind, style, event in (("blade", "steel", "clash"), ("ui", "crystal", "confirm"),

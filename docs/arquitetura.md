@@ -37,7 +37,7 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `arms.py`, `magic.py`, `status.py`, `ui.py`, `home.py` (o dia a dia), `mounts.py` (cavalaria, asas, marcha, teleporte), `ambience.py` e `places.py` (os lugares) |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
 | `score.py` | composição: `Score` (faixas, sons posicionados, pan, sala estéreo compartilhada, loops), nomes de notas, acordes e escalas |
-| `instruments.py` | 38 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
+| `instruments.py` | 43 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
 | `music.py` | músicas por semente: `Cue` (jingles e loops, orquestra ou chip) |
 | `music_tactics.py` | os cues de tactics: batalhas, preparação, mapa, cenas, recrutamento |
 
@@ -621,6 +621,19 @@ Para que cada modo comece exatamente no seu ganho, um contato menor que 3 amostr
 No trompete, o brilho segue a intensidade, interpolando entre os dois ajustes: uma ressonância perto de 670 Hz quando suave, abrindo para 1,2 e 2 kHz quando forte.
 
 Para não refiltrar bloco a bloco, ressonâncias fixas (boca parada) usam um filtro só por formante.
+
+*Do Japão.* Medidos no đàn tranh e na percussão da VCSL (Versilian Community Sample Library, CC0, a irmã da VSCO-2) e em gravações do Wikimedia Commons (koto: CC BY e CC BY-SA; shakuhachi: "Shika no Tōne", de Araki Kodō III, domínio público); só análise.
+
+| medido | o que é | instrumento |
+|---|---|---|
+| đàn tranh, a cítara vietnamita prima do koto (48 notas, si2–si5) | grave: a fundamental fraca, os harmônicos 2–4 até 10 dB acima; médio e agudo: a fundamental domina; −20 dB em 0,3–0,9 s, mais rápido e mais brilhante quanto mais forte; o vibrato da mão esquerda (*yuri*) a 6,4–7,1 Hz, 20–63 cents (28 no mf, 39 no ff), começando ~0,15 s depois | o corpo e o *yuri* do `koto` |
+| koto real (2 gravações) | os harmônicos 2 a 6 mais fortes que a fundamental (+6 a +10 dB: tocado perto da ponte), −20 dB em 0,52–0,58 s (seda e tetron caem mais rápido que o aço), 7–19 % das notas sobem depois do ataque (*oshide*) | o `koto` fica a ~3 dB por harmônico e cai −20 dB em 0,46 s |
+| shakuhachi ("Shika no Tōne") | notas longas (2,6–3,5 s, até 11 s), entrando por baixo (~15 cents; às vezes 2,5–5,6 semitons) e saindo para cima (~25 cents, às vezes 2,7 semitons), vibrato lento (5,8 Hz, ~16 cents) que entra tarde | `shakuhachi` (o timbre: desenhado sobre a flauta, com mais ar e o *muraiki*, o sopro no ataque) |
+| bumbo (VCSL) | os modos da pele: 59, 62, 75, 86, 108 Hz, soando ~2 s | os modos do `taiko`, com baqueta de madeira (*bachi*) |
+| bloco de madeira (VCSL) | um cacho em 1,27–1,46 kHz e 2,7–3,5 kHz, T60 0,3–0,6 s, −20 dB em 0,07–0,1 s | `hyoshigi` |
+| sinos de mão nepaleses (VCSL) | modos a 1 : 2,7 : 3,84 : 4,87, soando 1–3 s | `rin` (mais longo, como uma tigela, com um batimento lento) |
+
+O *oshide* e o *yuri* precisam que a nota mude de altura depois do golpe: um corpo `Modal` aceita uma curva `bend` (semitons ao longo da nota). O anel é lido mais rápido ou mais devagar, como uma fita, e todos os modos sobem juntos, como numa corda quando a tensão muda; o núcleo em C++ faz a mesma conta (spec versão 7).
 
 **Composição (`Cue`).**
 - A semente escolhe tom (sol3 a fá♯4) e modo, a progressão (I–IV–V–I, i–VI–VII–i…), os ritmos e o motivo.

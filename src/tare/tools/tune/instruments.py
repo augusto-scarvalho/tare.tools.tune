@@ -8,7 +8,11 @@ instrument as ratios to the note, their levels and decay times, and how both cha
     plucked       harp (harmonic; the low strings ring 7 s and are rich, the top ones nearly pure), pizzicato
     drums         timpani (the pitched mode with 1.5 / 2 / 2.44 over it), hand drums, concert bass drum, snare
     metals        triangle, crash cymbal, gong, tambourine
+    Japan         koto, shakuhachi, taiko, hyoshigi, rin (the VCSL đàn tranh and percussion, koto and shakuhachi
+                  recordings from Wikimedia Commons)
 """
+from dataclasses import replace
+
 import numpy as np
 
 from .score import Note
@@ -369,6 +373,113 @@ def choir(n: Note) -> list:
                     voices=3, spread=10.0, jitter=0.05)
 
 
+# -- Japan: measured on the VCSL đàn tranh and percussion (CC0) and on koto and shakuhachi recordings (Wikimedia
+#    Commons, CC BY / CC BY-SA / public domain); analysis only ------------------------------------------------------
+
+KOTO = [0, 12, 14, 11, 10, 13, 5, -2, -8, -12]   # harmonics vs the first, dB, before the pick and body take theirs
+
+
+def _trill(start: float, until: float, dur: float, rate: float, cents: float) -> list:
+    """A tremble as a bend curve over `dur` (0..1, semitones): from `start` to `until` s, easing in over 0.2 s."""
+    pts, t, k = [(0.0, 0.0), (round(start / dur, 5), 0.0)], start, 0
+    while t + 1 / (4 * rate) < min(until, dur):
+        t += 1 / (4 * rate)
+        k += 1
+        pts.append((round(t / dur, 5), round(min((t - start) / 0.2, 1.0) * cents / 100 * (0, 1, 0, -1)[k % 4], 4)))
+    return pts + ([(1.0, 0.0)] if pts[-1][0] < 1.0 else [])
+
+
+def koto(n: Note) -> list:
+    """A koto: silk (now tetron) strings plucked with ivory picks near the bridge, so the 2nd-6th harmonics are louder
+    than the first (+6 to +10 dB in the recordings); it falls 20 dB in ~0.55 s, faster than the steel-strung đàn
+    tranh (~0.9 s), and the pick brightens with force. Long notes tremble (yuri: the left hand pressing the string
+    past its bridge, 6.4-7.1 Hz, 20-63 cents, from ~0.15 s; measured on the đàn tranh), and about one note in seven is
+    plucked a step lower and pressed up into its pitch (oshide: 7-19 % of the recorded notes bend up)."""
+    t1 = 3.0 * (300 / n.f) ** 0.4
+    parts = []
+    for h, db in enumerate(KOTO, start=1):
+        if n.f * h > 12_000:
+            break
+        t = t1 * h ** -0.45
+        parts += [(h, db + _soft(n.f * h, 6000, 2), 0.85 * t), (h * 1.0005, db - 12 + _soft(n.f * h, 6000, 2), t)]
+    ring = _ring(n, parts, 14_000, 0.06, 0.0, cap=6.0, spread=0.0008)
+    bend, settle = [], 0.15
+    if n.dur >= 0.5 and n.rand("oshide") < 0.15:            # oshide: lower first, pressed up into the note
+        below = -1.0 if n.rand("step") < 0.7 else -2.0
+        at = 0.08 + 0.1 * n.rand("at")
+        settle = at + 0.12
+        bend = [(0.0, below), (round(at / ring.dur, 5), below), (round(settle / ring.dur, 5), 0.0), (1.0, 0.0)]
+    if n.dur >= 0.8:                                         # yuri: deeper when played harder (28 -> 39 cents)
+        rate, cents = 6.4 + 0.7 * n.rand("yr"), 24 + 30 * n.vel
+        trill = _trill(settle, n.dur, ring.dur, rate, cents)
+        bend = [p for p in bend if p[0] < trill[1][0]] + trill[1:] if bend else trill
+    return [replace(ring, bend=bend)] if bend else [ring]
+
+
+SHAKUHACHI = [(1100.0, 2500.0, 1.0), (2600.0, 1500.0, 0.25)]     # designed on the flute's body, a little more air
+
+
+def shakuhachi(n: Note) -> list:
+    """A shakuhachi (Shika no Tone, Araki Kodo III, public domain): long notes (2.6-3.5 s typical) that slide in from
+    below (~15 cents; one in seven from 2-5 semitones under) and lift as they end (~25 cents), a slow yuri (5.8 Hz,
+    ~16 cents) coming in late, breath in the tone and a burst of it (muraiki) on strong attacks."""
+    d, release = n.dur, 0.15
+    total = d + release
+    slide = -(200 + 300 * n.rand("far")) if d > 0.8 and n.rand("big") < 0.15 else -(15 + 25 * n.rand("in"))
+    t_in = min(0.12 + 0.15 * n.rand("tin") + (0.15 if slide < -100 else 0.0), 0.4 * d)
+    cents = [(0.0, slide), (t_in, 0.0)]
+    if d > 1.0:                                              # yuri from 0.4 s, easing in
+        rate, depth = 5.8 * (0.9 + 0.2 * n.rand("vr")), 10 + 14 * n.rand("vd")
+        t, k = 0.4, 0
+        while t + 1 / (4 * rate) < d - 0.2:
+            t += 1 / (4 * rate)
+            k += 1
+            cents.append((t, min((t - 0.4) / 0.4, 1.0) * depth * (0, 1, 0, -1)[k % 4]))
+    cents += [(max(d - 0.12, cents[-1][0] + 0.01), 0.0), (d, 20 + 30 * n.rand("out")), (total, 20 + 30 * n.rand("out"))]
+    pitch = [(round(t / total, 5), round(n.f * 2 ** (c / 1200), 2)) for t, c in cents]
+    out = [Syllable(round(n.start, 4), round(total, 4), pitch, "glottal", brightness=0.15, jitter=0.08, breath=0.35,
+                    formants=SHAKUHACHI, attack=0.06 + 0.1 * (1 - n.vel), release=release,
+                    amp=[(0, 0.7), (0.3, 1.0), (0.85, 0.9), (1, 0.6)], gain=round(n.vel, 4), shimmer=0.04)]
+    if n.vel > 0.7:                                          # muraiki: the breath bursting into the tone
+        out.append(Noise(round(n.start, 4), 0.18, [(0, 1800), (1, 1200)], "band", 0.6, amp=[(0, 1), (1, 0)],
+                         attack=0.01, release=0.05, gain=round(0.5 * n.vel, 4)))
+    return out
+
+
+TAIKO = [(1, 0, 1.4), (1.05, -2, 1.3), (1.27, -8, 1.0), (1.46, -1, 1.1), (1.83, -6, 0.8), (2.3, -14, 0.5),
+         (2.9, -20, 0.4)]     # the ratios of a big drum's head (VCSL bass drum: 59, 62, 75, 86, 108 Hz)
+
+
+def taiko(n: Note) -> list:
+    """A nagado-daiko: the cowhide's modes (a big drum's head ratios, measured on the VCSL bass drum: 1, 1.05, 1.27,
+    1.46, 1.83) ringing over a second, struck with wooden bachi: a hard contact, the boom, the stick's knock."""
+    head = _ring(n, TAIKO, 3500, 0.08, 0.0, cap=2.0)
+    boom = Noise(round(n.start, 4), 0.12, [(0, 300), (1, 90)], "low", 0.9, amp=[(0, 1), (1, 0)], attack=0.001,
+                 release=0.03, gain=round(1.1 * n.vel, 4))
+    stick = Noise(round(n.start, 4), 0.02, [(0, 2500), (1, 2000)], "band", 1.0, amp=[(0, 1), (1, 0)], attack=0.0005,
+                  release=0.005, gain=round(0.25 * n.vel, 4))
+    return [head, boom, stick]
+
+
+HYOSHIGI = [(0.959, -7, 0.36), (1.0, 0, 0.42), (1.057, -3, 0.41), (1.1, -14, 0.35), (2.149, -2, 0.45),
+            (2.37, -10, 0.35), (2.631, -8, 0.39)]   # a woodblock's cluster around 1.32 kHz (VCSL), as ratios
+
+
+def hyoshigi(n: Note) -> list:
+    """Hyoshigi, the two hardwood clappers of the theatre and the night watch: a woodblock's cluster (VCSL:
+    1.27-1.46 and 2.7-3.5 kHz, T60 0.3-0.6 s), struck hard and dry; `n.f` places the cluster (1.32 kHz ~ E6)."""
+    return [_ring(n, HYOSHIGI, 16_000, 0.3, 0.0, cap=0.8)]
+
+
+RIN = [(1, 0, 6.0), (1.004, -3, 6.0), (2.70, -2, 3.0), (3.84, -9, 1.5), (4.87, -8, 0.9), (5.86, -16, 0.6)]
+
+
+def rin(n: Note) -> list:
+    """A rin, the temple's bowl bell: the Nepalese hand bells' modes (VCSL: 1, 2.7, 3.84, 4.87 times the lowest)
+    held longer, as a bowl rings, with a slow beat between the first mode and its twin."""
+    return [_ring(n, RIN, 6000, 0.02, 0.0, cap=10.0)]
+
+
 # -- chiptune: the Game Boy's two pulse channels, its wave channel and its noise --------------------------------------
 
 def _pulse(width: float):
@@ -411,7 +522,7 @@ INSTRUMENTS = {
     "gong": gong, "crash": crash, "tambourine": tambourine, "shaker": shaker, "hihat": hihat, "open_hat": open_hat,
     "bass": bass, "e_piano": e_piano,
     "violins": violins, "cellos": cellos, "strings": strings, "flute": flute, "horn": horn, "trumpet": trumpet,
-    "choir": choir,
+    "choir": choir, "koto": koto, "shakuhachi": shakuhachi, "taiko": taiko, "hyoshigi": hyoshigi, "rin": rin,
     "square": _pulse(0.5), "pulse": _pulse(0.25), "thin_pulse": _pulse(0.125), "chip_bass": chip_bass,
     "chip_kick": chip_kick, "chip_snare": chip_snare, "chip_hat": chip_hat,
 }

@@ -426,6 +426,20 @@ Vec modal(const Spec &m, int sr, uint64_t k) {
         const Vec y = lfilter({std::sin(w)}, {1.0, -2 * r * std::cos(w), r * r}, exc);
         for (std::size_t i = 0; i < n; ++i) out[i] = out[i] + gain * y[i];
     }
+    const Rows bend = m.rows("bend", {}, 2);
+    if (!bend.empty()) {   // the ring read faster (up) or slower (down): every mode bends together
+        const Vec semis = curve(bend, n);
+        Vec bent(n, 0.0);
+        double pos = 0.0;
+        for (std::size_t i = 0; i < n; ++i) {
+            if (pos <= static_cast<double>(n - 1)) {
+                const auto j = static_cast<std::size_t>(pos);
+                bent[i] = j + 1 < n ? out[j] + (pos - static_cast<double>(j)) * (out[j + 1] - out[j]) : out[j];
+            }
+            pos += std::pow(2.0, semis[i] / 12);
+        }
+        out = std::move(bent);
+    }
     const double damp = m.num("damp", 0);
     if (0 < damp && damp < m.num("dur", 0)) {   // damped: -60 dB over the next 0.1 s
         const auto a = static_cast<std::size_t>(damp * sr);
@@ -771,7 +785,7 @@ int32_t tt_render_voice(const char *json, const char *knobs, const tt_bank *cons
         const std::string format = voice.text("format", "tare.tools.tune.voice");
         if (format != "tare.tools.tune.voice" && format != "creaturesynth.voice")
             throw std::runtime_error("not a tare.tools.tune.voice document");
-        if (voice.number("version", 6) > 6) throw std::runtime_error("the spec is newer than this core (version 6)");
+        if (voice.number("version", 7) > 7) throw std::runtime_error("the spec is newer than this core (version 7)");
         for (const char *other : {"chips", "speech", "vocoded"})
             if (!voice.list(other).empty())
                 throw Unsupported(std::string("this core does not render ") + other + " layers yet");

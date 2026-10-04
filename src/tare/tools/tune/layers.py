@@ -57,6 +57,11 @@ def render_modal(m: Modal, sr: int, k: int) -> np.ndarray:
     for hz, t60, gain in m.modes:
         if 20 <= hz < 0.45 * sr:
             out = out + gain * resonator(exc, hz, t60, sr)
+    if m.bend:                             # the ring read faster (up) or slower (down): every mode bends together
+        from .render import curve
+        ratio = 2 ** (curve(m.bend, n) / 12)
+        pos = np.concatenate([[0.0], np.cumsum(ratio[:-1])])
+        out = np.interp(pos, np.arange(n), out, right=0.0)
     if 0 < m.damp < m.dur:                 # damped: -60 dB over the next 0.1 s
         a = int(m.damp * sr)
         out[a:] *= 10 ** (-3 * np.arange(n - a) / (0.1 * sr))

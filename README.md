@@ -339,7 +339,7 @@ O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e 
 
 Três peças, uma sobre a outra:
 - **`Score`** (`tare.tools.tune.score`): uma linha do tempo em compassos e segundos. Põe notas e sons prontos (efeitos, criaturas, falas) em camadas, com volume, posição no estéreo e um eco (sala) compartilhado. Renderiza em estéreo, e `render(loop=...)` devolve um loop sem emenda.
-- **Instrumentos** (`tare.tools.tune.instruments`): 38 instrumentos medidos em notas gravadas, com os números de cada um no código:
+- **Instrumentos** (`tare.tools.tune.instruments`): 43 instrumentos medidos em notas gravadas, com os números de cada um no código:
   - cordas pinçadas: harpa, violão, alaúde, pizzicato;
   - teclados de percussão: glockenspiel, marimba, xilofone, celesta, caixinha de música;
   - sinos tubulares;
@@ -347,6 +347,7 @@ Três peças, uma sobre a outra:
   - metais de percussão: triângulo, prato, gongo, pandeiro, chocalho;
   - sustentados: violinos, violoncelos, flauta, trompa, trompete, coro;
   - banda: baixo elétrico, piano elétrico, chimbal fechado e aberto;
+  - do Japão: koto (com o *yuri*, a corda tremendo, e o *oshide*, a corda empurrada até a nota), shakuhachi, taiko, hyoshigi, rin;
   - chiptune: pulsos, baixo e ruídos de console.
 - **`Cue`** (`tare.tools.tune.music`): músicas compostas a partir de uma semente.
   - Jingles: `victory`, `levelup`, `quest`, `gameover`.
