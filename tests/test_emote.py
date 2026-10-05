@@ -90,7 +90,7 @@ def test_vocoded_layer_round_trips_in_the_spec():
     v = Voice(vocoded=[Vocoded("laugh/male/536811", 0.1, pitch=1.2, warp=1.1, stretch=0.9, breath=-0.2)], seed=3)
     w = Voice.from_json(v.to_json())
     assert w == v and w.duration == pytest.approx(0.1 + template("laugh/male/536811").duration / 1.2)   # on tape
-    stretched = Voice(vocoded=[Vocoded("laugh/male/536811", pitch=1.2, warp=1.1, stretch=0.5)])   # too far for tape
+    stretched = Voice(vocoded=[Vocoded("laugh/male/536811", pitch=1.2, warp=1.1, stretch=0.5)])   # too short for tape
     assert stretched.duration == pytest.approx(template("laugh/male/536811").duration * 0.5)
     assert np.array_equal(render(v, SR), render(w, SR))
     with pytest.raises(ValueError):

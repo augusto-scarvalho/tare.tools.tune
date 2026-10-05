@@ -31,8 +31,10 @@ LO, HI = 40.0, 20_000.0
 DATA = Path(__file__).parent / "data" / "barks.npz"
 AUDIO = DATA.with_name("barks_audio.npz")   # the recordings themselves, cut as analysed (16-bit, AUDIO_SR)
 AUDIO_SR = 24_000
-TAPE = 0.25                   # how far a bark may move to be played like tape: its length off what the style asks,
-                              # its formants off its pitch (both move together on tape), at most 25 %
+TAPE = 0.4                    # how far a bark may move to be played like tape: its formants off its pitch (both move
+                              # together on tape); by ear tape still beat the vocoder in 10 of 12 pairs moving up to
+                              # 40 % (round "fita-fronteira")
+TAPE_LENGTH = 0.25            # and its length off what the style asks (a style fitting a length keeps the vocoder)
 ENV_FLOOR = -107.5            # envelopes are stored in 0.5 dB steps from here (uint8)
 BREATH = 3 ** 0.5             # uniform noise in -1..1 to unit variance, as WORLD's
 UNVOICED = 500.0              # Hz: the pulse rate where there is no voice (breath only), as WORLD's
@@ -212,10 +214,10 @@ def recording(name: str) -> np.ndarray | None:
 def tape(v) -> bool:
     """Whether a Vocoded bark plays from its recording, like tape a little faster or slower: pitch, formants and length
     moving together, nothing cut or rebuilt (by ear it sounds as the recording does; the vocoder and PSOLA did not).
-    Only when it moves that way anyway: not whispered, not rough or doubled, its length and formants within TAPE of
-    where tape takes them."""
+    Only when it moves that way anyway: not whispered, not rough or doubled, its formants within TAPE and its length
+    within TAPE_LENGTH of where tape takes them."""
     return (v.clip in _recordings() and abs(v.breath) <= 0.3 and not v.rough and not v.sub
-            and abs(v.stretch * v.pitch - 1) <= TAPE and abs(v.warp / v.pitch - 1) <= TAPE)
+            and abs(v.stretch * v.pitch - 1) <= TAPE_LENGTH and abs(v.warp / v.pitch - 1) <= TAPE)
 
 
 def duration(v) -> float:

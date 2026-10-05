@@ -119,8 +119,8 @@ O que mais se ouve num tactics: o cursor passa por dezenas de casas a cada turno
 
 | Som | Jogos | Hoje | Prioridade |
 |---|---|---|---|
-| Gritos de golpe, dor, morte, comemoração | todos | tem: `emote`, estilos `tactics`, `gasp` (medido no TO) e `kiai` (medido no Utawarerumono). De ouvido (rodada "gritos-de-audio", robótico de 1 a 5): o vocoder 3,4, a gravação movida por PSOLA 2,9, a gravação CC0 original 2,1, e mesmo ela "encenada, sem emoção" | A |
-| Frases curtas de batalha e diálogos de história em português | todos | parcial: voz natural. De ouvido (rodada "tremor-do-ciclo"): robótica (4 de 5) e com cara de português de Portugal; "poções" (o -ções) e o "dar" de "dar uma olhada" (um r arrastado, anasalado), "este" soando "heste", "novo" soando "nóvu" (o o aberto), a pergunta "Você viu o meu gato?" sem subir, uma pausa longa demais, e robótico no fim da frase | A |
+| Gritos de golpe, dor, morte, comemoração | todos | tem: `emote`, estilos `tactics`, `gasp` (medido no TO) e `kiai` (medido no Utawarerumono). De ouvido (rodada "gritos-de-audio", robótico de 1 a 5): o vocoder 3,4, a gravação movida por PSOLA 2,9, a gravação CC0 original 2,1, e mesmo ela "encenada, sem emoção"; agora a maioria toca a própria gravação como fita (63–83% por estilo) | A |
+| Frases curtas de batalha e diálogos de história em português | todos | parcial: voz natural. De ouvido (rodada "tremor-do-ciclo"): robótica (4 de 5) e com cara de português de Portugal; "poções" (o -ções) e o "dar" de "dar uma olhada" (um r arrastado, anasalado), "este" soando "heste", "novo" soando "nóvu" (o o aberto), a pergunta "Você viu o meu gato?" sem subir (e "O que te traz aqui?" também), a exclamação "Ele fugiu de novo!" sem força, uma pausa longa demais antes de "viajante", e robótico no fim da frase | A |
 | As mesmas falas em inglês | todos | falta: bancos em inglês | B |
 | Monstros e personagens que "falam" sem palavras | FFTA | parcial: balbucio | C |
 
