@@ -99,7 +99,7 @@ PHONES: dict[str, Phone] = {
     "h": Phone("h", 65, voiced=False, place="glot"),
     "R": Phone("h", 80, voiced=False, place="glot"),
 }
-PAUSES = {",": 0.18, ".": 0.38, "!": 0.38, "?": 0.38, "?!": 0.42, "…": 0.6}
+PAUSES = {",": 0.08, ".": 0.38, "!": 0.38, "?": 0.38, "?!": 0.42, "…": 0.6}   # a comma barely stops (by ear)
 
 # Per-language adjustments on top of PHONES: {lang: {phone: {field: value}}}
 LANG_PHONES: dict[str, dict[str, dict]] = {"pt": {}}

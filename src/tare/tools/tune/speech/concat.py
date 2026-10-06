@@ -31,11 +31,13 @@ CLASSES = {"vowel": VOWEL, "stop": {"p", "b", "t", "d", "k", "g"}, "affricate": 
            "fric": {"f", "v", "s", "z", "S", "Z", "R", "h", "x"}, "nasal": {"m", "n", "N", "J"},
            "liquid": {"l", "L", "r"}, "glide": {"j", "w", "j~", "w~"}, "pause": {"_"}}
 # phones that may stand in for each other, and what it costs (0 = the same)
-GROUPS = [({"a", "6"}, 0.3), ({"e", "E"}, 0.3), ({"o", "O"}, 0.3), ({"i", "I", "j"}, 0.35), ({"u", "U", "w"}, 0.35),
+# By ear an open vowel for a closed one is an accent ("novo" from "nove" said "nóvu"), and a nasal glide made a
+# nasal consonant ("poções" from "monstro" said "poçõns"): those stand in only when nothing else can
+GROUPS = [({"a", "6"}, 0.3), ({"e", "E"}, 1.5), ({"o", "O"}, 1.5), ({"i", "I", "j"}, 0.35), ({"u", "U", "w"}, 0.35),
           ({"U", "w"}, 0.1), ({"I", "j"}, 0.15), ({"6~", "a", "6"}, 0.6), ({"e~", "e", "E"}, 0.6),
           ({"i~", "i", "j~", "j"}, 0.6), ({"o~", "o", "O"}, 0.6), ({"u~", "u", "U", "w~", "w"}, 0.6),
           ({"m", "n", "N", "J"}, 0.7), ({"6", "@"}, 0.4), ({"R", "h", "x"}, 0.3), ({"l", "L"}, 0.5),
-          ({"J", "j~"}, 0.6), ({"N", "w~", "j~"}, 0.6)]
+          ({"J", "j~"}, 0.6), ({"N", "w~", "j~"}, 1.5)]
 N_BEST = 25                       # candidates kept per diphone
 JOIN = 0.2                        # the cost of any join, on top of the spectral distance (dB / 10)
 SMOOTH = 3                        # frames cross-faded on each side of a join
@@ -521,9 +523,13 @@ SURPRISE = 1.6                    # "?!": the question's pitch movements, wider 
 #   ?!   surprise ("Sério?!", "O quê?!"): the same, higher and longer
 #   …    trailing off: left hanging, level and slow
 # A wh-question ("Onde...?") falls like a statement (the regression has it), with the question word raised.
-TUNES = {
-    "?": {"nuc": (-1.5, 6.0), "post": (3.5, -2.0), "end": 5.5, "stretch": 1.1},
-    "?!": {"nuc": (0.0, 9.0), "post": (6.0, 0.0), "end": 8.5, "stretch": 1.3},
+TUNES = {             # by ear (rounds "tremor-do-ciclo", "conferencias"): questions rising to +6 and falling back to -2
+    # did not sound like questions, and an exclamation sounded like a statement: the yes/no rise goes higher and
+    # stays up, a wh-question rises a little at its end, and an exclamation peaks on its stressed vowel and falls
+    "?": {"nuc": (-1.5, 8.0), "post": (6.0, 2.0), "end": 7.0, "stretch": 1.1},
+    "?wh": {"nuc": (0.0, 5.0), "post": (3.0, 0.0), "end": 4.0, "stretch": 1.05},
+    "!": {"nuc": (5.0, 3.0), "post": (1.0, -6.0), "end": -4.0, "stretch": 1.05},
+    "?!": {"nuc": (0.0, 11.0), "post": (8.0, 1.0), "end": 10.5, "stretch": 1.3},   # surprise: above a question
     "…": {"nuc": (-0.5, -1.0), "post": (-1.0, -1.5), "end": -1.0, "stretch": 1.45},
 }
 WH_RAISE = 1.5                    # semitones on a wh-question's first vowel (the regression already starts high)
@@ -567,7 +573,7 @@ def tunes(learned, seq: list, phrases, final: float = 0.0, real: bool = False):
         tune = None if real else TUNES.get(ph.kind)
         widen = SURPRISE if real and ph.kind == "?!" else EXCLAIM if not real and ph.kind == "!" else 1.0
         if ph.kind == "?" and ph.wh and not real:
-            tune = None                                      # wh-questions fall: keep the learned tune
+            tune = TUNES["?wh"]                              # a wh-question: its own, milder rise
             targets[pos[idx[0]]] += WH_RAISE / 12
         if widen != 1.0:
             mean = targets[[pos[i] for i in idx]].mean()
@@ -582,7 +588,7 @@ def tunes(learned, seq: list, phrases, final: float = 0.0, real: bool = False):
                     targets[pos[i]] = ends[2 * k:2 * k + 2] / 12
             else:
                 targets[pos[nuclear]] = np.array([tune["nuc"][0], tune["end"]]) / 12
-        elif final and ph.kind in (".", "!", ","):
+        if final and ph.kind in (".", "!", ","):
             tail = [i for i in idx if i >= nuclear]
             for k, i in enumerate(tail):
                 w = (k + 1) / len(tail)

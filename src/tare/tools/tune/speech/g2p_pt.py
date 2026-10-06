@@ -334,10 +334,13 @@ def text_to_phrases(text: str) -> list[Phrase]:
     phrases = []
     for words, kind in normalize(text):
         ws = [word_to_phonemes(w, clitic=w in CLITICS and len(words) > 1) for w in words]
-        for a, b in zip(ws, ws[1:], strict=False):  # final s before a vowel-initial word sounds like z
-            if a.syllables and b.syllables and a.syllables[-1].phones[-1] == "s" and \
-                    is_vowel(b.syllables[0].phones[0]):
-                a.syllables[-1].phones[-1] = "z"
+        for a, b in zip(ws, ws[1:], strict=False):  # a final consonant before a vowel-initial word joins it:
+            if a.syllables and b.syllables and is_vowel(b.syllables[0].phones[0]):
+                last = a.syllables[-1].phones
+                if last[-1] == "s":                      # s sounds like z (traz aqui)
+                    last[-1] = "z"
+                elif last[-1] == "R":                    # r a tap, not the strong r (por este: po-res-te)
+                    last[-1] = "r"
         wh = kind in ("?", "?!") and (words[0] in WH_WORDS or " ".join(words[:2]) in WH_PAIRS)
         phrases.append(Phrase([w for w in ws if w.syllables], kind, wh=wh))
     return [p for p in phrases if p.words]

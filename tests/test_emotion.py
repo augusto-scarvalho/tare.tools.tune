@@ -37,7 +37,7 @@ def test_brazilian_question_tunes():
     oxytone = tail(sp, "Você viu o dragão?")
     assert oxytone[-1] > 1.3 * np.median(oxytone[:10])          # ends high
     wh = tail(sp, "Onde você comprou a espada?")
-    assert wh[-1] < 0.8 * wh[0]                                  # a wh-question falls
+    assert statement[-1] < wh[-1] < question.max()              # a wh-question rises a little at its end (by ear)
     surprise = tail(sp, "Você comprou a espada?!")
     assert surprise.max() > 1.15 * question.max()
     hanging = sp.spoken("Você comprou a espada...", "pt")
