@@ -1,0 +1,19 @@
+{
+  "protocol": "executed-semantic-workflows/2",
+  "sample_rate": 16000,
+  "tasks": [
+    {"id":"single","track":"memory","instruction":"Create a dry crystal confirmation, species 7, and export WAV.","actions":["create","export"]},
+    {"id":"variants","track":"memory","instruction":"Arrange four deterministic takes 250 ms apart, then change their shared power from .5 to .8 and export WAV.","actions":["create","shared_edit","export"]},
+    {"id":"arrangement","track":"memory","instruction":"Repeat a one-beat C4 and three beats of silence eight times at 120 BPM. Transpose the clip down one octave and export WAV and MIDI.","actions":["create","transpose","midi","export"]},
+    {"id":"refinement","track":"memory","instruction":"Create a crystal confirmation; inspect its top three band-power rows; set first Modal hardness to 1234, set lowpass to 1800 then 2400; reject a changed recipe under the old guard; export the last valid WAV.","actions":["create","inspect","hardness","filter","filter_again","stale_materialization","export"]},
+    {"id":"scene","track":"memory","instruction":"Mix a wolf attack, deep Ready speech at .1s, levelup Cue at .2s and the supplied local stereo contact WAV at .3s, with a .5 limiter. Export WAV.","actions":["create","export"]},
+    {"id":"shared-definition","track":"memory","instruction":"Create two takes from one confirmation recipe and an unrelated error sound. Change the shared confirmation power from .5 to .8, preserving the error sound, then export both takes.","actions":["create","shared_edit","export"]},
+    {"id":"invalid-repair","track":"memory","instruction":"Create a confirmation with ring .3. Reject ring 99 preserving the last good state, then apply ring .7 and export WAV.","actions":["create","invalid","repair","export"]},
+    {"id":"missing-asset","track":"memory","instruction":"Report the missing local WAV; create the specified 160-frame .125 contact, recover and export WAV.","actions":["missing","create_asset","recover","export"]},
+    {"id":"discovery","track":"memory","instruction":"Discover the bright crystal confirmation recipe and its events/styles; create a dry confirmation and export WAV.","actions":["discover","select_recipe","create","export"]},
+    {"id":"bank","track":"persisted","sizes":[8,32,128],"instruction":"In the supplied bank, change only the selected invocation power from .5 to .65 and export its WAV, preserving every unrelated entry.","actions":["observe","edit","export"]},
+    {"id":"bank-recovery","track":"persisted","size":8,"instruction":"Reject ring 99 without changing source bytes, repair to .7, then reject an earlier authored revision after a successful power edit; export the current WAV.","actions":["observe","invalid","repair","edit","stale_revision","export"]},
+    {"id":"capability","track":"persisted","instruction":"Render the supplied FM ping. Attempt Voice export and report refusal; export WAV instead.","actions":["observe","voice_refusal","export"]},
+    {"id":"repeated-edit","track":"persisted","size":8,"counts":[1,5,20],"instruction":"Apply the requested power values to one invocation through revision-checked transactions; preserve unrelated entries and export the final WAV.","actions":["observe","edits","export"]}
+  ]
+}

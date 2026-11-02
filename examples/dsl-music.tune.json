@@ -1,0 +1,21 @@
+{
+  "format": "tare.tools.tune.dsl",
+  "version": 1,
+  "context": {"sample_rate": 16000, "bpm": 120, "meter": 3},
+  "defs": {
+    "motif": {"body": {"pattern": "C4 - . . . .", "steps": 2}}
+  },
+  "sounds": {
+    "theme": {
+      "score": {
+        "seed": 17, "hall": 0.2, "loop": "2bar",
+        "tracks": [
+          {"id": "melody", "name": "lead-v1", "instrument": "harp", "pan": -0.3,
+           "notes": {"repeat": 2, "of": {"use": "motif"}}},
+          {"id": "bass", "name": "bass-v1", "instrument": "marimba", "pan": 0.3,
+           "notes": {"repeat": 2, "of": {"use": "motif", "then": [{"transpose": -12}]}}}
+        ]
+      }
+    }
+  }
+}

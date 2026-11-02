@@ -1,0 +1,2 @@
+# Store bytes exactly: this tree mixes CRLF and LF and tests compare fixtures byte for byte.
+* -text

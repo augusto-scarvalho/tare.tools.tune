@@ -1,0 +1,401 @@
+{
+  "corpus_id": "f9368b3f56208687eabf20cca2e1a9dbe082d96ea5c9baa52961ffa94a5c1834",
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.12.10",
+    "source_id": "65a5ef81305034673dfb57bdb11ee67137647f278f758fb971043b0239948f5d"
+  },
+  "kind": "executed_scripted_corpus",
+  "limitations": [
+    "Handwritten final Python solutions versus DSL construction and additional diagnostic transactions.",
+    "Task paths have different operation counts; totals are not a task-success efficiency comparison.",
+    "Content tokens exclude tool wrappers, system instructions and repeated model context.",
+    "Persistent Python namespace within a task; fresh task namespaces; no live-agent quality judgments.",
+    "Legacy format falls back to Python where it cannot express the task; identified per task.",
+    "Absolute temporary paths and source provenance make small count variations possible."
+  ],
+  "metrics": {
+    "cl100k_base": {
+      "arrangement": {
+        "dsl_json": {
+          "request_tokens": 172,
+          "response_tokens": 112,
+          "tool_calls": 2,
+          "total_content_tokens": 284
+        },
+        "project_json": {
+          "request_tokens": 254,
+          "response_tokens": 37,
+          "tool_calls": 1,
+          "total_content_tokens": 291
+        },
+        "python": {
+          "request_tokens": 111,
+          "response_tokens": 37,
+          "tool_calls": 1,
+          "total_content_tokens": 148
+        }
+      },
+      "capability-export": {
+        "dsl_json": {
+          "request_tokens": 132,
+          "response_tokens": 283,
+          "tool_calls": 4,
+          "total_content_tokens": 415
+        },
+        "project_json": {
+          "request_tokens": 109,
+          "response_tokens": 42,
+          "tool_calls": 1,
+          "total_content_tokens": 151
+        },
+        "python": {
+          "request_tokens": 75,
+          "response_tokens": 42,
+          "tool_calls": 1,
+          "total_content_tokens": 117
+        }
+      },
+      "creature-speech-scene": {
+        "dsl_json": {
+          "request_tokens": 167,
+          "response_tokens": 111,
+          "tool_calls": 2,
+          "total_content_tokens": 278
+        },
+        "project_json": {
+          "request_tokens": 129,
+          "response_tokens": 36,
+          "tool_calls": 1,
+          "total_content_tokens": 165
+        },
+        "python": {
+          "request_tokens": 129,
+          "response_tokens": 36,
+          "tool_calls": 1,
+          "total_content_tokens": 165
+        }
+      },
+      "four-variants": {
+        "dsl_json": {
+          "request_tokens": 238,
+          "response_tokens": 110,
+          "tool_calls": 2,
+          "total_content_tokens": 348
+        },
+        "project_json": {
+          "request_tokens": 119,
+          "response_tokens": 36,
+          "tool_calls": 1,
+          "total_content_tokens": 155
+        },
+        "python": {
+          "request_tokens": 119,
+          "response_tokens": 36,
+          "tool_calls": 1,
+          "total_content_tokens": 155
+        }
+      },
+      "high-low-refinement": {
+        "dsl_json": {
+          "request_tokens": 300,
+          "response_tokens": 135,
+          "tool_calls": 3,
+          "total_content_tokens": 435
+        },
+        "project_json": {
+          "request_tokens": 92,
+          "response_tokens": 44,
+          "tool_calls": 1,
+          "total_content_tokens": 136
+        },
+        "python": {
+          "request_tokens": 92,
+          "response_tokens": 44,
+          "tool_calls": 1,
+          "total_content_tokens": 136
+        }
+      },
+      "invalid-repair": {
+        "dsl_json": {
+          "request_tokens": 301,
+          "response_tokens": 253,
+          "tool_calls": 4,
+          "total_content_tokens": 554
+        },
+        "project_json": {
+          "request_tokens": 90,
+          "response_tokens": 32,
+          "tool_calls": 1,
+          "total_content_tokens": 122
+        },
+        "python": {
+          "request_tokens": 90,
+          "response_tokens": 32,
+          "tool_calls": 1,
+          "total_content_tokens": 122
+        }
+      },
+      "localized-bank-edit": {
+        "dsl_json": {
+          "request_tokens": 288,
+          "response_tokens": 237,
+          "tool_calls": 3,
+          "total_content_tokens": 525
+        },
+        "project_json": {
+          "request_tokens": 86,
+          "response_tokens": 39,
+          "tool_calls": 1,
+          "total_content_tokens": 125
+        },
+        "python": {
+          "request_tokens": 86,
+          "response_tokens": 39,
+          "tool_calls": 1,
+          "total_content_tokens": 125
+        }
+      },
+      "single-recipe": {
+        "dsl_json": {
+          "request_tokens": 138,
+          "response_tokens": 117,
+          "tool_calls": 2,
+          "total_content_tokens": 255
+        },
+        "project_json": {
+          "request_tokens": 133,
+          "response_tokens": 39,
+          "tool_calls": 1,
+          "total_content_tokens": 172
+        },
+        "python": {
+          "request_tokens": 82,
+          "response_tokens": 39,
+          "tool_calls": 1,
+          "total_content_tokens": 121
+        }
+      }
+    },
+    "o200k_base": {
+      "arrangement": {
+        "dsl_json": {
+          "request_tokens": 175,
+          "response_tokens": 111,
+          "tool_calls": 2,
+          "total_content_tokens": 286
+        },
+        "project_json": {
+          "request_tokens": 253,
+          "response_tokens": 37,
+          "tool_calls": 1,
+          "total_content_tokens": 290
+        },
+        "python": {
+          "request_tokens": 107,
+          "response_tokens": 37,
+          "tool_calls": 1,
+          "total_content_tokens": 144
+        }
+      },
+      "capability-export": {
+        "dsl_json": {
+          "request_tokens": 134,
+          "response_tokens": 285,
+          "tool_calls": 4,
+          "total_content_tokens": 419
+        },
+        "project_json": {
+          "request_tokens": 109,
+          "response_tokens": 42,
+          "tool_calls": 1,
+          "total_content_tokens": 151
+        },
+        "python": {
+          "request_tokens": 72,
+          "response_tokens": 42,
+          "tool_calls": 1,
+          "total_content_tokens": 114
+        }
+      },
+      "creature-speech-scene": {
+        "dsl_json": {
+          "request_tokens": 171,
+          "response_tokens": 112,
+          "tool_calls": 2,
+          "total_content_tokens": 283
+        },
+        "project_json": {
+          "request_tokens": 126,
+          "response_tokens": 36,
+          "tool_calls": 1,
+          "total_content_tokens": 162
+        },
+        "python": {
+          "request_tokens": 126,
+          "response_tokens": 36,
+          "tool_calls": 1,
+          "total_content_tokens": 162
+        }
+      },
+      "four-variants": {
+        "dsl_json": {
+          "request_tokens": 239,
+          "response_tokens": 113,
+          "tool_calls": 2,
+          "total_content_tokens": 352
+        },
+        "project_json": {
+          "request_tokens": 115,
+          "response_tokens": 37,
+          "tool_calls": 1,
+          "total_content_tokens": 152
+        },
+        "python": {
+          "request_tokens": 115,
+          "response_tokens": 37,
+          "tool_calls": 1,
+          "total_content_tokens": 152
+        }
+      },
+      "high-low-refinement": {
+        "dsl_json": {
+          "request_tokens": 301,
+          "response_tokens": 135,
+          "tool_calls": 3,
+          "total_content_tokens": 436
+        },
+        "project_json": {
+          "request_tokens": 88,
+          "response_tokens": 43,
+          "tool_calls": 1,
+          "total_content_tokens": 131
+        },
+        "python": {
+          "request_tokens": 88,
+          "response_tokens": 43,
+          "tool_calls": 1,
+          "total_content_tokens": 131
+        }
+      },
+      "invalid-repair": {
+        "dsl_json": {
+          "request_tokens": 303,
+          "response_tokens": 258,
+          "tool_calls": 4,
+          "total_content_tokens": 561
+        },
+        "project_json": {
+          "request_tokens": 86,
+          "response_tokens": 32,
+          "tool_calls": 1,
+          "total_content_tokens": 118
+        },
+        "python": {
+          "request_tokens": 86,
+          "response_tokens": 32,
+          "tool_calls": 1,
+          "total_content_tokens": 118
+        }
+      },
+      "localized-bank-edit": {
+        "dsl_json": {
+          "request_tokens": 293,
+          "response_tokens": 243,
+          "tool_calls": 3,
+          "total_content_tokens": 536
+        },
+        "project_json": {
+          "request_tokens": 82,
+          "response_tokens": 40,
+          "tool_calls": 1,
+          "total_content_tokens": 122
+        },
+        "python": {
+          "request_tokens": 82,
+          "response_tokens": 40,
+          "tool_calls": 1,
+          "total_content_tokens": 122
+        }
+      },
+      "single-recipe": {
+        "dsl_json": {
+          "request_tokens": 138,
+          "response_tokens": 119,
+          "tool_calls": 2,
+          "total_content_tokens": 257
+        },
+        "project_json": {
+          "request_tokens": 132,
+          "response_tokens": 39,
+          "tool_calls": 1,
+          "total_content_tokens": 171
+        },
+        "python": {
+          "request_tokens": 78,
+          "response_tokens": 39,
+          "tool_calls": 1,
+          "total_content_tokens": 117
+        }
+      }
+    }
+  },
+  "release_status": "experimental; live-agent qualification not run; token-efficiency target unproven",
+  "stage": "full",
+  "task_count": 8,
+  "tasks": {
+    "arrangement": {
+      "pcm_equal": true,
+      "pcm_id": "fd4b0419cac224c99f1cc206d83b4e4ee2da72ed0365c016ed7575f96d392040",
+      "legacy_mode": "project_json",
+      "acceptance": "Onsets 0,4,...,28 beats; 16-second loop; exact Score PCM; valid MIDI."
+    },
+    "capability-export": {
+      "pcm_equal": true,
+      "pcm_id": "74dcb63bb4dcd73d2ca1969a8defeb53e8e462e0b96675c4d8efb45e9ad55dd3",
+      "legacy_mode": "project_json",
+      "acceptance": "Exact fm_tone PCM; refused Voice export; nonempty WAV."
+    },
+    "creature-speech-scene": {
+      "pcm_equal": true,
+      "pcm_id": "2be1761532344c13a3c91ef34e7737d504145330975d46aa80228a1c8e84cb20",
+      "legacy_mode": "python_fallback",
+      "acceptance": "Separate child Voice buses, exact manual Score PCM, retained replay graph."
+    },
+    "four-variants": {
+      "pcm_equal": true,
+      "pcm_id": "a71d953b336afc58bf16d5cb47759afba39bbb1f0fe3a201be76c756d154c68b",
+      "legacy_mode": "python_fallback",
+      "acceptance": "Four placements in original call order, exact legacy API PCM."
+    },
+    "high-low-refinement": {
+      "pcm_equal": true,
+      "pcm_id": "c344d83dc287aac2cb923b80d6e5aed0cf5cdfe0f1d0e1c24c4e8dbfaa63c4c5",
+      "legacy_mode": "python_fallback",
+      "acceptance": "Exact directly edited Voice PCM; stale edit rejected."
+    },
+    "invalid-repair": {
+      "pcm_equal": true,
+      "pcm_id": "8667fa5ddd704217ec2389b002e19ea457a12612ef66c27ba7323af5224952af",
+      "legacy_mode": "python_fallback",
+      "acceptance": "E_KNOB_RANGE; unchanged revision on rejection; exact final PCM."
+    },
+    "localized-bank-edit": {
+      "pcm_equal": true,
+      "pcm_id": "9aceea68e25ad6ac7cfff6dc1c9462c087f2ca6d27559b858b2ba9a917a79ffb",
+      "legacy_mode": "python_fallback",
+      "acceptance": "Exact edited recipe PCM; revision-checked localized transaction."
+    },
+    "single-recipe": {
+      "pcm_equal": true,
+      "pcm_id": "f00eaa552544da2bbf59eb3d7bd955a523f5384e6de4b37d8ea1fc19fd47d633",
+      "legacy_mode": "project_json",
+      "acceptance": "Exact legacy API PCM; deterministic replay."
+    }
+  },
+  "tokenizer": {
+    "package": "tiktoken",
+    "status": "proxy encodings; no model-specific savings claim",
+    "version": "0.14.0"
+  }
+}

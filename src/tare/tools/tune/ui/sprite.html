@@ -1,0 +1,18 @@
+<!doctype html><html lang="en-US"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
+<title>Audio sprite · tare.tools.tune</title><style>body{font:16px/1.5 system-ui;max-width:800px;margin:40px auto;padding:16px;background:#11151a;color:#e4e9ed}button{font:inherit;margin:6px;padding:10px;background:#253746;color:inherit;border:1px solid #789;border-radius:4px}:focus-visible{outline:3px solid #9df}</style>
+<h1>Audio sprite</h1><p id="status" role="status">Load a sound to start playback. Loop endpoints use the recorded sample coordinates.</p>
+<button id="stop">Stop playback</button><div id="sounds"></div><script>
+const status=document.getElementById('status');let context,buffer,source,request=0;
+document.getElementById('stop').onclick=()=>{request++;source?.stop();source=null;status.textContent='Playback stopped.'};
+fetch('manifest.json').then(r=>r.json()).then(manifest=>{for(const [name,entry] of Object.entries(manifest.entries)){
+const button=document.createElement('button');button.textContent=name+(entry.loop?' · loop':'');button.onclick=async()=>{const ticket=++request;try{
+context??=new AudioContext();await context.resume();if(!buffer){let candidate;try{const data=await(await fetch(manifest.files['bank.ogg']?'bank.ogg':'bank.wav')).arrayBuffer();candidate=await context.decodeAudioData(data)}catch(e){if(!manifest.files['bank.ogg'])throw e}
+const end=Math.max(...Object.values(manifest.entries).map(item=>item.end_sample))/manifest.sample_rate;
+if(!candidate||candidate.numberOfChannels!==manifest.channels||candidate.duration+1/context.sampleRate<end){candidate=await context.decodeAudioData(await(await fetch('bank.wav')).arrayBuffer())}
+if(candidate.duration+1/context.sampleRate<end)throw Error('Decoded bank is shorter than its clip coordinates');buffer=candidate}
+if(ticket!==request)return;
+source?.stop();source=context.createBufferSource();source.buffer=buffer;source.connect(context.destination);
+if(entry.loop){source.loop=true;source.loopStart=entry.start_sample/manifest.sample_rate;source.loopEnd=entry.end_sample/manifest.sample_rate;source.start(0,source.loopStart)}
+else source.start(0,entry.start_sample/manifest.sample_rate,entry.frames/manifest.sample_rate);status.textContent='Playing '+name;
+}catch(e){status.textContent='Playback failed: '+e.message+'. Check that this directory is served over HTTP.'}};document.getElementById('sounds').append(button)}}).catch(e=>status.textContent=e.message);
+</script></html>

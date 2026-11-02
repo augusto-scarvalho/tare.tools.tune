@@ -1,0 +1,11 @@
+{
+  "format": "tare.tools.tune.checks",
+  "version": 1,
+  "duration_s": {"min": 0.01, "max": 2},
+  "peak_dbfs": {"max": 0},
+  "sample_rate": 16000,
+  "channels": 1,
+  "capabilities": ["pcm", "voice_json"],
+  "reference": {"active_s": {"ratio": 1.2}, "attack_ms": {"max_delta": 10}, "centroid_hz": {"semitones": 3},
+                "f0_hz": {"semitones": 2}}
+}

@@ -1,0 +1,7 @@
+{
+  "source_archive": "%TEMP%\\tare-tune-before-dsl-wwxtl2_3\\source.zip",
+  "source_sha256": "627781b572484bd7d821e75bbf7e582e09f3286124c13fa17795ee040ed1a328",
+  "revision": "75adb185727c6bafb508f35db43c53e731abec84b4441fc229755364784fb135",
+  "producer": "M0 source snapshot before any DSL code/replay changes",
+  "expected_pcm_id": "48faf7d75b62af82a63afb681e1638e79a8006d3adb56aa02ddce6ed6db0fa03"
+}

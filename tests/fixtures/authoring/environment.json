@@ -1,0 +1,11 @@
+{
+  "renderer_behavior": "legacy-1",
+  "sample_rate": 16000,
+  "python": "3.12.10",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "source_sha256": {
+    "src\\tare\\tools\\tune\\render.py": "ebce02791549dfbf9ea613298b779365f24050cfca2cf06a4be1395ca1b5f1f2",
+    "src\\tare\\tools\\tune\\score.py": "47af72bf82b6a6346ae198329fd61845c219988847cd1eb0df1b85c7ad779b3f"
+  }
+}

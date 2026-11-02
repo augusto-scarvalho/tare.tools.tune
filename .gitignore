@@ -1,0 +1,59 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+/output/
+/.playwright-cli/
+/authoring-out/
+.tune-backups/
+
+# rendered output
+*.wav
+!/tests/fixtures/dsl/historical-schema1/*/audio.wav
+*.raw
+/baked/
+/native/build/
+# the Godot extension's build and the demo's generated voices, lines and sounds (tools/build_native.py godot | demo)
+.sconsign.dblite
+*.o
+*.os
+*.obj
+/native/godot/godot-cpp/
+/native/godot/demo/.godot/
+/native/godot/demo/bin/*
+!/native/godot/demo/bin/tare_tune.gdextension
+/native/godot/demo/voices/
+/native/godot/demo/lines/
+/native/godot/demo/sounds/
+/zoo/
+/gen1/
+/data/gen1/
+/teacher/*.npz
+/real/*
+!/real/prosody_pt.json
+!/real/dialect.json
+FEEDBACK.md
+.*.lock
+/private/
+
+# audio besides WAV (renders, downloads, game recordings: never in the repo)
+*.ogg
+*.mp3
+*.flac
+*.opus
+*.m4a
+*.mid
+# local secrets and editor/OS state
+.env
+.claude/settings.local.json
+.vscode/
+.idea/
+Thumbs.db
+# third-party recordings: built locally by tools/build_barks.py --audio, never shipped
+/src/tare/tools/tune/speech/data/barks_audio.npz

@@ -1,0 +1,301 @@
+"""Voice spec -> audio.
+
+Signal flow per syllable:
+    source (glottal saw | sine | pulse | noise) with pitch contour, vibrato, jitter
+    -> subharmonics, breath, ring modulation
+    -> time-varying formant bank (parallel band-passes, coefficients updated every 64 samples)
+    -> envelope (attack/release, amp curve, growl AM, pulse trains)
+Then for the whole voice: sum syllables + chip programs + speech + vocoded clips + effect layers (layers.py)
+-> 40 Hz high-pass -> crush -> saturation -> grain (bits) -> realism -> reverb -> loop folding -> normalise to `gain`.
+
+Every block is a simple per-sample recurrence (one-pole, biquad, PolyBLEP) or a seeded
+SplitMix64 stream, so engine ports can reproduce it.
+"""
+from dataclasses import asdict
+
+import numpy as np
+from scipy.signal import butter, fftconvolve, lfilter, sosfilt
+
+from . import rng
+from .chip import render_program
+from .diagnostics import current
+from .spec import Curve, Syllable, Voice
+
+DEFAULT_SR = 48_000
+BLOCK = 64          # formant coefficient update interval, samples
+PEAK = 0.89         # -1 dBFS
+
+
+def curve(points: Curve, n: int, log: bool = False) -> np.ndarray:
+    t = np.linspace(0.0, 1.0, n)
+    xs, ys = zip(*points, strict=True)
+    ys = np.log(np.maximum(ys, 1e-9)) if log else np.asarray(ys, float)
+    out = np.interp(t, xs, ys)
+    return np.exp(out) if log else out
+
+
+def smooth_noise(k: int, n: int, sr: int, rate: float) -> np.ndarray:
+    """Random wander in [-1, 1] with about `rate` control points per second."""
+    points = max(2, int(n / sr * rate) + 2)
+    return np.interp(np.linspace(0, points - 1, n), np.arange(points), rng.noise(k, points))
+
+
+def _polyblep(t: np.ndarray, dt: np.ndarray) -> np.ndarray:
+    out = np.zeros_like(t)
+    m = t < dt
+    x = t[m] / dt[m]
+    out[m] = 2 * x - x * x - 1
+    m = t > 1 - dt
+    x = (t[m] - 1) / dt[m]
+    out[m] = x * x + 2 * x + 1
+    return out
+
+
+def _source(s: Syllable, f0: np.ndarray, sr: int, k: int) -> np.ndarray:
+    n = len(f0)
+    cycles = np.cumsum(f0 / sr)
+    t, dt = cycles % 1.0, np.minimum(f0 / sr, 0.5)
+    if s.source == "sine":
+        x = np.sin(2 * np.pi * cycles) + 0.12 * np.sin(4 * np.pi * cycles)
+    elif s.source == "pulse":
+        w = s.pulse_width
+        x = np.where(t < w, 1.0, -1.0) + _polyblep(t, dt) - _polyblep((t - w) % 1.0, dt)
+    elif s.source == "noise":
+        x = rng.noise(rng.key(k, "source"), n) * 0.8
+    elif s.source == "glottal":  # band-limited saw, darkened by a one-pole tilt filter
+        x = 2 * t - 1 - _polyblep(t, dt)
+    else:
+        raise ValueError(f"unknown source {s.source!r}")
+    if s.source in ("glottal", "pulse"):
+        fc = min(float(np.median(f0)) * (1.5 + 40 * s.brightness ** 2), 0.45 * sr)
+        x = lfilter(*butter(1, fc / (sr / 2)), x)
+    if s.sub:
+        x = x * (1 + s.sub * np.cos(np.pi * cycles))  # energy at f0/2: growly period doubling
+    if s.breath:
+        x = x * (1 - s.breath) + s.breath * rng.noise(rng.key(k, "breath"), n) * 0.7
+    hz, mix = s.ring
+    if mix:
+        x = x * (1 - mix + mix * np.sin(2 * np.pi * hz * np.arange(n) / sr))
+    return x
+
+
+def time_varying(x: np.ndarray, coeffs, block: int) -> np.ndarray:
+    """Second-order filter whose (b, a) coefficients change every `block` samples.
+
+    Between blocks we carry the Direct Form I history (last two inputs and outputs) and
+    rebuild lfilter's state for the new coefficients; reusing lfilter's own state across a
+    coefficient change would click.
+    """
+    y = np.empty_like(x)
+    x1 = x2 = y1 = y2 = 0.0
+    for i, (b, a) in enumerate(coeffs):
+        k = i * block
+        seg = x[k:k + block]
+        if not len(seg):
+            break
+        b0, b1, b2 = (list(b) + [0.0, 0.0])[:3]
+        _, a1, a2 = (list(a) + [0.0, 0.0])[:3]
+        zi = [b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2, b2 * x1 - a2 * y1]
+        out, _ = lfilter([b0, b1, b2], [1.0, a1, a2], seg, zi=zi)
+        y[k:k + len(seg)] = out
+        if len(seg) >= 2:
+            x1, x2, y1, y2 = seg[-1], seg[-2], out[-1], out[-2]
+        else:
+            x1, x2, y1, y2 = seg[-1], x1, out[-1], y1
+    return y
+
+
+def bandpass_coeffs(f: float, bw: float, sr: int):
+    """RBJ band-pass with 0 dB peak gain."""
+    f = min(f, 0.45 * sr)
+    w0 = 2 * np.pi * f / sr
+    alpha = np.sin(w0) * min(bw, f) / (2 * f)
+    a0 = 1 + alpha
+    return [alpha / a0, 0.0, -alpha / a0], [1.0, -2 * np.cos(w0) / a0, (1 - alpha) / a0]
+
+
+def _formants(x: np.ndarray, s: Syllable, sr: int) -> np.ndarray:
+    if not s.formants:
+        return x
+    n = len(x)
+    out = np.zeros(n)
+    if len({m for _, m in s.mouth}) == 1:   # a still mouth (an instrument's body): one fixed filter per formant
+        m = s.mouth[0][1]
+        for hz, bw, gain in s.formants:
+            out += gain * lfilter(*bandpass_coeffs(hz * m, bw * m, sr), x)
+        return out
+    blocks = (n + BLOCK - 1) // BLOCK
+    scale = curve(s.mouth, blocks, log=True)
+    for hz, bw, gain in s.formants:  # constant-Q as the mouth moves
+        out += gain * time_varying(x, (bandpass_coeffs(hz * m, bw * m, sr) for m in scale), BLOCK)
+    return out
+
+
+def render_syllable(s: Syllable, sr: int, k: int) -> np.ndarray:
+    n = max(int(s.dur * sr), 16)
+    t = np.arange(n) / sr
+    f0 = curve(s.pitch, n, log=True)
+    rate, depth = s.vibrato
+    wander = s.jitter * smooth_noise(rng.key(k, "jitter"), n, sr, 25) if s.jitter else 0.0
+    f0 = np.clip(f0 * 2 ** ((depth * np.sin(2 * np.pi * rate * t) + wander) / 12), 1.0, 0.49 * sr)
+    x = _formants(_source(s, f0, sr, k), s, sr)
+
+    env = curve(s.amp, n)
+    a, r = min(max(int(s.attack * sr), 1), n), min(max(int(s.release * sr), 1), n)
+    env[:a] *= np.linspace(0, 1, a) ** 2
+    env[n - r:] *= np.linspace(1, 0, r) ** 2
+    depth, rate = s.rough
+    if depth:
+        wobble = np.sin(2 * np.pi * rate * t + 3 * smooth_noise(rng.key(k, "rough"), n, sr, 8))
+        env *= 1 - depth * (0.5 + 0.5 * wobble)
+    if s.shimmer:
+        env *= np.clip(1 + s.shimmer * smooth_noise(rng.key(k, "shimmer"), n, sr, 60), 0, None)
+    rate, depth, sharp = s.pulses
+    if depth:
+        env *= 1 - depth + depth * (0.5 - 0.5 * np.cos(2 * np.pi * rate * t)) ** sharp
+    x = x * env
+    if (rec := current()) is not None and rec.stack:
+        rec.stack[-1]["factors"].setdefault("syllable_peaks", []).append(float(np.max(np.abs(x))))
+    return s.gain * x / (np.max(np.abs(x)) + 1e-12)
+
+
+def _crush(x: np.ndarray, amount: float) -> np.ndarray:
+    hold = 1 + int(amount * 11)
+    x = np.repeat(x[::hold], hold)[: len(x)]
+    levels = 2 ** (14 - 10 * amount)
+    return np.round(x * levels) / levels
+
+
+def _grain(x: np.ndarray, bits: int, sr: int) -> np.ndarray:
+    """An adaptive quantizer of `bits` bits, like the 4-bit ADPCM samples of the DS and the PSP: its step follows the
+    level over ~5 ms, so a loud passage carries a hiss that a quiet one does not."""
+    a = 1 - np.exp(-1 / (0.005 * sr))
+    env = lfilter([a], [1.0, a - 1], np.abs(x))
+    q = np.maximum(env * 2.0 ** (1 - bits), 2.0 ** -15)
+    return np.round(x / q) * q
+
+
+def _reverb(x: np.ndarray, sr: int, seconds: float, wet: float, k: int, fixed=None) -> np.ndarray:
+    n = int(seconds * sr)
+    ir = rng.noise(k, n) * np.exp(-6.9 * np.arange(n) / n)
+    ir = sosfilt(butter(2, 5000 / (sr / 2), output="sos"), ir)
+    dry = np.concatenate([x, np.zeros(n)])
+    tail = fftconvolve(dry, ir)[: len(dry)]
+    if fixed is not None:
+        return (1 - wet) * dry + wet * tail * fixed
+    if (rec := current()) is not None:
+        rec.factor("reverb_ratio", float(np.max(np.abs(x)) / (np.max(np.abs(tail)) + 1e-12)))
+    return (1 - wet) * dry + wet * tail * (np.max(np.abs(x)) / (np.max(np.abs(tail)) + 1e-12))
+
+
+def _room(x: np.ndarray, sr: int, mix: float, k: int, fixed=None) -> np.ndarray:
+    """A small space: a few dozen early reflections over ~60 ms."""
+    n = int(0.06 * sr)
+    ir = np.zeros(n)
+    taps = (rng.uniforms(rng.key(k, "taps"), 40) * (n - 1)).astype(int)
+    ir[taps] = rng.noise(rng.key(k, "gains"), 40) * np.exp(-3 * taps / n)
+    ir[0] = 1.0
+    wet = fftconvolve(x, ir)[: len(x)]
+    if fixed is not None:
+        return (1 - mix) * x + mix * wet / (fixed[1] + 1e-12) * fixed[0]
+    if (rec := current()) is not None:
+        rec.factor("room_peaks", [float(np.max(np.abs(x))), float(np.max(np.abs(wet)))])
+    return (1 - mix) * x + mix * wet / (np.max(np.abs(wet)) + 1e-12) * np.max(np.abs(x))
+
+
+def render(voice: Voice, sr: int = DEFAULT_SR) -> np.ndarray:
+    """Render a voice to mono float32 in [-1, 1]."""
+    rec = current()
+    node = rec.begin("voice", voice.to_dict()) if rec is not None else None
+    parts = []
+    for i, s in enumerate(voice.syllables):
+        parts.append((int(s.start * sr), render_syllable(s, sr, rng.key(voice.seed, "syllable", i))))
+    for c in voice.chips:
+        y = render_program(c, sr)
+        parts.append((int(c.start * sr), c.gain * y / (np.max(np.abs(y)) + 1e-12)))
+    if voice.speech:
+        from .speech.klatt import render_speech  # the speech module builds on this one
+        for i, p in enumerate(voice.speech):
+            parts.append((int(p.start * sr), render_speech(p, sr, rng.key(voice.seed, "speech", i))))
+    if voice.vocoded:
+        from .speech.vocoder import render_vocoded
+        for i, v in enumerate(voice.vocoded):
+            parts.append((int(v.start * sr), render_vocoded(v, sr, rng.key(voice.seed, "vocoded", i))))
+    if voice.spoken:
+        from .speech.concat import render_spoken
+        for i, v in enumerate(voice.spoken):
+            parts.append((int(v.start * sr), render_spoken(v, sr, rng.key(voice.seed, "spoken", i))))
+    if voice.modal or voice.noise or voice.scatter:
+        from .layers import render_modal, render_noise, render_scatter
+        for name, fn in (("modal", render_modal), ("noise", render_noise), ("scatter", render_scatter)):
+            for i, e in enumerate(getattr(voice, name)):
+                parts.append((int(e.start * sr), fn(e, sr, rng.key(voice.seed, name, i))))
+    if not parts:
+        raise ValueError("voice has no syllables, chip programs, speech, vocoded clips or effect layers")
+    if rec is not None:
+        tags = []
+        for kind in ("syllables", "chips", "speech", "vocoded", "spoken", "modal", "noise", "scatter"):
+            for i, layer in enumerate(getattr(voice, kind)):
+                seed = None if kind == "chips" else rng.key(voice.seed, "syllable" if kind == "syllables" else kind, i)
+                tags.append((f"{kind}[{i}]", seed, asdict(layer)))
+        for (start, y), (label, seed, params) in zip(parts, tags, strict=True):
+            rec.part(node, y, start, label, seed=seed, params=params)
+    out = np.zeros(max(k + len(y) for k, y in parts))
+    for k, y in parts:
+        out[k:k + len(y)] += y
+    if rec is not None:
+        node["input_length"] = len(out)
+    result = process_voice(out, voice, sr)
+    if rec is not None:
+        rec.end(node, result)
+    return result
+
+
+def process_voice(out: np.ndarray, voice: Voice, sr: int, *, fixed=None) -> np.ndarray:
+    """The unchanged legacy bus; diagnostic interventions may freeze its measured gains."""
+    rec = current()
+    out = sosfilt(butter(2, 40 / (sr / 2), btype="high", output="sos"), out)
+    peak = np.max(np.abs(out)) if fixed is None else fixed["input_peak"]
+    if rec is not None:
+        rec.factor("input_peak", float(peak))
+    out /= peak + 1e-12
+    if voice.crush:
+        out = _crush(out, voice.crush)
+    if voice.drive:
+        out = np.tanh(voice.drive * out) / np.tanh(voice.drive)
+    if voice.bits:
+        out = _grain(out, voice.bits, sr)
+    if voice.lowpass:
+        out = sosfilt(butter(2, min(voice.lowpass, 0.45 * sr) / (sr / 2), output="sos"), out)
+    if voice.room:
+        out = _room(out, sr, voice.room, rng.key(voice.seed, "room"),
+                    fixed=None if fixed is None else fixed["room_peaks"])
+    if voice.air:
+        pink = sosfilt(butter(1, 1000 / (sr / 2), output="sos"), rng.noise(rng.key(voice.seed, "air"), len(out)))
+        out = out + pink / (np.max(np.abs(pink)) + 1e-12) * 10 ** ((-70 + 40 * voice.air) / 20)
+    if voice.space:
+        out = _reverb(out, sr, voice.space, voice.wet, rng.key(voice.seed, "space"),
+                      fixed=None if fixed is None else fixed["reverb_ratio"])
+    if voice.loop:
+        out = _fold_loop(out, int(voice.loop * sr), int(round((voice.duration - voice.loop) * sr)))
+    else:
+        fade = min(int(0.004 * sr), len(out))
+        out[len(out) - fade:] *= np.linspace(1, 0, fade)
+    peak = np.max(np.abs(out)) if fixed is None else fixed["output_peak"]
+    if rec is not None:
+        rec.factor("output_peak", float(peak))
+    return (PEAK * voice.gain * out / (peak + 1e-12)).astype(np.float32)
+
+
+def _fold_loop(x: np.ndarray, xfade: int, length: int) -> np.ndarray:
+    """A seamless loop of `length` samples: the end crossfades (equal power) into the start and
+    anything past the loop point (the crossfade region, reverb tail) wraps around."""
+    length = max(min(length, len(x)), 1)
+    xfade = min(xfade, length, len(x) - length)
+    out = x[:length].copy()
+    tail = x[length:]
+    w = np.linspace(0, 1, xfade)
+    out[:xfade] = out[:xfade] * np.sin(0.5 * np.pi * w) + tail[:xfade] * np.cos(0.5 * np.pi * w)
+    rest = tail[xfade:]
+    np.add.at(out, (xfade + np.arange(len(rest))) % length, rest)
+    return out

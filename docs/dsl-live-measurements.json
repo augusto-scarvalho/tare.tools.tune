@@ -1,0 +1,177 @@
+{
+  "schema": "tare.tools.tune.live-pilot-evidence/1",
+  "status": "environment-inconclusive",
+  "authorization": {
+    "text": "Piloto menor no Codex: ate 15 minutos, sem API paga",
+    "max_wall_seconds": 900,
+    "channel": "existing ChatGPT-authenticated Codex quota; no API key",
+    "start_local": "2026-10-31T22:48:37-03:00",
+    "finished_before_local": "2026-10-31T23:00:06-03:00"
+  },
+  "model": {
+    "requested": "gpt-6.1-sol",
+    "effort": "xhigh",
+    "cli_version": "0.166.0",
+    "backend_snapshot": "not independently reported"
+  },
+  "attempts": 7,
+  "independently_validated_artifacts": 0,
+  "usage": {
+    "input_tokens": 1986316,
+    "cached_input_tokens": 1746432,
+    "output_tokens": 24884
+  },
+  "summed_input_plus_output_tokens": 2011200,
+  "uncached_input_tokens": 239884,
+  "cached_accounting": "cached_input_tokens is a subset of input_tokens; do not add twice",
+  "summed_run_seconds": 481.53100000001723,
+  "budget_semantics": "Wall-clock/process tree bounded. Token usage is reported after completed turns, so an assigned soft token allowance can be exceeded within one turn. No dollars or quota-unit cost is inferred.",
+  "finding": "Native Codex sandbox denied project and audio artifact writes. Initial configuration blocked shell actions; scoped workspace-write retry still produced PermissionError. A no-model sandbox write/read/unlink probe also failed. In-memory self-reported checks are not independent artifact success.",
+  "remediation": "Runner now executes a no-model, same-sandbox, task-directory write/read/unlink preflight before starting inference. Failed preflight stops the batch with zero provider requests. Unit tests use a fake CLI. No ACL expansion or full-access bypass was used.",
+  "qualification": "No route success-rate, tokens-per-success, p90 or efficiency conclusion is possible from these failures. No further inference authorized or attempted in this completion.",
+  "source_records": [
+    {
+      "path": "output\\dsl-live-transport-failure.json",
+      "sha256": "b39bb3bacbf6ac985b08920054b4dd2c1540cc4bbe485ead9845264438f2bccf"
+    },
+    {
+      "path": "output\\dsl-live-exploratory.json",
+      "sha256": "d77db37c8f3cdee76bc8f723ffd9ac31df7a94dd0a33bae413f1267340557c7d"
+    }
+  ],
+  "runs": [
+    {
+      "task": "arrangement",
+      "route": "python",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 120084,
+        "cached_input_tokens": 97664,
+        "output_tokens": 1004
+      },
+      "usage_complete": true,
+      "seconds": 27.719000000040978,
+      "recorded_command_executions": 0,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "[WinError 2] The system cannot find the file specified: 'C:\\\\side-projects\\\\tare-tools-tune\\\\output\\\\pilot-arrangement-python-0-c7tv479h\\\\audio.npy'",
+      "artifact_directory": "output\\pilot-arrangement-python-0-c7tv479h",
+      "source_record": "output\\dsl-live-transport-failure.json"
+    },
+    {
+      "task": "arrangement",
+      "route": "python",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 371627,
+        "cached_input_tokens": 336640,
+        "output_tokens": 5653
+      },
+      "usage_complete": true,
+      "seconds": 114.75,
+      "recorded_command_executions": 8,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "[WinError 2] The system cannot find the file specified: 'C:\\\\side-projects\\\\tare-tools-tune\\\\output\\\\pilot-arrangement-python-0-6_w4nfb1\\\\audio.npy'",
+      "artifact_directory": "output\\pilot-arrangement-python-0-6_w4nfb1",
+      "source_record": "output\\dsl-live-exploratory.json"
+    },
+    {
+      "task": "arrangement",
+      "route": "project_json",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 331904,
+        "cached_input_tokens": 295936,
+        "output_tokens": 4224
+      },
+      "usage_complete": true,
+      "seconds": 67.92199999996228,
+      "recorded_command_executions": 6,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "[WinError 2] The system cannot find the file specified: 'C:\\\\side-projects\\\\tare-tools-tune\\\\output\\\\pilot-arrangement-project_json-0-qnxl96s7\\\\audio.npy'",
+      "artifact_directory": "output\\pilot-arrangement-project_json-0-qnxl96s7",
+      "source_record": "output\\dsl-live-exploratory.json"
+    },
+    {
+      "task": "arrangement",
+      "route": "dsl_json",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 293410,
+        "cached_input_tokens": 262144,
+        "output_tokens": 4542
+      },
+      "usage_complete": true,
+      "seconds": 65.73399999999674,
+      "recorded_command_executions": 8,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "[WinError 2] The system cannot find the file specified: 'C:\\\\side-projects\\\\tare-tools-tune\\\\output\\\\pilot-arrangement-dsl_json-0-1e84eki4\\\\audio.npy'",
+      "artifact_directory": "output\\pilot-arrangement-dsl_json-0-1e84eki4",
+      "source_record": "output\\dsl-live-exploratory.json"
+    },
+    {
+      "task": "single-recipe",
+      "route": "project_json",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 349885,
+        "cached_input_tokens": 287488,
+        "output_tokens": 3085
+      },
+      "usage_complete": true,
+      "seconds": 56.68800000002375,
+      "recorded_command_executions": 7,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "[WinError 2] The system cannot find the file specified: 'C:\\\\side-projects\\\\tare-tools-tune\\\\output\\\\pilot-single-recipe-project_json-0-bwcrkipu\\\\audio.npy'",
+      "artifact_directory": "output\\pilot-single-recipe-project_json-0-bwcrkipu",
+      "source_record": "output\\dsl-live-exploratory.json"
+    },
+    {
+      "task": "single-recipe",
+      "route": "python",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 188157,
+        "cached_input_tokens": 163840,
+        "output_tokens": 2727
+      },
+      "usage_complete": true,
+      "seconds": 58.40600000001723,
+      "recorded_command_executions": 5,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "[WinError 2] The system cannot find the file specified: 'C:\\\\side-projects\\\\tare-tools-tune\\\\output\\\\pilot-single-recipe-python-0-12m6qw3y\\\\audio.npy'",
+      "artifact_directory": "output\\pilot-single-recipe-python-0-12m6qw3y",
+      "source_record": "output\\dsl-live-exploratory.json"
+    },
+    {
+      "task": "single-recipe",
+      "route": "dsl_json",
+      "repetition": 0,
+      "success": false,
+      "classification": "environment-blocked-artifact-write",
+      "usage": {
+        "input_tokens": 331249,
+        "cached_input_tokens": 302720,
+        "output_tokens": 3649
+      },
+      "usage_complete": true,
+      "seconds": 90.31199999997625,
+      "recorded_command_executions": 11,
+      "command_metric": "completed command_execution items only; excludes file_change and policy-denied attempts before item creation",
+      "runner_error": "runner exceeded the assigned remaining token budget",
+      "artifact_directory": "output\\pilot-single-recipe-dsl_json-0-910l140i",
+      "source_record": "output\\dsl-live-exploratory.json"
+    }
+  ]
+}

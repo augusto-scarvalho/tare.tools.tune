@@ -1,0 +1,111 @@
+{
+  "python": "3.12.10",
+  "sample_rate": 16000,
+  "events": [
+    {
+      "id": "lead-v1/e0",
+      "instrument": "harp",
+      "custom": false,
+      "note": "C4",
+      "pitch": 60.0,
+      "beat": 0.0,
+      "offset": 0.5,
+      "beats": 1.0,
+      "bpm": 120,
+      "start": 0.25,
+      "duration": 0.5,
+      "velocity": 0.8,
+      "transpose": 0.0,
+      "seed": 17655940085959450332,
+      "source": {
+        "file": "<stdin>",
+        "line": 15
+      },
+      "layers": [
+        0
+      ],
+      "layer_hashes": [
+        "7635f3e571827e84c46f42f708297131442806439558be96e32c38eda4f2b390"
+      ]
+    },
+    {
+      "id": "lead-v1/e1",
+      "instrument": "harp",
+      "custom": false,
+      "note": "E4",
+      "pitch": 64.0,
+      "beat": 0.0,
+      "offset": 0.5,
+      "beats": 1.0,
+      "bpm": 120,
+      "start": 0.25,
+      "duration": 0.5,
+      "velocity": 0.8,
+      "transpose": 0.0,
+      "seed": 11412659603528137776,
+      "source": {
+        "file": "<stdin>",
+        "line": 15
+      },
+      "layers": [
+        1
+      ],
+      "layer_hashes": [
+        "d4a840301c0c3d52cc07af3c27a68b1cbf933e94b87cb615152ff34d25b10e8b"
+      ]
+    },
+    {
+      "id": "lead-v1/e2",
+      "instrument": "harp",
+      "custom": false,
+      "note": "G4",
+      "pitch": 67.0,
+      "beat": 2.0,
+      "offset": 0.5,
+      "beats": 0.5,
+      "bpm": 120,
+      "start": 1.25,
+      "duration": 0.25,
+      "velocity": 0.8,
+      "transpose": 0.0,
+      "seed": 8020055959740353156,
+      "source": {
+        "file": "<stdin>",
+        "line": 15
+      },
+      "layers": [
+        2
+      ],
+      "layer_hashes": [
+        "43a21e7e767ec8cab6ddc74931712b1e09e896b54ac7a53f35aa59ae24738526"
+      ]
+    },
+    {
+      "id": "lead-v1/e3",
+      "instrument": "marimba",
+      "custom": false,
+      "note": "C5",
+      "pitch": 72.0,
+      "beat": 0.0,
+      "offset": 3.0,
+      "beats": 0.5,
+      "bpm": 120,
+      "start": 1.5,
+      "duration": 0.25,
+      "velocity": 0.8,
+      "transpose": 0.0,
+      "seed": 10728380069540157629,
+      "source": {
+        "file": "<stdin>",
+        "line": 16
+      },
+      "layers": [
+        3
+      ],
+      "layer_hashes": [
+        "bf424a1107219b008f955614089441dc034a33f2aba355d0296612107939be82"
+      ]
+    }
+  ],
+  "backup": "%TEMP%\\tare-tune-before-dsl-wwxtl2_3"
+}

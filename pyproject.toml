@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tare.tools.tune"
+version = "0.1.0"
+description = "Procedural game audio: creature voices, human speech (pt-BR, English), sound effects and music, deterministic and portable, with a Game Boy cry engine."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{name = "Augusto da Silva Carvalho", email = "ct.cmmdr@gmail.com"}]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+keywords = ["procedural audio", "sound design", "game audio", "creature", "synthesizer", "speech synthesis", "tts"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+asr = ["faster-whisper>=1.0"]   # tools/intelligibility.py
+teacher = ["kokoro>=0.9", "soundfile", "pyworld"]   # tools/build_speech.py and the calibration tools only
+native = ["scons"]   # tools/build_native.py godot (plus a C++ compiler)
+prosody = ["soundfile", "pyworld", "pyarrow"]   # tools/real_prosody.py (plus the Montreal Forced Aligner, from conda)
+clap = ["transformers>=4.40", "torch", "soundfile"]   # design/match/judge creatures with CLAP
+dev = ["pytest>=8", "ruff>=0.6", "matplotlib>=3.7"]
+export = ["soundfile>=0.12"]   # validated Vorbis output and additional inspection input formats
+bench = ["tiktoken>=0.14,<0.15"]   # local tokenizer checkpoints, never a runtime dependency
+
+[project.urls]
+Repository = "https://github.com/augusto-scarvalho/tare.tools.tune"
+
+[project.scripts]
+"tare.tools.tune" = "tare.tools.tune.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tare"]   # namespace packages: tare, tare.tools
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["native/godot/godot-cpp"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]

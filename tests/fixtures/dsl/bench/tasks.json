@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "single-recipe",
+      "instruction": "Create a dry crystal confirmation, species 7, at 16 kHz.",
+      "acceptance": "Exact legacy API PCM; deterministic replay.",
+      "python": "c=capture(Sfx('ui','crystal',species=7,dry=True).voice('confirm'),16000)",
+      "legacy": {"sample_rate":16000,"source":{"type":"sfx","kind":"ui","style":"crystal","event":"confirm","options":{"species":7,"dry":true}}},
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"sounds":{"main":{"sfx":"ui","style":"crystal","event":"confirm","species":7,"dry":true}}}
+    },
+    {
+      "id": "four-variants",
+      "instruction": "Expose four deterministic takes and arrange them 250 ms apart.",
+      "acceptance": "Four placements in original call order, exact legacy API PCM.",
+      "python": "s=Score(sr=16000,hall=0)\nfor take in range(4):\n s.add(capture(Sfx('ui','crystal',species=7,dry=True).voice('confirm',take=take),16000).audio,at=take*.25)\nc=capture(s)",
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"defs":{"hit":{"params":{"take":{"type":"integer","min":0,"default":0}},"body":{"sfx":"ui","style":"crystal","event":"confirm","species":7,"dry":true,"take":{"param":"take"}}}},"sounds":{"main":{"mix":[{"at":"0ms","sound":{"use":"hit"}},{"at":"250ms","sound":{"use":"hit","with":{"take":1}}},{"at":"500ms","sound":{"use":"hit","with":{"take":2}}},{"at":"750ms","sound":{"use":"hit","with":{"take":3}}}]}}}
+    },
+    {
+      "id": "creature-speech-scene",
+      "instruction": "A wolf attacks, then a deep voice says Ready at 300 ms.",
+      "acceptance": "Separate child Voice buses, exact manual Score PCM, retained replay graph.",
+      "python": "s=Score(sr=16000,hall=0)\ns.add(capture(Creature('mammal',species='wolf').voice('attack'),16000).audio)\ns.add(capture(Speaker.preset('deep').voice('Ready!','en',seed=17),16000).audio,at=.3)\nc=capture(s)",
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"sounds":{"main":{"mix":[{"sound":{"creature":"mammal","species":"wolf","call":"attack"}},{"at":"300ms","sound":{"say":"Ready!","lang":"en","speaker":{"speaker":"deep"},"seed":17}}]}}}
+    },
+    {
+      "id": "arrangement",
+      "instruction": "Repeat C4 held one beat followed by three beats of silence for eight bars at 120 BPM; transpose down one octave.",
+      "acceptance": "Onsets 0,4,...,28 beats; 16-second loop; exact Score PCM; valid MIDI.",
+      "python": "s=Score(sr=16000,hall=0,bpm=120)\ns.track('lead-v1').play('harp',[(48,i*4,1,.8) for i in range(8)])\nc=capture(s,loop=16)",
+      "legacy": {"sample_rate":16000,"source":{"type":"score","settings":{"bpm":120,"hall":0},"bars":8,"tracks":[{"name":"lead-v1","instrument":"harp","notes":[[48,0,1,0.8],[48,4,1,0.8],[48,8,1,0.8],[48,12,1,0.8],[48,16,1,0.8],[48,20,1,0.8],[48,24,1,0.8],[48,28,1,0.8]]}]}},
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000,"bpm":120},"sounds":{"main":{"score":{"hall":0,"loop":"8bar","tracks":[{"name":"lead-v1","instrument":"harp","notes":{"repeat":8,"of":{"pattern":"C4 . . .","steps":1},"then":[{"transpose":-12}]}}]}}}}
+    },
+    {
+      "id": "high-low-refinement",
+      "instruction": "Start from a crystal confirmation, refine its lowpass to 2400 Hz, reject a stale materialization guard.",
+      "acceptance": "Exact directly edited Voice PCM; stale edit rejected.",
+      "python": "v=Sfx('ui','crystal',species=7,dry=True).voice('confirm')\nv.lowpass=2400\nc=capture(v,16000)",
+      "refine": {"/lowpass":2400},
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"sounds":{"main":{"sfx":"ui","style":"crystal","event":"confirm","species":7,"dry":true}}}
+    },
+    {
+      "id": "localized-bank-edit",
+      "instruction": "Raise only the main confirmation power to .8 in a bank with shared definitions.",
+      "acceptance": "Exact edited recipe PCM; revision-checked localized transaction.",
+      "python": "c=capture(Sfx('ui','crystal',species=7,power=.8,dry=True).voice('confirm'),16000)",
+      "patch": [{"op":"set","target":"sound:main","path":"/with/power","value":0.8}],
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"defs":{"hit":{"params":{"power":{"type":"number","default":0.5}},"body":{"sfx":"ui","style":"crystal","event":"confirm","species":7,"power":{"param":"power"},"dry":true}}},"sounds":{"main":{"use":"hit","with":{"power":0.5}},"cancel":{"sfx":"ui","event":"cancel","dry":true},"error":{"sfx":"ui","event":"error","dry":true}}}
+    },
+    {
+      "id": "invalid-repair",
+      "instruction": "Reject ring 99 without writing, then successfully apply ring .7.",
+      "acceptance": "E_KNOB_RANGE; unchanged revision on rejection; exact final PCM.",
+      "python": "c=capture(Sfx('ui','crystal',species=7,dry=True,knobs={'ring':.7}).voice('confirm'),16000)",
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"sounds":{"main":{"sfx":"ui","style":"crystal","event":"confirm","species":7,"dry":true,"knobs":{"ring":0.7}}}}
+    },
+    {
+      "id": "capability-export",
+      "instruction": "Create an FM ping, discover that Voice export is unavailable, and export WAV.",
+      "acceptance": "Exact fm_tone PCM; refused Voice export; nonempty WAV.",
+      "python": "c=capture(fm_tone(duration=.1,sr=16000),16000)",
+      "legacy": {"sample_rate":16000,"source":{"type":"fm","options":{"duration":0.1}}},
+      "dsl": {"format":"tare.tools.tune.dsl","version":1,"context":{"sample_rate":16000},"sounds":{"main":{"fm":{"duration":0.1}}}}
+    }
+  ]
+}

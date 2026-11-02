@@ -1,0 +1,13 @@
+{
+  "format": "tare.tools.tune.project",
+  "sample_rate": 16000,
+  "source": {
+    "type": "score",
+    "settings": {"bpm": 120, "meter": 3, "hall": 0.3, "seed": 17},
+    "bars": 1,
+    "tracks": [
+      {"name": "harp", "instrument": "harp", "pan": -0.4, "pattern": "C4 - E4 - G4 - C5 - G4 - E4 -"},
+      {"name": "bars", "instrument": "marimba", "pan": 0.5, "pattern": "C3 - - - G3 - - - C4 - - -"}
+    ]
+  }
+}

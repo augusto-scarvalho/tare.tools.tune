@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en-US">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audio authoring · tare.tools.tune</title>
+<style>
+:root{color-scheme:dark;background:#11151a;color:#e4e9ed;font:15px/1.5 system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:28px}h1{font-size:24px;margin:0}
+header,.bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:20px}
+button,input,select,textarea{font:inherit;color:inherit;background:#1c242c;border:1px solid #53606c;border-radius:4px;padding:7px}
+button{cursor:pointer}button:hover{background:#334553}button:disabled{opacity:.5;cursor:default}:focus-visible{outline:3px solid #7fdaff}
+label{display:inline-flex;gap:7px;align-items:center}input[type=number]{width:100px}input[type=checkbox]{width:18px;height:18px}
+section{margin:18px 0;padding:18px;background:#182027;border:1px solid #35414b;border-radius:6px}h2{font-size:17px;margin:0 0 12px}
+.muted,small{color:#b2c0cb}#status{min-height:25px}#error{color:#ffbaaa;white-space:pre-wrap}canvas{width:100%;height:260px;background:#080e14;touch-action:none}
+audio{width:100%;margin:12px 0}textarea{width:100%;min-height:80px}table{width:100%;min-width:520px;border-collapse:collapse;text-align:left}
+td,th{padding:7px;border-bottom:1px solid #35414b;overflow-wrap:anywhere}code{font-size:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.scroll{overflow:auto}.revision{max-width:350px}a{color:#8cd9f7}#annotations{padding-left:22px}details{margin-top:14px}
+</style>
+<main>
+<header><div><h1>Audio authoring</h1><div class="muted">tare.tools.tune · edit the project file and hear each saved revision</div></div>
+<button id="rebuild">Rebuild now</button></header>
+<p id="status" role="status" aria-live="polite">Building the first revision…</p><p id="error" role="alert"></p>
+<section><h2>Listen and compare</h2><div class="bar">
+<label>Sound <select id="sound"><option value="">Project source</option></select></label>
+<label>Revision <select id="revision" class="revision" aria-label="Audio revision"></select></label>
+<button id="follow">Follow latest</button><button id="previous">Previous revision</button>
+<label><input type="checkbox" id="autoplay">Play after rebuilding</label></div>
+<audio id="player" controls></audio><div class="bar">
+<label>Speed <select id="speed"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option></select></label>
+<label><input id="loop" type="checkbox">Loop playback</label>
+<label>Layer <select id="layer" aria-label="Diagnostic layer"></select></label>
+<button id="full">Full mix</button><button id="solo">Solo layer</button><button id="mute">Mute layer</button>
+<button id="reference" disabled>Reference recording</button></div>
+<p id="mode" class="muted">Full mix. Diagnostic solo/mute freezes the captured processing gains.</p>
+</section>
+<section><h2>Mark a time and frequency range</h2>
+<canvas id="spectrum" role="img" aria-label="Channel-power spectrogram. Use the numeric fields below to select a range with the keyboard."></canvas>
+<p class="muted">Drag across the spectrogram, or enter a range below. Frequency runs from low at the bottom to high at the top.</p>
+<div class="bar"><label>Start (s) <input id="start" type="number" min="0" step="0.01" value="0"></label>
+<label>End (s) <input id="end" type="number" min="0" step="0.01"></label>
+<label>Low (Hz) <input id="low" type="number" min="0" value="0"></label>
+<label>High (Hz) <input id="high" type="number" min="1"></label>
+<label>Measured stage <select id="stage"></select></label><button id="inspect">Inspect range</button></div>
+<p id="measurement" role="status"></p><div class="scroll"><table><thead><tr><th>Layer</th><th>Measured stage</th><th>Band power</th><th>Musical event</th></tr></thead><tbody id="layers"></tbody></table></div>
+<p class="muted">Layer energy is measured before its parent bus. Shared effects, cancellation, and nonlinear products prevent exact additive attribution.</p>
+<details><summary>Source of the selected layer</summary><pre id="source">Select a layer to find its recipe or musical event.</pre></details>
+</section>
+<section><h2>Revision notes</h2><label for="note">What should be kept, checked, or changed in this range?</label>
+<textarea id="note" placeholder="Describe what you heard and where."></textarea>
+<div class="bar"><button id="add">Add range note</button><button id="save">Save evaluation</button><span id="saved" role="status" aria-live="polite"></span></div>
+<ol id="annotations"></ol><p class="muted">Notes stay attached to the selected revision and the exact playback file. Historical audio is retained.</p></section>
+<details><summary>Technical measurements and provenance</summary><pre id="details"></pre></details>
+</main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), player=$("player");
+player.preservesPitch=false;
+const S={revision:null,latest:null,history:[],report:null,version:0,notes:[],pinned:false,dirty:false,mode:"full",playback:null,playLayer:null,drafts:new Map(),load:0,playing:0,loading:false,state:0};
+const text=(id,value)=>{$(id).textContent=value};
+async function api(url,body){const r=await fetch(url,body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const v=await r.json();if(!r.ok)throw Error(v.error||"Request failed. Try again.");return v;}
+function query(){return {start:Number($("start").value),end:Number($("end").value),low:Number($("low").value),high:Number($("high").value)};}
+function showNotes(){const list=$("annotations");list.replaceChildren();for(const n of S.notes){const li=document.createElement("li");li.textContent=`${n.start.toFixed(2)}–${n.end.toFixed(2)} s · ${n.low}–${n.high} Hz: ${n.text}`;list.append(li);}}
+function fail(e){text("error",e.message||String(e));}
+const stageName=value=>({layer_output_before_voice_bus:"Before voice processing",part_output_before_score_bus:"Before score mixing",imported_pcm:"Imported audio"}[value]||value);
+async function playMode(mode){
+ if(!S.revision)return;const revision=S.revision,ticket=S.load,playing=++S.playing,layer=$("layer").value,wasPlaying=!player.paused,at=player.currentTime;
+ const q=new URLSearchParams({revision,mode,layer});const response=await fetch("/api/audio?"+q);
+ if(!response.ok)throw Error((await response.json()).error);const bytes=await response.arrayBuffer();
+ const identity=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(x=>x.toString(16).padStart(2,"0")).join("");
+ if(ticket!==S.load||playing!==S.playing)return;S.playback=identity;S.playLayer=layer;
+ S.mode=mode;const old=player.src;player.src=URL.createObjectURL(new Blob([bytes],{type:"audio/wav"}));if(old.startsWith("blob:"))URL.revokeObjectURL(old);
+ player.onloadedmetadata=()=>{player.currentTime=Math.min(at,Math.max(0,player.duration-.01));player.playbackRate=Number($("speed").value);if(wasPlaying||$("autoplay").checked)player.play().catch(()=>text("status","Audio ready. Press Play to listen."));};
+ text("mode",mode==="full"?"Full mix.":mode==="reference"?"Reference recording.":`Diagnostic ${mode}: original seeds, timeline, and normalization gains are frozen.`);
+ await draw(bytes,playing);
+}
+async function draw(bytes,playing){
+ const ctx=new AudioContext(), buffer=await ctx.decodeAudioData(bytes.slice(0));await ctx.close();const c=$("spectrum"),g=c.getContext("2d");
+ if(playing!==S.playing)return;
+ c.width=720;c.height=260;const N=1024,image=g.createImageData(c.width,c.height),nyquist=buffer.sampleRate/2;
+ const channels=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i)),drawLength=Math.round((S.report?.duration||buffer.duration)*buffer.sampleRate);
+ function fft(re,im){for(let i=1,j=0;i<N;i++){let b=N>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+  for(let len=2;len<=N;len<<=1){const a=-2*Math.PI/len;for(let k=0;k<N;k+=len)for(let j=0;j<len/2;j++){const w=a*j,co=Math.cos(w),si=Math.sin(w),v=k+j+len/2,u=k+j,tr=re[v]*co-im[v]*si,ti=re[v]*si+im[v]*co;re[v]=re[u]-tr;im[v]=im[u]-ti;re[u]+=tr;im[u]+=ti;}}}
+ for(let x=0;x<c.width;x++){const power=new Float64Array(N/2);const start=Math.floor(x/c.width*Math.max(0,drawLength-N));
+  for(const ch of channels){const re=new Float64Array(N),im=new Float64Array(N);for(let i=0;i<N;i++)re[i]=(ch[start+i]||0)*(.5-.5*Math.cos(2*Math.PI*i/(N-1)));fft(re,im);for(let i=0;i<N/2;i++)power[i]+=re[i]**2+im[i]**2;}
+  for(let y=0;y<c.height;y++){const hz=20*(nyquist/20)**(1-y/c.height),bin=Math.min(N/2-1,Math.max(0,Math.round(hz/buffer.sampleRate*N))),v=Math.max(0,Math.min(1,(10*Math.log10(power[bin]/N**2+1e-12)+85)/75)),p=(y*c.width+x)*4;image.data[p]=Math.round(35+195*v);image.data[p+1]=Math.round(38+145*v);image.data[p+2]=Math.round(48+60*v);image.data[p+3]=255;}}
+ g.putImageData(image,0,0);
+}
+async function inspectRange(){if(!S.revision)return;const ticket=S.load,options={revision:S.revision,...query()};if($("stage").value)options.node=$("stage").value;const q=new URLSearchParams(options);const r=await api("/api/inspect?"+q);if(ticket!==S.load)return;S.report=r;
+ text("measurement",`${r.duration.toFixed(3)} s · ${r.channels} channel(s) · selected power ${r.query.channel_sum_power.toExponential(3)}`);
+ const body=$("layers");body.replaceChildren();const select=$("layer"),selected=select.value;select.replaceChildren();
+ for(const layer of r.layers||[]){const row=document.createElement("tr"),cell=document.createElement("td"),button=document.createElement("button");button.textContent=layer.label;button.title="Find this layer in the project";button.onclick=()=>{select.value=layer.id;showSource();$("source").parentElement.open=true;$("source").scrollIntoView({block:"nearest"});};cell.append(button);row.append(cell);for(const value of [stageName(layer.stage),layer.power.toExponential(3),layer.event||"—"]){const td=document.createElement("td");td.textContent=value;row.append(td);}body.append(row);}
+ for(const layer of r.layer_catalog||[]){const option=document.createElement("option");option.value=layer.id;option.textContent=layer.id+" · "+layer.label;select.append(option);}if([...select.options].some(o=>o.value===selected))select.value=selected;
+ const stage=$("stage");stage.replaceChildren();for(const item of r.stages.filter(n=>n.kind!=="cue")){const option=document.createElement("option");option.value=item.id;option.textContent=item.id+" · "+(item.track||item.kind);stage.append(option);}stage.value=r.selected_stage;
+ text("details",JSON.stringify(r,null,2));$("reference").disabled=!r.reference;showSource();
+}
+function showSource(){
+ const layer=S.report?.layer_catalog.find(item=>item.id===$("layer").value);if(!layer)return;
+ const origin=layer.source||{},location=origin.project||origin.source||origin;
+ const planned=S.report.planned?.kind==="cue"?S.report.planned.score:S.report.planned;
+ const event=(planned?.tracks||[]).flatMap(t=>t.events||[]).find(e=>e.id===layer.event);
+ const lines=[`Layer: ${layer.label}`,`File: ${location.file||"Unknown recipe; preserved audio only"}`];
+ if(location.json_pointer||location.pointer)lines.push(`JSON location: ${location.json_pointer||location.pointer}`);
+ if(location.target)lines.push(`Authored target: ${location.target}`);
+ for(const link of location.chain||[])lines.push(`Definition: ${link.definition} · used at ${link.invocation}`);
+ if(location.original_path!==undefined)lines.push(`Original layer: ${location.original_path||"Added by this refinement"}`);
+ if(location.edited_path)lines.push(`Current layer: ${location.edited_path}`);
+ for(const path of location.override_paths||[])lines.push(`Refined field: ${path}`);
+ if(location.override_path)lines.push(`Refinement source: ${location.override_path}`);
+ if(location.line)lines.push(`Line: ${location.line}`);
+ if(origin.definition)lines.push(`Definition: ${origin.definition}`);
+ if(event)lines.push(`Event: ${event.id}`,`Instrument: ${event.instrument} · note ${event.note}`,`Beat: ${event.beat+event.offset} · held ${event.beats} beat(s) · velocity ${event.velocity}`);
+ text("source",lines.join("\n"));
+}
+$("layer").onchange=showSource;
+async function loadRevision(revision){
+ if(S.revision&&!S.loading)S.drafts.set(S.revision,{notes:S.notes,version:S.version,dirty:S.dirty,text:$("note").value});
+ S.loading=true;S.revision=revision;const ticket=++S.load;$("revision").value=revision;$("stage").replaceChildren();const r=await api("/api/answers?revision="+revision),draft=S.drafts.get(revision);if(ticket!==S.load)return;
+ S.notes=draft?.notes||r.answers.notes||[];S.version=draft?.version??r.version;S.dirty=draft?.dirty||false;$("note").value=draft?.text||"";showNotes();
+ const info=await api("/api/inspect?revision="+revision);if(ticket!==S.load)return;$("end").value=info.duration;$("high").value=info.sample_rate/2;$("start").value=0;$("low").value=0;
+ await inspectRange();if(ticket!==S.load)return;await playMode("full");if(ticket!==S.load)return;S.loading=false;text("saved",S.dirty?"Unsaved notes for this revision":"");text("status",S.pinned?"Historical revision selected.":"Saved revision ready.");
+}
+async function stateChanged(state){text("error",state.error?`${state.error}. The last successful audio is still available. Fix the project and save again.`:"");text("status",state.phase==="building"?"Building saved changes…":state.phase==="error"?"Build failed; previous audio retained.":"Saved revision ready.");
+ const oldSound=$("sound").value;$("sound").replaceChildren();for(const name of state.sounds?.length?state.sounds:[""]){const o=document.createElement("option");o.value=name;o.textContent=name||"Project source";$("sound").append(o);}$("sound").value=state.name||oldSound;
+ if(!state.revision||state.revision===S.latest)return;S.latest=state.revision;const ticket=++S.state,history=await api("/api/revisions");if(ticket!==S.state)return;S.history=history;$("revision").replaceChildren();for(const revision of S.history){const o=document.createElement("option");o.value=revision;o.textContent=revision.slice(0,12)+(revision===S.latest?" · latest":"");$("revision").append(o);}
+ if(!S.pinned&&!S.dirty&&!$("note").value)await loadRevision(state.revision);else{$("revision").value=S.revision;text("status","A new revision is ready. Your current notes remain on the selected revision. Use Follow latest to switch.");}
+}
+$("rebuild").onclick=()=>api("/api/build",{name:$("sound").value||null}).catch(fail);
+$("sound").onchange=()=>api("/api/build",{name:$("sound").value}).catch(fail);
+$("revision").onchange=()=>{S.pinned=true;loadRevision($("revision").value).catch(fail);};
+$("follow").onclick=()=>{S.pinned=false;if(S.latest)loadRevision(S.latest).catch(fail);};
+$("previous").onclick=()=>{const i=S.history.indexOf(S.revision);if(S.history[i+1]){S.pinned=true;loadRevision(S.history[i+1]).catch(fail);}};
+for(const mode of ["full","solo","mute","reference"])$(mode).onclick=()=>playMode(mode).catch(fail);
+$("speed").onchange=()=>player.playbackRate=Number($("speed").value);$("loop").onchange=()=>player.loop=$("loop").checked;
+$("inspect").onclick=()=>inspectRange().catch(fail);$("note").oninput=()=>{S.dirty=true;};
+function listening(){return {playback_id:S.playback,mode:S.mode,layer:S.playLayer,rate:player.playbackRate,preserves_pitch:player.preservesPitch,volume:player.volume,loop:player.loop,loudness_match:false,reference:S.report?.reference||null};}
+$("add").onclick=()=>{if(!S.revision||S.loading||!S.playback||!$("note").value.trim())return;S.notes.push({...query(),text:$("note").value.trim(),...listening()});$("note").value="";S.dirty=true;showNotes();};
+$("save").onclick=async()=>{try{if(S.loading||!S.playback)throw Error("Audio is loading. Wait before saving.");if($("note").value.trim())$("add").click();const revision=S.revision;
+ const saved=await api("/api/answers",{revision,version:S.version,answers:{notes:S.notes},listening:listening()});
+ if(S.revision===revision){S.version=saved.version;S.dirty=false;text("saved","Evaluation saved for "+revision.slice(0,12));}}catch(e){text("saved",`${e.message}. Notes remain here; reload the revision and reconcile before saving.`);}};
+let anchor=null;const canvas=$("spectrum");function point(e){const r=canvas.getBoundingClientRect(),x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));return [x*(S.report?.duration||0),20*((S.report?.sample_rate||48000)/40)**(1-y)];}
+canvas.onpointerdown=e=>{anchor=point(e);canvas.setPointerCapture(e.pointerId);};canvas.onpointerup=e=>{if(!anchor)return;const end=point(e);$("start").value=Math.min(anchor[0],end[0]).toFixed(3);$("end").value=Math.max(anchor[0],end[0]).toFixed(3);$("low").value=Math.floor(Math.min(anchor[1],end[1]));$("high").value=Math.ceil(Math.max(anchor[1],end[1]));anchor=null;inspectRange().catch(fail);};
+window.addEventListener("beforeunload",e=>{if(S.dirty){e.preventDefault();e.returnValue="";}});
+new EventSource("/api/events").onmessage=e=>stateChanged(JSON.parse(e.data)).catch(fail);
+api("/api/state").then(stateChanged).catch(fail);
+</script>
+</html>

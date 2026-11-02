@@ -1,0 +1,15 @@
+{
+  "format": "tare.tools.tune.dsl",
+  "version": 1,
+  "context": {"sample_rate": 16000},
+  "sounds": {
+    "gesture": {
+      "voice": [
+        {"id": "tone", "syllable": {"start": 0, "dur": 0.18, "pitch": [[0, 660], [1, 440]], "source": "sine", "gain": 0.8}},
+        {"id": "body", "modal": {"start": 0.01, "dur": 0.3, "modes": [[880, 0.2, 1], [1320, 0.12, 0.3]], "hardness": 5000, "gain": 0.4}},
+        {"id": "air", "noise": {"start": 0, "dur": 0.08, "freq": [[0, 3000], [1, 1200]], "gain": 0.12}}
+      ],
+      "bus": {"seed": 13, "drive": 0.3, "gain": 0.5}
+    }
+  }
+}

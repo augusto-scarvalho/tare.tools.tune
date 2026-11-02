@@ -1,0 +1,15 @@
+{
+  "format": "tare.tools.tune.dsl",
+  "version": 1,
+  "context": {"sample_rate": 16000},
+  "defs": {
+    "confirm": {
+      "params": {"power": {"type": "number", "default": 0.5, "min": 0, "max": 1}},
+      "body": {"sfx": "ui", "style": "crystal", "event": "confirm", "species": 7, "power": {"param": "power"}, "dry": true}
+    }
+  },
+  "sounds": {
+    "confirm": {"use": "confirm"},
+    "confirm_strong": {"use": "confirm", "with": {"power": 0.85}}
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "runner": ["python", "your_budget_enforcing_runner.py"],
+  "model": "REPLACE_WITH_PINNED_MODEL_VERSION",
+  "effort": "REPLACE_WITH_FIXED_EFFORT",
+  "runs_per_task": 3,
+  "max_total_tokens": 100000,
+  "max_seconds": 1800,
+  "per_run_seconds": 120
+}
