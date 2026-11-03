@@ -21,7 +21,7 @@ synthesized on the spot: no recordings shipped, no AI at runtime, and the same r
 ## Why
 
 - 🧬 **Describe who and why, not waveforms.** A big, angry wolf attacking. A deep-voiced blacksmith greeting you. A steel sword clashing. The sound follows.
-- 🎲 **Deterministic, never copy-pasted.** Same input, same samples, on every machine. Each individual and each take varies a little, so repeats don't sound identical.
+- 🎲 **Deterministic, never copy-pasted.** Same input, same sound. On the same setup the samples are identical. Between Windows and Linux, 954 of 960 test WAVs matched bit for bit, and the other 6 differ in one sample by the smallest step. Each individual and each take varies a little, so repeats don't sound identical.
 - 🪶 **Tiny.** Only numpy and scipy. A sound is a 1–10 KB JSON spec that your game can render on demand.
 - 🗣️ **Speech in Brazilian Portuguese and English**, plus wordless barks (*hyah!*, *ugh*, *hm?*) in each character's own voice.
 - 🎮 **Engine-ready.** WAV packs for any engine, OGG sprite banks for the web, MIDI, and a C++ renderer for Godot that matches Python sample for sample.
@@ -42,13 +42,16 @@ from tare.tools.tune.speech import Speaker
 
 wolf = Creature("mammal", species="wolf", size=0.45, aggression=0.5)
 write_wav("wolf_attack.wav", wolf.render("attack"), 48000)
-write_wav("dire_wolf_death.wav", wolf.evolve(size=0.9).render("death", take=2), 48000)   # same species, bigger
+dire_wolf = wolf.evolve(size=0.9)                    # same species, bigger
+write_wav("dire_wolf_death.wav", dire_wolf.render("death", take=2), 48000)
 
 smith = Speaker.preset("deep")
-write_wav("smith.wav", smith.render("Welcome to the forge, traveler!", lang="en"), 48000)
-write_wav("smith_laugh.wav", smith.emote("laugh"), 48000)                               # a wordless bark, same voice
+hello = smith.render("Welcome to the forge, traveler!", lang="en")
+write_wav("smith.wav", hello, 48000)
+write_wav("smith_laugh.wav", smith.emote("laugh"), 48000)   # a bark, same voice
 
-write_wav("clash.wav", Sfx("blade", "steel", species="excalibur").render("clash", take=3), 48000)
+sword = Sfx("blade", "steel", species="excalibur")
+write_wav("clash.wav", sword.render("clash", take=3), 48000)
 write_wav("victory.wav", Cue("victory", seed=3).render(), 48000)
 ```
 
@@ -56,14 +59,15 @@ Or from the command line:
 
 ```bash
 tare.tools.tune sfx spell lightning --event impact -o lightning.wav
-tare.tools.tune sfx ambience rain --event loop -o rain_loop.wav        # 16 s, seamless
+tare.tools.tune sfx ambience rain --event loop -o rain.wav   # 16 s, seamless
 tare.tools.tune say "Hello there!" --lang en --voice npc:7 -o hello.wav
-tare.tools.tune bake examples/bestiary.json -o baked                    # a whole bestiary: 19 creatures × 5 calls × 3 takes
+# a whole bestiary: 19 creatures × 5 calls × 3 takes, as WAV packs
+tare.tools.tune bake examples/bestiary.json -o baked
 ```
 
 ## What it makes
 
-| | | |
+| | Range | Highlights |
 |---|---|---|
 | 🐺 **[Creatures](docs/guide.md#archetypes)** | 10 archetypes × 5 calls | mammals, birds, insects, monsters, slimes, spirits, robots and more. A creature can `evolve()` and keep its species |
 | 🗣️ **[Speech](docs/guide.md#human-speech)** | Portuguese and English | a formant voice or a natural voice bank; intonation from punctuation; emotions; a unique voice per NPC; gibberish and animalese |
@@ -93,7 +97,7 @@ Struck bodies ring through modal synthesis, wind and fire are filtered noise, an
 
 ## Learn more
 
-| | |
+| Read | What's inside |
 |---|---|
 | 📖 [Full guide](docs/guide.md) | every archetype, voice, effect and cue, the knobs, engines, CLI and development |
 | 🎛️ [Authoring](docs/authoring.md) | live studio, capture, inspection, MIDI and web sprites |

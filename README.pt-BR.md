@@ -21,7 +21,7 @@ sintetizados na hora: nenhuma gravação no pacote, nenhuma IA rodando no jogo, 
 ## Por quê
 
 - 🧬 **Você descreve quem e por quê, não a forma de onda.** Um lobo grande e bravo atacando. Um ferreiro de voz grave dando boas-vindas. Uma espada de aço se chocando. O som vem daí.
-- 🎲 **Determinístico, mas nunca copia e cola.** A mesma entrada dá as mesmas amostras em qualquer máquina. Cada indivíduo e cada take variam um pouco, então a repetição não soa idêntica.
+- 🎲 **Determinístico, mas nunca copia e cola.** A mesma entrada dá o mesmo som. Na mesma configuração, as amostras são idênticas. Entre Windows e Linux, 954 de 960 WAVs de teste saíram iguais bit a bit, e nos outros 6 muda uma única amostra, no menor degrau possível. Cada indivíduo e cada take variam um pouco, então a repetição não soa idêntica.
 - 🪶 **Pequeno.** Só numpy e scipy. Um som é uma spec JSON de 1 a 10 KB que o jogo transforma em áudio quando precisa.
 - 🗣️ **Fala em português brasileiro e inglês**, e também interjeições sem palavras (*rá!*, *ugh*, *hm?*) na voz de cada personagem.
 - 🎮 **Pronto para engine.** Pacotes de WAV para qualquer engine, sprites OGG para a web, MIDI e um renderizador C++ para o Godot que bate com o Python amostra por amostra.
@@ -42,13 +42,16 @@ from tare.tools.tune.speech import Speaker
 
 lobo = Creature("mammal", species="wolf", size=0.45, aggression=0.5)
 write_wav("lobo_ataque.wav", lobo.render("attack"), 48000)
-write_wav("lobo_gigante_morte.wav", lobo.evolve(size=0.9).render("death", take=2), 48000)   # mesma espécie, maior
+gigante = lobo.evolve(size=0.9)                      # mesma espécie, maior
+write_wav("lobo_gigante_morte.wav", gigante.render("death", take=2), 48000)
 
 ferreiro = Speaker.preset("deep")
-write_wav("ferreiro.wav", ferreiro.render("Bem-vindo à forja, viajante!", lang="pt"), 48000)
-write_wav("ferreiro_risada.wav", ferreiro.emote("laugh"), 48000)                         # interjeição, mesma voz
+fala = ferreiro.render("Bem-vindo à forja, viajante!", lang="pt")
+write_wav("ferreiro.wav", fala, 48000)
+write_wav("ferreiro_risada.wav", ferreiro.emote("laugh"), 48000)   # mesma voz
 
-write_wav("choque.wav", Sfx("blade", "steel", species="excalibur").render("clash", take=3), 48000)
+espada = Sfx("blade", "steel", species="excalibur")
+write_wav("choque.wav", espada.render("clash", take=3), 48000)
 write_wav("vitoria.wav", Cue("victory", seed=3).render(), 48000)
 ```
 
@@ -56,14 +59,15 @@ Ou pela linha de comando:
 
 ```bash
 tare.tools.tune sfx spell lightning --event impact -o raio.wav
-tare.tools.tune sfx ambience rain --event loop -o chuva_loop.wav       # 16 s, sem emenda
+tare.tools.tune sfx ambience rain --event loop -o chuva.wav   # 16 s, sem emenda
 tare.tools.tune say "Olá, viajante!" --voice npc:7 -o ola.wav
-tare.tools.tune bake examples/bestiary.json -o baked                    # um bestiário inteiro: 19 criaturas × 5 chamados × 3 takes
+# um bestiário inteiro: 19 criaturas × 5 chamados × 3 takes, em WAV
+tare.tools.tune bake examples/bestiary.json -o baked
 ```
 
 ## O que ele faz
 
-| | | |
+| | Alcance | Destaques |
 |---|---|---|
 | 🐺 **[Criaturas](docs/pt-BR/guia.md#arquétipos)** | 10 arquétipos × 5 chamados | mamíferos, aves, insetos, monstros, slimes, espíritos, robôs e mais. Uma criatura pode `evolve()` sem perder a espécie |
 | 🗣️ **[Fala](docs/pt-BR/guia.md#fala-humana)** | português e inglês | voz de formantes ou banco de voz natural; entonação pela pontuação; emoções; uma voz única por NPC; língua inventada e animalese |
@@ -93,7 +97,7 @@ Corpos que vibram (metal, madeira, sinos) soam por síntese modal, vento e fogo 
 
 ## Para saber mais
 
-| | |
+| Leia | O que tem lá |
 |---|---|
 | 📖 [Guia completo](docs/pt-BR/guia.md) | todos os arquétipos, vozes, efeitos e músicas, os botões de ajuste, os motores, a linha de comando e o desenvolvimento |
 | 🎛️ [Autoria](docs/pt-BR/autoria.md) | estúdio ao vivo, captura, inspeção, MIDI e sprites para a web |
