@@ -4,7 +4,8 @@ English (en-US) is the primary documentation language and the reference for this
 
 | Guide | English (primary) | Português brasileiro (alternativa) |
 |---|---|---|
-| Overview, installation, API examples, CLI, and development | [README](../README.md) | [README em português](../README.pt-BR.md) |
+| Overview and quick start | [README](../README.md) | [README em português](../README.pt-BR.md) |
+| Full guide: archetypes, speech, effects, music, engines, CLI, and development | [Guide](guide.md) | [Guia completo](pt-BR/guia.md) |
 | Architecture, rendering, portability, and calibration | [Architecture](architecture.md) | [Arquitetura](pt-BR/arquitetura.md) |
 | Essential action and adventure RPG sounds | [RPG sounds](rpg-sounds.md) | [Sons essenciais de RPG](pt-BR/sons-rpg.md) |
 | Tactical RPG sound coverage and priorities | [Tactical RPG sounds](tactics-sounds.md) | [Sons de tactics RPG](pt-BR/sons-tactics.md) |
@@ -14,7 +15,7 @@ English (en-US) is the primary documentation language and the reference for this
 | Review audio, discover controls and trial-check atomic edits | [Review loop](dsl-review.md) | [Revisar e editar](pt-BR/revisao-dsl.md) |
 | Continuation token attribution and compact feedback | [Token analysis](dsl-review-token-costs.md) | [Tokens nas continuações](pt-BR/tokens-revisao-dsl.md) |
 
-For documentation changes, update the English version first and keep the corresponding pt-BR version aligned. New primary guides belong directly in `docs/`; their Portuguese alternatives belong in `docs/pt-BR/`. The alternative project overview is `README.pt-BR.md` at the repository root. Each translated guide links to its counterpart.
+For documentation changes, update the English version first and keep the corresponding pt-BR version aligned. New primary guides belong directly in `docs/`; their Portuguese alternatives belong in `docs/pt-BR/`. The alternative project overview is `README.pt-BR.md` at the repository root, and the full guide is `docs/guide.md` (`docs/pt-BR/guia.md`). Each translated guide links to its counterpart.
 
 Portuguese speech samples, phonetic examples, language codes, voice bank names, and supported API identifiers retain their original spelling where required to demonstrate Brazilian Portuguese synthesis. Source code and third-party documentation retain their own paths.
 
