@@ -21,10 +21,10 @@ sintetizados na hora: nenhuma gravação no pacote, nenhuma IA rodando no jogo, 
 ## Por quê
 
 - 🧬 **Você descreve quem e por quê, não a forma de onda.** Um lobo grande e bravo atacando. Um ferreiro de voz grave dando boas-vindas. Uma espada de aço se chocando. O som vem daí.
-- 🎲 **Determinístico, mas nunca copia e cola.** A mesma entrada dá o mesmo som. Na mesma configuração, as amostras são idênticas. Entre Windows e Linux, 954 de 960 WAVs de teste saíram iguais bit a bit, e nos outros 6 muda uma única amostra, no menor degrau possível. Cada indivíduo e cada take variam um pouco, então a repetição não soa idêntica.
+- 🎲 **Determinístico, mas nunca copia e cola.** A mesma entrada dá o mesmo som. Com o [numpy e o scipy testados](constraints.txt), dois computadores Intel diferentes no Windows deram WAVs idênticos bit a bit nos 960 sons de teste. Entre Windows e Linux, 954 bateram, e nos outros 6 muda uma única amostra, no menor degrau possível. Cada indivíduo e cada take variam um pouco, então a repetição não soa idêntica.
 - 🪶 **Pequeno.** Só numpy e scipy. Um som é uma spec JSON de 1 a 10 KB que o jogo transforma em áudio quando precisa.
 - 🗣️ **Fala em português brasileiro e inglês**, e também interjeições sem palavras (*rá!*, *ugh*, *hm?*) na voz de cada personagem.
-- 🎮 **Pronto para engine.** Pacotes de WAV para qualquer engine, sprites OGG para a web, MIDI e um renderizador C++ para o Godot que bate com o Python amostra por amostra.
+- 🎮 **Pronto para engine.** Pacotes de WAV para qualquer engine, sprites OGG para a web, MIDI e um renderizador C++ para o Godot que bate com o Python com diferença de no máximo 10⁻⁵, muito abaixo do que se ouve.
 - 🤖 **Feito também para agentes.** Vem como a [skill `tune-game-audio`](SKILL.md), e o ciclo de revisão deixa o agente ler um som como texto.
 
 > Tudo começou como um sintetizador dos gritos do Pokémon da 1ª geração. O jogo fazia 151 gritos a partir de 38 moldes, mais altura e duração, e essa ideia virou o modelo de todo o projeto: **espécie = genes, indivíduo = pequenas variações, take = uma nova interpretação**.
@@ -34,6 +34,8 @@ sintetizados na hora: nenhuma gravação no pacote, nenhuma IA rodando no jogo, 
 ```bash
 pip install git+https://github.com/augusto-scarvalho/tare.tools.tune
 ```
+
+Uma equipe ou um servidor de build? Instale a partir de um clone com `-c constraints.txt`: ele fixa o numpy e o scipy que testamos (Python 3.12+), e assim uma versão nova não muda os seus sons. [Detalhes →](docs/pt-BR/guia.md#instalação)
 
 ```python
 from tare.tools.tune import Creature, Sfx, write_wav
@@ -83,7 +85,7 @@ flowchart LR
     R["<b>Receita</b><br/>quem + por quê<br/>Python · JSON · DSL"] --> T["<b>tare.tools.tune</b><br/>síntese determinística"]
     T --> F["<b>Arquivos</b><br/>WAV · sprites OGG · MIDI"]
     T --> S["<b>Spec</b><br/>JSON de 1–10 KB"]
-    S --> G["<b>No jogo</b><br/>Godot / núcleo C++<br/>as mesmas amostras do Python"]
+    S --> G["<b>No jogo</b><br/>Godot / núcleo C++<br/>igual ao Python até 10⁻⁵"]
 ```
 
 Corpos que vibram (metal, madeira, sinos) soam por síntese modal, vento e fogo são ruído filtrado, e estalos são nuvens de eventos minúsculos. As vozes são refeitas por um vocoder pequeno. As gravações e a voz-professora offline foram só **medidas**, e só os números vão no pacote, tanto da fala quanto das interjeições e dos instrumentos. A [arquitetura](docs/pt-BR/arquitetura.md) explica cada técnica e as medições por trás dela.

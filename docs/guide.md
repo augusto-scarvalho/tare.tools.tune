@@ -35,12 +35,12 @@ write_wav("fireball.wav", Sfx("spell", "fire", power=0.8).render("impact"), 4800
 git clone https://github.com/augusto-scarvalho/tare.tools.tune
 cd tare.tools.tune
 pip install -e .            # numpy + scipy
-pip install -e ".[dev]"     # + pytest, ruff, matplotlib (spectrograms)
+pip install -e ".[dev]" -c constraints.txt   # + pytest, ruff, matplotlib (spectrograms)
 ```
 
-Requires Python 3.10 or newer. In code, use `import tare.tools.tune` (`tare` and `tare.tools` are namespace packages); on the command line, use `tare.tools.tune`; where dots are not allowed, use `tare-tools-tune` (the name pip normalizes the package to).
+Requires Python 3.10 or newer. Floating point can change between numpy and scipy versions, so a team, a build server or the tests should add `-c constraints.txt`: it pins the versions every render was verified with (Python 3.12 or newer). With those versions, two different Intel CPUs on Windows gave bit-identical WAVs for all 960 test sounds. The operating system still matters a little: Windows and Linux matched on 954, and the other 6 differ in one sample by the smallest step. In code, use `import tare.tools.tune` (`tare` and `tare.tools` are namespace packages); on the command line, use `tare.tools.tune`; where dots are not allowed, use `tare-tools-tune` (the name pip normalizes the package to).
 
-As an agent skill (`tune-game-audio`, [SKILL.md](../SKILL.md)), the clone is the skill folder once it has its own `.venv` (`python -m venv .venv`, then `.venv/bin/pip install -e .`, or `.venv\Scripts\pip` on Windows): link it as `~/.claude/skills/tune-game-audio` (Claude Code) or `~/.codex/skills/tune-game-audio` (Codex; a junction on Windows). Antigravity's `agy` does not follow a link there: name the folder holding the clone in `~/.gemini/config/skills.json` instead, `{"entries": [{"path": "<the folder holding your clone>", "include_only": ["<your clone's folder name>"]}]}`.
+As an agent skill (`tune-game-audio`, [SKILL.md](../SKILL.md)), the clone is the skill folder once it has its own `.venv` (`python -m venv .venv`, then `.venv/bin/pip install -e . -c constraints.txt`, or `.venv\Scripts\pip` on Windows): link it as `~/.claude/skills/tune-game-audio` (Claude Code) or `~/.codex/skills/tune-game-audio` (Codex; a junction on Windows). Antigravity's `agy` does not follow a link there: name the folder holding the clone in `~/.gemini/config/skills.json` instead, `{"entries": [{"path": "<the folder holding your clone>", "include_only": ["<your clone's folder name>"]}]}`.
 
 ## Authoring and diagnostics
 
@@ -493,7 +493,7 @@ Import `baked/` into Unity, Godot, Unreal, FMOD, or Wwise and pick a random take
   line = bank.line(Speaker.preset("child"), "Hi!", "en")   # cached speech too
   ```
 
-- **Godot** (`native/godot`): the `tare_tune` extension provides the C++ renderer. Python designs sounds as small specs (`Sfx(...).voice("confirm").to_json()`, `Speaker.voice(text).to_json()`: 1–10 KB), and the game turns them into sound on demand, matching Python sample for sample. Speech uses exported voice banks (`tare.tools.tune.speech.tvb.export`, ~21 MB per voice):
+- **Godot** (`native/godot`): the `tare_tune` extension provides the C++ renderer. Python designs sounds as small specs (`Sfx(...).voice("confirm").to_json()`, `Speaker.voice(text).to_json()`: 1–10 KB), and the game turns them into sound on demand, matching Python to within 10⁻⁶ (speech 10⁻⁵), far below hearing. Speech uses exported voice banks (`tare.tools.tune.speech.tvb.export`, ~21 MB per voice):
 
   ```gdscript
   var sound := TareSound.new()

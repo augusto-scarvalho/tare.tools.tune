@@ -21,10 +21,10 @@ synthesized on the spot: no recordings shipped, no AI at runtime, and the same r
 ## Why
 
 - 🧬 **Describe who and why, not waveforms.** A big, angry wolf attacking. A deep-voiced blacksmith greeting you. A steel sword clashing. The sound follows.
-- 🎲 **Deterministic, never copy-pasted.** Same input, same sound. On the same setup the samples are identical. Between Windows and Linux, 954 of 960 test WAVs matched bit for bit, and the other 6 differ in one sample by the smallest step. Each individual and each take varies a little, so repeats don't sound identical.
+- 🎲 **Deterministic, never copy-pasted.** Same input, same sound. With the [tested numpy and scipy](constraints.txt), two different Intel machines on Windows gave bit-identical WAVs for all 960 test sounds. Windows and Linux matched on 954, and the other 6 differ in one sample by the smallest step. Each individual and each take varies a little, so repeats don't sound identical.
 - 🪶 **Tiny.** Only numpy and scipy. A sound is a 1–10 KB JSON spec that your game can render on demand.
 - 🗣️ **Speech in Brazilian Portuguese and English**, plus wordless barks (*hyah!*, *ugh*, *hm?*) in each character's own voice.
-- 🎮 **Engine-ready.** WAV packs for any engine, OGG sprite banks for the web, MIDI, and a C++ renderer for Godot that matches Python sample for sample.
+- 🎮 **Engine-ready.** WAV packs for any engine, OGG sprite banks for the web, MIDI, and a C++ renderer for Godot that matches Python to within 10⁻⁵, far below hearing.
 - 🤖 **Built for agents too.** It ships as the [`tune-game-audio` skill](SKILL.md), and the review loop lets an agent read a sound as text.
 
 > It began as a Pokémon Gen 1 cry synthesizer. That game made 151 cries from 38 templates plus pitch and duration, and the idea became the model for everything here: **species = genes, individual = small variations, take = a new performance**.
@@ -34,6 +34,8 @@ synthesized on the spot: no recordings shipped, no AI at runtime, and the same r
 ```bash
 pip install git+https://github.com/augusto-scarvalho/tare.tools.tune
 ```
+
+A team or a build server? Install from a clone with `-c constraints.txt`: it pins the numpy and scipy we tested (Python 3.12+), so a new version can't change your renders. [Details →](docs/guide.md#installation)
 
 ```python
 from tare.tools.tune import Creature, Sfx, write_wav
@@ -83,7 +85,7 @@ flowchart LR
     R["<b>Recipe</b><br/>who + why<br/>Python · JSON · DSL"] --> T["<b>tare.tools.tune</b><br/>deterministic synthesis"]
     T --> F["<b>Files</b><br/>WAV packs · OGG sprites · MIDI"]
     T --> S["<b>Spec</b><br/>1–10 KB JSON"]
-    S --> G["<b>In the game</b><br/>Godot / C++ core<br/>same samples as Python"]
+    S --> G["<b>In the game</b><br/>Godot / C++ core<br/>matches Python within 10⁻⁵"]
 ```
 
 Struck bodies ring through modal synthesis, wind and fire are filtered noise, and crackles are clouds of tiny events. Voices are rebuilt by a small vocoder. Recordings and the offline teacher voice were only ever **measured**, and just the numbers ship: speech, barks and instruments alike. The [architecture](docs/architecture.md) explains each technique and the measurements behind it.

@@ -1,0 +1,6 @@
+# The numpy and scipy every render was verified with (Python 3.12+). A new version can change floating point, and
+# with it the samples, so a team, a build server or the tests install with these. They rule out version drift only:
+# with them, Windows and Linux still differed in 6 of 960 test WAVs (one sample each, by the smallest step).
+#     pip install -e . -c constraints.txt
+numpy==2.5.3
+scipy==1.18.1

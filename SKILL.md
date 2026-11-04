@@ -9,7 +9,9 @@ You describe sounds in a `.tune.json`; tune renders them deterministically and m
 them by ear in a local page. `TUNE` below means `<this skill's directory>/.venv/bin/python -m tare.tools.tune`;
 `CURATE`, that Python running `<this skill's directory>/tools/curate.py`. On Windows the Python is
 `.venv/Scripts/python`; in Git Bash prefix `MSYS_NO_PATHCONV=1` (it keeps `/with/power` from turning into a
-path) and write the directory as `C:/...`, never `/c/...`. `TUNE --help` lists every command.
+path) and write the directory as `C:/...`, never `/c/...`. `TUNE --help` lists every command. No `.venv` yet? Make it
+with Python 3.12+ in this skill's directory: `python -m venv .venv`, then its pip `install -e . -c constraints.txt`
+(the numpy and scipy every render was verified with).
 
 Work in the user's project (renders under `output/`), never in this skill's directory, where `examples/`
 and `docs/` live. Copy an example before editing it: `dsl edit` rewrites its source.

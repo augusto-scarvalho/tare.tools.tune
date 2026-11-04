@@ -43,12 +43,12 @@ write_wav("bola_de_fogo.wav", Sfx("spell", "fire", power=0.8).render("impact"), 
 git clone https://github.com/augusto-scarvalho/tare.tools.tune
 cd tare.tools.tune
 pip install -e .            # numpy + scipy
-pip install -e ".[dev]"     # + pytest, ruff, matplotlib (espectrogramas)
+pip install -e ".[dev]" -c constraints.txt   # + pytest, ruff, matplotlib (espectrogramas)
 ```
 
-Requer Python 3.10 ou mais novo. No código, `import tare.tools.tune` (os pacotes `tare` e `tare.tools` são namespaces); na linha de comando, `tare.tools.tune`; onde o nome não aceita pontos, `tare-tools-tune` (é como o pip normaliza o nome do pacote).
+Requer Python 3.10 ou mais novo. As contas em ponto flutuante podem mudar entre versões do numpy e do scipy, então uma equipe, um servidor de build ou os testes devem acrescentar `-c constraints.txt`: ele fixa as versões com que cada som foi conferido (Python 3.12 ou mais novo). Com essas versões, dois processadores Intel diferentes no Windows deram WAVs idênticos bit a bit nos 960 sons de teste. O sistema operacional ainda pesa um pouco: entre Windows e Linux, 954 bateram, e nos outros 6 muda uma única amostra, no menor degrau possível. No código, `import tare.tools.tune` (os pacotes `tare` e `tare.tools` são namespaces); na linha de comando, `tare.tools.tune`; onde o nome não aceita pontos, `tare-tools-tune` (é como o pip normaliza o nome do pacote).
 
-Como skill de agente (`tune-game-audio`, [SKILL.md](../../SKILL.md)), o clone é a pasta da skill depois de ganhar o próprio `.venv` (`python -m venv .venv` e `.venv/bin/pip install -e .`, ou `.venv\Scripts\pip` no Windows): crie um link para ela em `~/.claude/skills/tune-game-audio` (Claude Code) ou `~/.codex/skills/tune-game-audio` (Codex; no Windows, uma junction). O `agy` do Antigravity não segue link ali: registre a pasta que contém o clone em `~/.gemini/config/skills.json`, `{"entries": [{"path": "<a pasta que contém o clone>", "include_only": ["<o nome da pasta do clone>"]}]}`.
+Como skill de agente (`tune-game-audio`, [SKILL.md](../../SKILL.md)), o clone é a pasta da skill depois de ganhar o próprio `.venv` (`python -m venv .venv` e `.venv/bin/pip install -e . -c constraints.txt`, ou `.venv\Scripts\pip` no Windows): crie um link para ela em `~/.claude/skills/tune-game-audio` (Claude Code) ou `~/.codex/skills/tune-game-audio` (Codex; no Windows, uma junction). O `agy` do Antigravity não segue link ali: registre a pasta que contém o clone em `~/.gemini/config/skills.json`, `{"entries": [{"path": "<a pasta que contém o clone>", "include_only": ["<o nome da pasta do clone>"]}]}`.
 
 ## Arquétipos
 
@@ -470,7 +470,7 @@ Importe `baked/` na Unity, Godot, Unreal, FMOD ou Wwise e sorteie um take por ch
   fala = bank.line(Speaker.preset("child"), "Oi!")    # falas também, com cache
   ```
 
-- **Godot** (`native/godot`): a extensão `tare_tune` traz o renderizador em C++. O Python desenha os sons em specs pequenos (`Sfx(...).voice("confirm").to_json()`, `Speaker.voice(texto).to_json()`: de 1 a 10 KB), e o jogo os transforma em som na hora, igual ao Python amostra por amostra. As falas usam os bancos de voz exportados (`tare.tools.tune.speech.tvb.export`, ~21 MB por voz):
+- **Godot** (`native/godot`): a extensão `tare_tune` traz o renderizador em C++. O Python desenha os sons em specs pequenos (`Sfx(...).voice("confirm").to_json()`, `Speaker.voice(texto).to_json()`: de 1 a 10 KB), e o jogo os transforma em som na hora, igual ao Python com diferença de no máximo 10⁻⁶ (10⁻⁵ na fala), muito abaixo do que se ouve. As falas usam os bancos de voz exportados (`tare.tools.tune.speech.tvb.export`, ~21 MB por voz):
 
   ```gdscript
   var som := TareSound.new()
