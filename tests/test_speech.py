@@ -134,3 +134,12 @@ def test_cli_say(tmp_path, capsys):
                  "-o", str(tmp_path / "hi.wav"), "--sr", str(SR)]) == 0
     assert main(["voices"]) == 0
     assert main(["say", "oi", "--voice", "pirate"]) == 1
+
+
+def test_convolve_matches_numpy_without_blas():
+    # numpy's convolve runs on BLAS, whose last bit depends on the CPU; ours must give the same smoothing
+    from tare.tools.tune.speech.phonetics import convolve
+    r = np.random.default_rng(0)
+    for n, m in [(1, 1), (5, 2), (11, 4), (50, 7), (50, 10)]:
+        a, v = r.normal(size=n), r.normal(size=m)
+        assert np.allclose(convolve(a, v), np.convolve(a, v, "same"), atol=1e-12)

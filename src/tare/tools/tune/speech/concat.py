@@ -21,6 +21,7 @@ from pathlib import Path
 import numpy as np
 
 from .. import rng
+from .phonetics import convolve
 from .vocoder import ENV_FLOOR, FRAME, Template, synthesize
 
 DATA = Path(__file__).parent / "data"
@@ -228,7 +229,7 @@ class Bank:
             for k, v in r.items():
                 if k in index:
                     x[i, index[k]] = v
-        return x @ coef, where
+        return (x[:, :, None] * coef).sum(1), where   # not @: BLAS, whose last bit depends on the CPU (see convolve)
 
     def rows(self, idx) -> np.ndarray:
         """Envelope frames (dB) at the given indices."""
@@ -247,7 +248,7 @@ class Bank:
             for k, v in r.items():
                 if k in self._index:
                     x[self._index[k]] = v
-            out.append(float(np.exp(x @ self._coef)))
+            out.append(float(np.exp((x * self._coef).sum())))
         return out
 
     def substitutions(self, sym: str) -> np.ndarray:
@@ -610,7 +611,7 @@ def _contour(learned, edges, n: int, pitch: float, range_: float, melody) -> np.
     lf = np.interp(np.arange(n), xs, ys)
     kernel = np.hanning(12)[1:-1]
     kernel /= kernel.sum()
-    lf = np.convolve(np.pad(lf, 5, mode="edge"), kernel, mode="same")[5:-5]
+    lf = convolve(np.pad(lf, 5, mode="edge"), kernel)[5:-5]
     return pitch * 2 ** lf
 
 

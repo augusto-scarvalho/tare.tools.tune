@@ -12,6 +12,7 @@ the output (tools/intelligibility.py), A/B against a fixed set of game-dialogue 
 from dataclasses import dataclass, field
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 
 from .units import Phrase, is_vowel
 
@@ -253,6 +254,13 @@ def segments(phrases: list[Phrase], lang: str, rate: float = 1.0) -> tuple[list[
     return segs, sylls
 
 
+def convolve(a: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """np.convolve(a, v, "same") without numpy's dot: that one runs on BLAS, whose kernel depends on the CPU, and the
+    last bit it changed moved a glottal pulse (a laptop and a desktop rendered the same line differently)."""
+    m = len(v)
+    return (sliding_window_view(np.pad(a, m - 1), m) * v[::-1]).sum(1)[(m - 1) // 2:][:len(a)]
+
+
 def _smooth(x: np.ndarray, ms: float) -> np.ndarray:
     n = max(int(ms * GRID / 1000), 1)
     if n < 2:
@@ -260,7 +268,7 @@ def _smooth(x: np.ndarray, ms: float) -> np.ndarray:
     w = np.hanning(n + 2)[1:-1]
     w /= w.sum()
     pad = np.concatenate([np.full(n, x[0]), x, np.full(n, x[-1])])
-    return np.convolve(pad, w, mode="same")[n:-n]
+    return convolve(pad, w)[n:-n]
 
 
 def _intonation(segs: list[_Seg], sylls: list[dict], t: np.ndarray, pitch: float, rng_: float, lang: str,
