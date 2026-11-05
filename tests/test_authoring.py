@@ -37,7 +37,10 @@ def test_frozen_audio_and_observation_are_unchanged():
         score = legacy_score()
         actual = score.render(loop=score.bar(1))
         observed = capture(score, loop=score.bar(1))
-        np.testing.assert_allclose(actual, reference["score"], atol=1e-6, rtol=0)
+        # legacy-1 normalized a Score by its sample peak, legacy-2 by its true peak: the same audio, one gain apart
+        gain = np.max(np.abs(actual)) / np.max(np.abs(reference["score"]))
+        assert gain == pytest.approx(0.99319, abs=1e-4)   # sample peak 0.890000, true peak 0.896102
+        np.testing.assert_allclose(actual, reference["score"] * gain, atol=1e-6, rtol=0)
         assert np.array_equal(actual, observed.audio)
         np.testing.assert_allclose(observed.replay(), actual, atol=1e-7, rtol=0)
 

@@ -23,6 +23,7 @@ from scipy.signal import butter, fftconvolve, sosfilt
 
 from . import rng
 from .diagnostics import current, digest, origin, pcm_id
+from .loudness import true_peak
 from .render import DEFAULT_SR, PEAK, render
 from .spec import ChipProgram, Modal, Noise, Scatter, Syllable, Voice
 
@@ -203,9 +204,9 @@ class Score:
         return self
 
     def render(self, loop: float | None = None, gain: float = 1.0) -> np.ndarray:
-        """Stereo float32, shape (n, 2), peak at -1 dBFS times `gain`. With `loop` (seconds, e.g.
-        ``score.bar(8)``) the result is exactly that long and loops seamlessly: what rings past the end, the hall's
-        tail included, wraps onto the start."""
+        """Stereo float32, shape (n, 2), true peak at -1 dBTP times `gain` (before `effects`). With `loop`
+        (seconds, e.g. ``score.bar(8)``) the result is exactly that long and loops seamlessly: what rings past the
+        end, the hall's tail included, wraps onto the start."""
         sr = self.sr
         rec = current()
         settings = {k: getattr(self, k) for k in ("bpm", "meter", "hall", "echo", "lowpass", "seed", "sr", "effects")}
@@ -249,7 +250,7 @@ class Score:
         parts = {name: (0.0, t.render(self.sr) * t.gain, t.pan, t.send, t.echo) for name, t in rendered.items()}
         n = self._length(list(parts.values()))
         mixes = {g: self._premix(*self._buses([parts[t] for t in names], n), loop) for g, names in groups.items()}
-        peak = np.max(np.abs(sum(mixes.values())))
+        peak = true_peak(sum(mixes.values()))
         return {g: (PEAK * gain * out / (peak + 1e-12)).astype(np.float32) for g, out in mixes.items()}
 
     def _length(self, parts) -> int:
@@ -299,7 +300,7 @@ class Score:
         if fixed is not None:
             length = fixed["length"]
             out = np.pad(out[:length], ((0, max(0, length - len(out))), (0, 0)))
-        peak = np.max(np.abs(out)) if fixed is None else fixed["output_peak"]
+        peak = true_peak(out) if fixed is None else fixed["output_peak"]   # between samples too: encoders clip there
         if (rec := current()) is not None:
             rec.factor("output_peak", float(peak))
             rec.factor("length", len(out))

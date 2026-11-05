@@ -13,7 +13,7 @@ import numpy as np
 import scipy
 
 SCHEMA = 1
-BEHAVIOR = "legacy-1"
+BEHAVIOR = "legacy-2"   # legacy-1 until 2026-11-05: a Score normalized by its sample peak, now by its true peak
 _active: contextvars.ContextVar[Recorder | None] = contextvars.ContextVar("tune_capture", default=None)
 
 

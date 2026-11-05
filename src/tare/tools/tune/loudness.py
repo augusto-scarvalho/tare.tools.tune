@@ -48,11 +48,17 @@ def integrated_lufs(audio: np.ndarray, sr: int) -> float | None:
     return float(-0.691 + 10 * np.log10(kept.mean()))
 
 
-def true_peak_db(audio: np.ndarray) -> float:
-    """The peak between samples too (4x oversampled), in dBTP: what a converter or an encoder may clip."""
+def true_peak(audio: np.ndarray) -> float:
+    """The peak between samples too (4x oversampled), linear: what a converter or an encoder may clip."""
     x = np.asarray(audio, dtype=np.float64)
-    peak = np.max(np.abs(resample_poly(x, 4, 1, axis=0))) if len(x) else 0.0
-    return float(20 * np.log10(max(peak, 1e-12)))
+    if not len(x):
+        return 0.0
+    return float(max(np.max(np.abs(x)), np.max(np.abs(resample_poly(x, 4, 1, axis=0)))))
+
+
+def true_peak_db(audio: np.ndarray) -> float:
+    """`true_peak` in dBTP."""
+    return float(20 * np.log10(max(true_peak(audio), 1e-12)))
 
 
 def measure(audio: np.ndarray, sr: int) -> dict:

@@ -37,7 +37,7 @@ tare.tools.tune inspect examples/authoring.json --json --start 0.1 --end 0.3 --b
 tare.tools.tune inspect gravacao.wav --json
 ```
 
-`capture` aceita Voice, Score, Cue e amostras mono/estéreo finitas. Score/Cue usam sua própria taxa. `Limits` limita duração (180 s), número de camadas (1024) e memória dos buffers (256 MiB); a inspeção também limita a entrada a 180 segundos. Dados sem receita são identificados como origem desconhecida. O schema diagnóstico 1 é separado das versões 6–8 de Voice e do comportamento `legacy-1`.
+`capture` aceita Voice, Score, Cue e amostras mono/estéreo finitas. Score/Cue usam sua própria taxa. `Limits` limita duração (180 s), número de camadas (1024) e memória dos buffers (256 MiB); a inspeção também limita a entrada a 180 segundos. Dados sem receita são identificados como origem desconhecida. O schema diagnóstico 1 é separado das versões 6–8 de Voice e do comportamento do renderizador, `legacy-2`: o `legacy-1` com o Score normalizado pelo pico real em vez do pico das amostras (um único ganho; a renderização de Voice não muda).
 
 O inspetor aceita diretório de bundle, Voice JSON, projeto JSON e WAV; o extra `export` permite outros formatos suportados pelo soundfile. `--name` escolhe uma entrada de banco. O relatório mantém identidades independentes de fonte, pedido de renderização, PCM, arquivo reproduzido e análise. Uma alteração só no canal direito é detectada. Arquivos de banco são identificados pelo conteúdo.
 

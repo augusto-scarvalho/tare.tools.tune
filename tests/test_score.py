@@ -4,6 +4,7 @@ import pytest
 from tare.tools.tune import Sfx
 from tare.tools.tune.audio_io import write_wav
 from tare.tools.tune.instruments import INSTRUMENTS
+from tare.tools.tune.loudness import true_peak
 from tare.tools.tune.score import Note, Score, chord, hz, midi, scale
 
 SR = 16_000
@@ -38,7 +39,7 @@ def test_render_is_stereo_panned_and_deterministic():
     a, b = build(), build()
     assert a.ndim == 2 and a.shape[1] == 2 and a.dtype == np.float32
     assert np.array_equal(a, b)
-    assert np.max(np.abs(a)) == pytest.approx(0.89, abs=1e-3)
+    assert true_peak(a) == pytest.approx(0.89, abs=1e-3) and np.max(np.abs(a)) <= 0.89   # -1 dBTP
 
 
 def test_pan_law_puts_a_hard_left_track_on_the_left():

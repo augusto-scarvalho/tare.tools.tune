@@ -32,7 +32,7 @@ report = inspect_capture(frozen, start=0.05, end=0.15, band=(1000, 4000))
 diagnostic = frozen.replay(mute=[report["layer_catalog"][0]["id"]])
 ```
 
-`capture` accepts `Voice`, `Score`, `Cue`, and finite mono/stereo sample arrays. Scores/Cues use their own sample rate. `loop` is a Score duration in seconds. `Limits(seconds=180, layers=1024, bytes=256*1024*1024)` bounds capture, including retained stems; the inspector accepts at most 180 seconds. PCM arrays without recipes have unknown provenance. Default rendering is still `legacy-1`; diagnostics have schema 1 and do not change Voice feature versions 6–8.
+`capture` accepts `Voice`, `Score`, `Cue`, and finite mono/stereo sample arrays. Scores/Cues use their own sample rate. `loop` is a Score duration in seconds. `Limits(seconds=180, layers=1024, bytes=256*1024*1024)` bounds capture, including retained stems; the inspector accepts at most 180 seconds. PCM arrays without recipes have unknown provenance. Default rendering is `legacy-2`: `legacy-1` with a Score normalized to its true peak instead of its sample peak (one gain; Voice rendering is unchanged); diagnostics have schema 1 and do not change Voice feature versions 6–8.
 
 ```bash
 tare.tools.tune capture examples/authoring.json -o authoring-out/bundles
@@ -101,7 +101,7 @@ These examples generate blind comparisons for all three options. Determinism, fi
 
 Frozen fixtures in `tests/fixtures/authoring` were saved before the renderer refactor. Tests compare capture on/off and historical samples, in addition to current Python/native comparisons. Windows skips unavailable Linux-native/Godot checks; those must be run in a compatible environment before claiming native validation. See the [implementation verification record](authoring-verification.md) for commands and results.
 
-The authoring layer follows an independent design review (Astra, not published). Diagnostic metadata has its own schema and does not change the Voice feature version or the `legacy-1` renderer behavior. New musical events describe the original expansion; diagnostic identifiers never seed synthesis.
+The authoring layer follows an independent design review (Astra, not published). Diagnostic metadata has its own schema and does not change the Voice feature version or the renderer behavior. New musical events describe the original expansion; diagnostic identifiers never seed synthesis.
 
 ## Contracts
 
