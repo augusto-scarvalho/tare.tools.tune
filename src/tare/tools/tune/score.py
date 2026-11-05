@@ -223,12 +223,7 @@ class Score:
         labels += [f"placed[{i}]" for i in range(len(self.sounds))]
         if not parts:
             raise ValueError("the score is empty")
-        tail = self.hall
-        if self.echo:
-            delay, fb, _ = self.echo
-            tail = max(tail, delay * (1 + np.log(1e-3) / np.log(max(min(fb, 0.95), 0.01))))
-        n = max(int(at * sr) + len(y) for at, y, *_ in parts) + int(tail * sr)
-        dry, bus, ebus = np.zeros((n, 2)), np.zeros(n), np.zeros(n)
+        n = self._length(parts)
         if rec is not None:
             node.update(input_length=n, loop=loop, gain=gain)
             for (at, y, pan, send, echo), (child, scale), label in zip(parts, children, labels, strict=True):
@@ -237,20 +232,48 @@ class Score:
                 node["parts"][-1]["child_scale"] = scale
                 if child:
                     node["parts"][-1]["track_gain"] = self.tracks[label].gain
+        result = self.finish(*self._buses(parts, n), loop=loop, gain=gain)
+        if rec is not None:
+            rec.end(node, result)
+        return result
+
+    def render_layers(self, groups: dict[str, list[str]], loop: float, gain: float = 1.0) -> dict[str, np.ndarray]:
+        """A loop split into stems that add up to ``render(loop, gain)``: each group of tracks goes through the same
+        hall, echo, lowpass and fold, scaled by the whole mix's peak. Adaptive music starts every stem together and
+        fades groups in and out. Every track belongs to one group; placed sounds and effects cannot be split."""
+        rendered = {name: t for name, t in self.tracks.items() if t.layers}
+        if sorted(n for names in groups.values() for n in names) != sorted(rendered):
+            raise ValueError(f"each track must be in exactly one group: {', '.join(rendered)}")
+        if self.sounds or self.effects or not loop:
+            raise ValueError("only a loop of tracks, without placed sounds or effects, splits into layers")
+        parts = {name: (0.0, t.render(self.sr) * t.gain, t.pan, t.send, t.echo) for name, t in rendered.items()}
+        n = self._length(list(parts.values()))
+        mixes = {g: self._premix(*self._buses([parts[t] for t in names], n), loop) for g, names in groups.items()}
+        peak = np.max(np.abs(sum(mixes.values())))
+        return {g: (PEAK * gain * out / (peak + 1e-12)).astype(np.float32) for g, out in mixes.items()}
+
+    def _length(self, parts) -> int:
+        """Samples the parts need, plus the hall's or the echo's tail."""
+        tail = self.hall
+        if self.echo:
+            delay, fb, _ = self.echo
+            tail = max(tail, delay * (1 + np.log(1e-3) / np.log(max(min(fb, 0.95), 0.01))))
+        return max(int(at * self.sr) + len(y) for at, y, *_ in parts) + int(tail * self.sr)
+
+    def _buses(self, parts, n: int):
+        """The parts placed and panned: the dry stereo mix and the mono sends to the hall and the echo."""
+        dry, bus, ebus = np.zeros((n, 2)), np.zeros(n), np.zeros(n)
         for at, y, pan, send, echo in parts:
-            k = int(at * sr)
+            k = int(at * self.sr)
             stereo = y if y.ndim == 2 else y[:, None] * _pan(pan)
             mono = y if y.ndim == 1 else y.mean(axis=1)
             dry[k:k + len(y)] += stereo
             bus[k:k + len(y)] += send * mono
             ebus[k:k + len(y)] += echo * mono
-        result = self.finish(dry, bus, ebus, loop=loop, gain=gain)
-        if rec is not None:
-            rec.end(node, result)
-        return result
+        return dry, bus, ebus
 
-    def finish(self, dry, bus, ebus, *, loop=None, gain=1.0, fixed=None):
-        """Legacy mix processing, shared with captured interventions at fixed gains/length."""
+    def _premix(self, dry, bus, ebus, loop=None):
+        """Hall, echo, lowpass and the loop's fold: all linear, so stems mixed apart add up to the mix."""
         sr = self.sr
         out = dry + self._hall(bus) if self.hall and bus.any() else dry
         if self.echo and ebus.any():
@@ -264,7 +287,13 @@ class Score:
                 chunk = out[start:start + length]
                 folded[:len(chunk)] += chunk
             out = folded
-        else:
+        return out
+
+    def finish(self, dry, bus, ebus, *, loop=None, gain=1.0, fixed=None):
+        """Legacy mix processing, shared with captured interventions at fixed gains/length."""
+        sr = self.sr
+        out = self._premix(dry, bus, ebus, loop)
+        if not loop:
             end = np.nonzero(np.abs(out).max(axis=1) > 1e-4)[0]
             out = out[: end[-1] + 1] if len(end) else out
         if fixed is not None:

@@ -166,12 +166,13 @@ def cmd_bake(a):
     sr = a.sr or settings.get("sample_rate", DEFAULT_SR)
     speakers = settings.get("speakers", {})
     manifest = bake(creatures, a.output, calls, takes, sr, specs=not a.no_specs, workers=a.workers,
-                    speakers=speakers, sounds=settings.get("sounds"), keep_tail=a.keep_tail)
+                    speakers=speakers, sounds=settings.get("sounds"), keep_tail=a.keep_tail,
+                    music=settings.get("music"))
     n = sum(len(t) for c in manifest["creatures"].values() for t in c["calls"].values())
     lines = sum(len(s["lines"]) for s in manifest.get("speakers", {}).values())
     fx = sum(len(t) for s in manifest.get("sounds", {}).values() for t in s["events"].values())
-    print(f"{n} calls for {len(creatures)} creatures, {lines} spoken lines, {fx} sound effects"
-          f" -> {a.output}/manifest.json")
+    print(f"{n} calls for {len(creatures)} creatures, {lines} spoken lines, {fx} sound effects,"
+          f" {len(manifest.get('music', {}))} cues -> {a.output}/manifest.json")
 
 
 def _sfx(a):

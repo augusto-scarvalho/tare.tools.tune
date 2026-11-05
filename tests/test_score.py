@@ -56,6 +56,20 @@ def test_loop_wraps_the_tail_to_exact_length():
     assert np.max(np.abs(y[: SR // 4])) > 0.01             # the ring and the hall came back around
 
 
+def test_layers_add_up_to_the_loop():
+    s = Score(bpm=120, sr=SR, hall=1.0, echo=(0.21, 0.45, 2500.0), lowpass=6000.0)   # every bus effect
+    s.track("bass", send=0.1).play("bass", [("C2", 0, 2), ("G2", 2, 2)])
+    s.track("lead", pan=0.3, send=0.3, echo=0.3).play("flute", [("E5", 3, 1)])      # rings past the loop
+    s.track("kick", send=0.0).play("bass_drum", [(36, b, 1) for b in range(4)])
+    groups = {"base": ["bass"], "lead": ["lead"], "rhythm": ["kick"]}
+    layers = s.render_layers(groups, loop=s.bar(1))
+    np.testing.assert_allclose(sum(layers.values()), s.render(loop=s.bar(1)), atol=1e-6)
+    with pytest.raises(ValueError, match="exactly one group"):
+        s.render_layers({"base": ["bass", "lead"]}, loop=s.bar(1))
+    with pytest.raises(ValueError, match="only a loop"):
+        s.render_layers(groups, loop=None)
+
+
 def test_placed_sounds_and_chords():
     s = Score(bpm=100, sr=SR)
     s.track("pad").play("marimba", [(["C4", "E4", "G4"], 0, 2), (chord("F"), 2, 2)])

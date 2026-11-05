@@ -419,6 +419,17 @@ write_wav("scene.wav", scene.render(), 48000)
 
 For complete stereo scenes (effects, creatures, speech, and music over ambience), see [`examples/scenes.py`](../examples/scenes.py): a dungeon fight, treasure in a cave, and a magic duel.
 
+**Adaptive layers.** A loop also comes as stems that add up to it: `tavern.layers()` returns `base` (harmony and bass), `rhythm` (percussion) and `lead` (the melody), leaving out a group the cue does not play. Start them together and fade groups in and out as play heats up (Godot's `AudioStreamSynchronized`, FMOD or Wwise layers). `Score.render_layers({"group": [track names]}, loop=...)` splits your own score the same way. In a bestiary, cues go in a `music` section, and `bake` writes `mix.wav` (and each layer) with the loop in a sampler chunk, plus `bpm`, `meter` and `bars` in the manifest:
+
+```json
+"music": {
+  "town":    {"cue": "town", "style": "snes", "seed": 2, "layers": true},
+  "fanfare": {"cue": "victory", "seed": 3}
+}
+```
+
+With layers, `mix.wav` is exactly their sum; as 16-bit files, the layers add up to it within one step per layer.
+
 Notes are `(note, time, duration[, intensity])`. A note can be a name (`"C#5"`), MIDI number, or list (a chord). Intensity changes timbre as well as volume: a loud trumpet opens up the highs, and a soft strike is darker.
 
 Measurements come from isolated notes in the [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) orchestra (CC0) and CC0 guitar notes from Freesound. They were used only for measurement and are not in the repository. Details are in [Architecture: Music and composition](architecture.md#music-and-composition).

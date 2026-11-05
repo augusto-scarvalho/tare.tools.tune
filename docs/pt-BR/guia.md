@@ -397,6 +397,17 @@ write_wav("cena.wav", cena.render(), 48000)
 
 Para cenas inteiras (efeitos, criaturas, uma fala e música sobre um ambiente, em estéreo), veja [`examples/scenes.py`](../../examples/scenes.py): uma luta na masmorra, um tesouro numa caverna e um duelo de magia.
 
+**Camadas adaptativas.** Um loop também sai em camadas que somam a mixagem: `tavern.layers()` devolve `base` (harmonia e baixo), `rhythm` (percussão) e `lead` (a melodia), sem o grupo que a música não toca. Comece todas juntas e aumente ou abaixe cada grupo conforme o jogo esquenta (o `AudioStreamSynchronized` do Godot, ou camadas no FMOD e no Wwise). `Score.render_layers({"grupo": [nomes das trilhas]}, loop=...)` divide uma partitura sua do mesmo jeito. No bestiário, a música vai numa seção `music`, e o `bake` grava o `mix.wav` (e cada camada) com o loop marcado no WAV, mais `bpm`, `meter` e `bars` no manifesto:
+
+```json
+"music": {
+  "cidade":  {"cue": "town", "style": "snes", "seed": 2, "layers": true},
+  "fanfarra": {"cue": "victory", "seed": 3}
+}
+```
+
+Com camadas, o `mix.wav` é exatamente a soma delas; em arquivos de 16 bits, as camadas somam a mixagem com diferença de no máximo um degrau por camada.
+
 Notas são `(nota, tempo, duração[, intensidade])`. A nota pode ser um nome (`"C#5"`), um número MIDI ou uma lista (um acorde). A intensidade muda o timbre, não só o volume: o trompete forte abre os agudos, e uma batida suave é mais escura.
 
 As medidas vêm de notas soltas da orquestra [VSCO-2 Community Edition](https://github.com/sgossner/VSCO-2-CE) (CC0) e de notas de violão CC0 do Freesound. Elas foram usadas só para medir e não estão no repositório. Detalhes em [`docs/pt-BR/arquitetura.md`](arquitetura.md#música-e-composição).

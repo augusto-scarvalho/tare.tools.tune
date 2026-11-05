@@ -38,6 +38,17 @@ defaults to all of the kind's events, loops get one take)::
         "fireball":  {"kind": "spell", "style": "fire", "power": 0.8},
         "rain":      {"kind": "ambience", "style": "rain", "power": 0.4}
       }
+
+Music goes in an optional ``music`` section (see tare.tools.tune.music; ``style`` defaults to orchestral,
+``seed`` to 0)::
+
+      "music": {
+        "town":    {"cue": "town", "style": "snes", "seed": 2, "layers": true},
+        "fanfare": {"cue": "victory", "seed": 3}
+      }
+
+A loop is written whole (``mix.wav``, with its loop in a sampler chunk) and, with ``layers``, as stems that
+add up to it (``base``, ``rhythm``, ``lead``): start them together and fade them in and out as play heats up.
 """
 import json
 import os
@@ -52,6 +63,7 @@ from . import __version__, rng
 from .audio_io import trim_tail, write_wav
 from .calls import CALLS
 from .creature import Creature
+from .music import CUES, STYLES, Cue
 from .render import DEFAULT_SR, render
 from .sfx import RECIPES, Sfx
 from .speech import Speaker
@@ -117,6 +129,18 @@ def sound_from_entry(name: str, entry: Mapping) -> tuple[Sfx, list[str]]:
     return sfx, list(events or sfx.events)
 
 
+def music_from_entry(name: str, entry: Mapping) -> dict:
+    if unknown := set(entry) - {"cue", "style", "seed", "layers"}:
+        raise ValueError(f"music {name!r}: unknown field(s) {', '.join(sorted(unknown))}")
+    spec = {"cue": entry.get("cue", name), "style": entry.get("style", "orchestral"), "seed": int(entry.get("seed", 0)),
+            "layers": bool(entry.get("layers", False))}
+    if spec["cue"] not in CUES or spec["style"] not in STYLES:
+        raise ValueError(f"music {name!r}: cue is one of {', '.join(CUES)}; style one of {', '.join(STYLES)}")
+    if spec["layers"] and not Cue(spec["cue"], spec["style"], spec["seed"]).loop:
+        raise ValueError(f"music {name!r}: {spec['cue']!r} is a jingle; only loops have layers")
+    return spec
+
+
 def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> tuple[dict[str, Creature], dict]:
     """Returns (creatures by name, settings). `natural` (default: the file's "natural_voices", else
     true) decides if "main" speakers get natural voices."""
@@ -132,6 +156,8 @@ def load_bestiary(source: str | Path | Mapping, natural: bool | None = None) -> 
                                 for name, e in data["speakers"].items()}
     if data.get("sounds"):
         settings["sounds"] = {name: sound_from_entry(name, e) for name, e in data["sounds"].items()}
+    if data.get("music"):
+        settings["music"] = {name: music_from_entry(name, e) for name, e in data["music"].items()}
     return creatures, settings
 
 
@@ -184,11 +210,33 @@ def _bake_line(job):
     return name, line_id, entry
 
 
+def _bake_cue(job):
+    name, spec, sr, out_dir = job
+    cue = Cue(spec["cue"], spec["style"], spec["seed"], sr)
+    stems = cue.layers() if spec["layers"] else {}
+    audio = sum(stems.values()) if stems else cue.render()     # with layers, the mix is exactly their sum
+    loop = cue.length > 0
+    entry = {"file": f"{name}/mix.wav", "duration": round(len(audio) / sr, 4),
+             "peak": round(float(np.max(np.abs(audio))), 4), "loop": loop, "bpm": round(cue.score.bpm, 3),
+             "meter": cue.score.meter}
+    write_wav(Path(out_dir) / entry["file"], audio, sr, loop=loop)
+    if loop:
+        entry["bars"] = round(cue.length / cue.score.bar(1))
+    if stems:
+        entry["layers"] = {}
+        for group, y in stems.items():
+            entry["layers"][group] = f"{name}/{group}.wav"
+            write_wav(Path(out_dir) / entry["layers"][group], y, sr, loop=True)
+    return name, entry
+
+
 def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable[str] | None = None,
          takes: int = 4, sr: int = DEFAULT_SR, specs: bool = True, workers: int | None = None,
          speakers: Mapping[str, tuple["Cast | Speaker", str, Mapping[str, str]]] | None = None,
-         sounds: Mapping[str, "Sfx | tuple[Sfx, list[str]]"] | None = None, keep_tail: bool = False) -> dict:
-    """Render every creature x call x take, speaker line and sound effect to ``out_dir``; write ``manifest.json``.
+         sounds: Mapping[str, "Sfx | tuple[Sfx, list[str]]"] | None = None, keep_tail: bool = False,
+         music: Mapping[str, Mapping] | None = None) -> dict:
+    """Render every creature x call x take, speaker line, sound effect and cue to ``out_dir``; write
+    ``manifest.json``.
     Each WAV's silent tail is cut (audio_io.trim_tail) unless it loops, has reverb or ``keep_tail``."""
     out_dir = Path(out_dir)
     speakers = {name: (who if isinstance(who, Cast) else Cast(who, name=name), lang, lines)
@@ -204,16 +252,20 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
     sounds = {name: s if isinstance(s, tuple) else (s, list(s.events)) for name, s in (sounds or {}).items()}
     sound_jobs = [(name, sx, ev, t, sr, str(out_dir), specs, keep_tail) for name, (sx, events) in sounds.items()
                   for ev in events for t in range(1 if ev in RECIPES[sx.kind].loops else takes)]
+    music = {name: music_from_entry(name, e) for name, e in (music or {}).items()}
+    cue_jobs = [(name, spec, sr, str(out_dir)) for name, spec in music.items()]
     workers = workers or min(os.cpu_count() or 1, 8)
-    if workers > 1 and len(jobs) + len(line_jobs) + len(sound_jobs) > 1:
+    if workers > 1 and len(jobs) + len(line_jobs) + len(sound_jobs) + len(cue_jobs) > 1:
         with ProcessPoolExecutor(workers) as pool:
             results = list(pool.map(_bake_one, jobs))
             line_results = list(pool.map(_bake_line, line_jobs))
             sound_results = list(pool.map(_bake_sound, sound_jobs))
+            cue_results = list(pool.map(_bake_cue, cue_jobs))
     else:
         results = [_bake_one(j) for j in jobs]
         line_results = [_bake_line(j) for j in line_jobs]
         sound_results = [_bake_sound(j) for j in sound_jobs]
+        cue_results = [_bake_cue(j) for j in cue_jobs]
 
     manifest = {"format": "tare.tools.tune.bake", "version": 1, "generator": f"tare.tools.tune {__version__}",
                 "sample_rate": sr, "takes": takes, "calls": calls,
@@ -234,6 +286,8 @@ def bake(creatures: Mapping[str, Creature], out_dir: str | Path, calls: Iterable
                               for name, (sx, events) in sounds.items()}
         for name, event, _take, entry in sorted(sound_results, key=lambda r: r[:3]):
             manifest["sounds"][name]["events"][event].append(entry)
+    if music:
+        manifest["music"] = {name: {"cue": music[name], **entry} for name, entry in cue_results}
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / MANIFEST).write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return manifest

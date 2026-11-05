@@ -1,4 +1,5 @@
 import json
+import wave
 from dataclasses import replace
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import numpy as np
 import pytest
 
 from tare.tools.tune import Creature, read_wav
+from tare.tools.tune.audio_io import wav_loop
 from tare.tools.tune.bake import bake, load_bestiary
 from tare.tools.tune.chip import _default_data_path
 from tare.tools.tune.cli import main
@@ -47,6 +49,26 @@ def test_bake_writes_packs_and_manifest(tmp_path):
                 audio, sr = read_wav(tmp_path / e["file"])
                 assert sr == SR and abs(len(audio) / sr - e["duration"]) < 1e-3
                 assert (tmp_path / e["spec"]).exists()
+
+
+def test_bake_writes_music_and_its_layers(tmp_path):
+    music = {"town": {"cue": "tavern", "style": "chip", "seed": 2, "layers": True},
+             "fanfare": {"cue": "victory", "style": "chip"}}
+    manifest = bake({}, tmp_path, sr=SR, workers=1, music=music)
+    town, fanfare = manifest["music"]["town"], manifest["music"]["fanfare"]
+    assert town["loop"] and town["bars"] > 0 and set(town["layers"]) <= {"base", "rhythm", "lead"}
+    assert not fanfare["loop"] and "layers" not in fanfare
+
+    def pcm(name):
+        with wave.open(str(tmp_path / name)) as w:
+            return np.frombuffer(w.readframes(w.getnframes()), "<i2").astype(int)
+
+    mix = pcm(town["file"])
+    assert wav_loop(tmp_path / town["file"]) == (0, len(mix) // 2 - 1)
+    assert all(wav_loop(tmp_path / f) for f in town["layers"].values())
+    assert np.abs(sum(pcm(f) for f in town["layers"].values()) - mix).max() <= len(town["layers"])  # rounding
+    with pytest.raises(ValueError, match="jingle"):
+        bake({}, tmp_path, sr=SR, music={"x": {"cue": "victory", "layers": True}})
 
 
 def test_voice_bank_rotates_takes():

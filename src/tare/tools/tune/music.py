@@ -90,6 +90,8 @@ SNES.update({
     "koto": ("koto", 0.7, -0.2, 0.15, {}, 0.25), "shakuhachi": ("shakuhachi", 0.6, 0.2, 0.15, {}, 0.3),
 })
 STYLES = {"orchestral": ORCHESTRAL, "chip": CHIP, "snes": SNES}
+PERCUSSION = {"kick", "snare", "hat", "open_hat", "crash", "shaker", "tambourine", "triangle", "block", "hand_drum",
+              "taiko", "timpani", "hyoshigi", "gong"}     # roles, whatever instrument a style gives them
 
 # Rhythms of one bar: (beat, length) in beats
 CALM = [[(0, 2), (2, 2)], [(0, 1), (1, 1), (2, 2)], [(0, 3), (3, 1)], [(0, 1.5), (1.5, 0.5), (2, 2)],
@@ -251,6 +253,17 @@ class Cue:
             node.update(child=child, params={"end_samples": len(y), "fade_samples": fade})
             rec.end(node, y)
         return y
+
+    def layers(self) -> dict[str, np.ndarray]:
+        """A loop as stems that add up to render(), for music that builds with play: "base" (harmony and bass),
+        "rhythm" (percussion) and "lead" (the melody); a group the cue does not play is left out."""
+        if not self.loop:
+            raise ValueError(f"{self.kind!r} is a jingle; only loops have layers")
+        groups: dict[str, list[str]] = {"base": [], "rhythm": [], "lead": []}
+        for name, track in self.score.tracks.items():
+            if track.layers:
+                groups["lead" if name == "lead" else "rhythm" if name in PERCUSSION else "base"].append(name)
+        return self.score.render_layers({g: names for g, names in groups.items() if names}, loop=self.loop)
 
 
 # -- jingles ----------------------------------------------------------------------------------------------------------
