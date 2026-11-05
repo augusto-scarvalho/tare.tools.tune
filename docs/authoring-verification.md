@@ -36,7 +36,7 @@ Native/Godot command used in WSL (dependency and executable paths are specific t
 
 ```bash
 PYTHONPATH=/tmp/tare-tune-native-check-20261031:$PWD/src \
-TARE_TOOLS_TUNE_GODOT=/home/cmmdr/tools/godot/Godot_v4.7.2-stable_linux.x86_64 \
+TARE_TOOLS_TUNE_GODOT=~/tools/godot/Godot_v4.7.2-stable_linux.x86_64 \
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
 python3 -m pytest -q tests/test_native.py tests/test_godot.py \
   --basetemp /tmp/tare-tune-native-complete-20261031 --disable-warnings

@@ -5,6 +5,7 @@
 **Áudio de jogo feito por código.** Vozes de criaturas, falas de NPC, efeitos sonoros e música,<br>
 sintetizados na hora: nenhuma gravação no pacote, nenhuma IA rodando no jogo, e a mesma receita sempre dá o mesmo som.
 
+[![Testes](https://github.com/augusto-scarvalho/tare.tools.tune/actions/workflows/tests.yml/badge.svg)](https://github.com/augusto-scarvalho/tare.tools.tune/actions/workflows/tests.yml)
 [![Licença: Apache 2.0](https://img.shields.io/badge/licen%C3%A7a-Apache_2.0-blue)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 ![Dependências: numpy + scipy](https://img.shields.io/badge/deps-numpy_%2B_scipy-013243?logo=numpy&logoColor=white)

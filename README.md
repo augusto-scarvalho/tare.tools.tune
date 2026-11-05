@@ -5,6 +5,7 @@
 **Game audio from code.** Creature cries, NPC voices, sound effects and music,<br>
 synthesized on the spot: no recordings shipped, no AI at runtime, and the same recipe always gives the same sound.
 
+[![Tests](https://github.com/augusto-scarvalho/tare.tools.tune/actions/workflows/tests.yml/badge.svg)](https://github.com/augusto-scarvalho/tare.tools.tune/actions/workflows/tests.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 ![Dependencies: numpy + scipy](https://img.shields.io/badge/deps-numpy_%2B_scipy-013243?logo=numpy&logoColor=white)

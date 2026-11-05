@@ -6,7 +6,7 @@ from tare.tools.tune.music import CALM, CUES, Cue, Key, Rand, melody, voicing
 SR = 16_000
 
 
-@pytest.mark.parametrize("style", ["orchestral", "chip"])
+@pytest.mark.parametrize("style", [pytest.param("orchestral", marks=pytest.mark.slow), "chip"])
 def test_every_cue_renders(style):
     for kind in CUES:
         c = Cue(kind, style, seed=1, sr=SR)
@@ -52,6 +52,7 @@ def test_voicing_moves_little():
     assert sorted(n % 12 for n in f) == [0, 5, 9] and sum(abs(a - b) for a, b in zip(c, f, strict=True)) <= 4
 
 
+@pytest.mark.slow
 def test_colour_cues_in_16bit_style():
     from tare.tools.tune.music import COLOR_CUES
     for kind in COLOR_CUES + ("town",):
