@@ -41,6 +41,9 @@ jobs:
         run: python -m pip install -e ".[dev,export]" ${{ matrix.pin }}
       - name: Lint
         run: python -m ruff check .
+      - name: Build the native core, so the tests hold the C++ renderer against Python
+        if: runner.os == 'Linux'
+        run: python tools/build_native.py build
       - name: Tests (the slow renders are left to a full local run)
         run: python -m pytest -q -m "not slow" --ignore=tests/test_determinism.py
       - name: Determinism against the Windows references
