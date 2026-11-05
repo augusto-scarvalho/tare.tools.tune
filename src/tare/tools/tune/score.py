@@ -161,6 +161,10 @@ class Track:
         return y.astype(np.float64) / PEAK
 
 
+UNPITCHED = {"bass_drum", "snare", "hihat", "open_hat", "crash", "tambourine", "triangle", "hand_drum", "log_drum",
+             "taiko", "gong", "shaker", "hyoshigi", "chip_kick", "chip_snare", "chip_hat"}
+
+
 @dataclass
 class Score:
     """A timeline in beats and seconds: tracks of notes, finished sounds, one stereo hall."""
@@ -237,6 +241,28 @@ class Score:
         if rec is not None:
             rec.end(node, result)
         return result
+
+    def clashes(self, overlap: float = 0.5, held: float = 0.75) -> list[dict]:
+        """Pitched notes a minor second (or a ninth, or more octaves) apart that sound together for at least
+        `overlap` beats, one of them held at least `held` beats: what an ear hears as a rub, found in the score
+        without rendering. Percussion is left out. Each: {"bar", "beat", "beats", "notes": [(track, MIDI), ...],
+        "kind", "same_track", "interval"}. A "chord" rub starts with both notes, so it is built into the harmony;
+        a "line" rub is a note entering over another (passing, leaning, or a tune that ignores its chord). In the
+        cues, rubs built into held chords are what sounded harsh; lines over clean chords were heard as colour."""
+        notes = [(t.name, e["pitch"], e["offset"] + e["beat"], e["beats"]) for t in self.tracks.values()
+                 for e in t.events if e["instrument"] not in UNPITCHED]
+        if len(notes) < 2:
+            return []
+        name, p, s, d = zip(*notes, strict=True)
+        p, s, d = np.array(p), np.array(s), np.array(d)
+        e = s + d
+        both = np.minimum(e[:, None], e) - np.maximum(s[:, None], s)      # ponytail: all pairs, fine to a few 1000
+        rub = (np.round(np.abs(p[:, None] - p)) % 12 == 1) & (both >= overlap) & (np.maximum(d[:, None], d) >= held)
+        return [{"bar": int(max(s[i], s[j]) // self.meter) + 1, "beat": round(float(max(s[i], s[j])), 3),
+                 "beats": round(float(both[i, j]), 3), "notes": [(name[i], float(p[i])), (name[j], float(p[j]))],
+                 "kind": "chord" if abs(s[i] - s[j]) < 0.05 else "line", "same_track": name[i] == name[j],
+                 "interval": int(round(abs(p[i] - p[j])))}
+                for i, j in zip(*np.nonzero(np.triu(rub, 1)), strict=True)]
 
     def render_layers(self, groups: dict[str, list[str]], loop: float, gain: float = 1.0) -> dict[str, np.ndarray]:
         """A loop split into stems that add up to ``render(loop, gain)``: each group of tracks goes through the same

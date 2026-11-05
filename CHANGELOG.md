@@ -13,6 +13,9 @@ that alters rendered samples says so, since the same recipe is meant to give the
   mix (`Cue.layers()`, `Score.render_layers()`).
 - **Loudness.** Every baked sound reports its loudness in LUFS (ITU-R BS.1770) and its true peak. A music entry may set
   a `"lufs"` target, which only lowers the level and never passes −1 dBTP.
+- **Notes that rub.** `Score.clashes()` finds minor seconds and ninths held together in a score, without rendering,
+  and says whether each is built into a chord or is a line over one. A test keeps each of the 96 cues from gaining
+  rubs. The kind matters more than the count: the `boss` cue, heard as harsh, rubs mostly inside held chords.
 - **Listen.** 25 sounds picked by ear are rendered by `examples/listen.py`. They can be played on a
   [GitHub Pages page](https://augusto-scarvalho.github.io/tare.tools.tune/) or downloaded from the `listen-1` release.
 - **CI** on Windows, Linux (x86 and ARM) and macOS (ARM), with Python 3.10. It builds the native core on Linux and
