@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tare.tools.tune · Listen</title>
+  <meta name="description" content="Game audio rendered from code by tare.tools.tune: music, speech, barks, effects and creatures.">
+  <style>
+    :root { --bg: #fbfaf8; --fg: #1d1b19; --muted: #6b655e; --line: #e6e1da; --accent: #b4532a; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #161514; --fg: #ece8e3; --muted: #a39c94; --line: #2c2a27; --accent: #e08a5e; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    h1 a { color: inherit; text-decoration: none; }
+    .lead { color: var(--muted); margin: 0 0 8px; }
+    h2 { font-size: 1.1rem; margin: 36px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+    h2 span { color: var(--muted); font-weight: normal; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+          padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .what { flex: 1 1 260px; min-width: 0; }
+    .what span { color: var(--muted); font-size: 0.9rem; }
+    .said { margin: 2px 0 0; font-style: italic; font-size: 0.92rem; }
+    audio { flex: 0 1 300px; width: 300px; max-width: 100%; height: 36px; }
+    a { color: var(--accent); }
+    footer { margin-top: 40px; color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1><a href="https://github.com/augusto-scarvalho/tare.tools.tune">tare.tools.tune</a></h1>
+    <p class="lead">Game audio rendered from code, with no recordings and no AI at runtime.
+      Every sound on this page comes from <a href="https://github.com/augusto-scarvalho/tare.tools.tune/blob/649295f/examples/listen.py"><code>examples/listen.py</code></a>:
+      run it and you get the same WAVs, sample for sample.</p>
+    <p class="lead" lang="pt-BR">Áudio de jogo gerado por código. Cada som desta página sai do mesmo script, sempre igual.</p>
+    <section>
+      <h2>Music <span lang="pt-BR">· Música</span></h2>
+      <ul>
+      <li id="victory">
+        <div class="what"><strong>Victory</strong> <span>orchestral jingle</span></div>
+        <audio controls preload="none" src="audio/victory.ogg"></audio>
+      </li>
+      <li id="levelup-16bit">
+        <div class="what"><strong>Level up</strong> <span>16-bit jingle</span></div>
+        <audio controls preload="none" src="audio/levelup-16bit.ogg"></audio>
+      </li>
+      <li id="town-16bit">
+        <div class="what"><strong>Town</strong> <span>16-bit loop</span></div>
+        <audio controls preload="none" src="audio/town-16bit.ogg"></audio>
+      </li>
+      <li id="tavern">
+        <div class="what"><strong>Tavern</strong> <span>orchestral loop</span></div>
+        <audio controls preload="none" src="audio/tavern.ogg"></audio>
+      </li>
+      <li id="battle-8bit">
+        <div class="what"><strong>Battle</strong> <span>8-bit loop</span></div>
+        <audio controls preload="none" src="audio/battle-8bit.ogg"></audio>
+      </li>
+      <li id="reverie-16bit">
+        <div class="what"><strong>Reverie</strong> <span>16-bit loop, colour harmony</span></div>
+        <audio controls preload="none" src="audio/reverie-16bit.ogg"></audio>
+      </li>
+      <li id="festival">
+        <div class="what"><strong>Festival</strong> <span>koto, shakuhachi and taiko, loop</span></div>
+        <audio controls preload="none" src="audio/festival.ogg"></audio>
+      </li>
+      <li id="shrine">
+        <div class="what"><strong>Shrine</strong> <span>a sanctuary, almost no pulse, loop</span></div>
+        <audio controls preload="none" src="audio/shrine.ogg"></audio>
+      </li>
+      <li id="skirmish">
+        <div class="what"><strong>Skirmish</strong> <span>tactics-style battle loop</span></div>
+        <audio controls preload="none" src="audio/skirmish.ogg"></audio>
+      </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Speech in Portuguese <span lang="pt-BR">· Fala em português</span></h2>
+      <ul>
+      <li id="pt-natural-m">
+        <div class="what"><strong>Natural voice, male</strong> <span>voice bank</span><p class="said">“Bem-vindo à forja, viajante! Você viu o dragão?”</p></div>
+        <audio controls preload="none" src="audio/pt-natural-m.ogg"></audio>
+      </li>
+      <li id="pt-natural-f">
+        <div class="what"><strong>Natural voice, female</strong> <span>voice bank</span><p class="said">“Preciso de uma espada nova. A minha quebrou na ponte.”</p></div>
+        <audio controls preload="none" src="audio/pt-natural-f.ogg"></audio>
+      </li>
+      <li id="pt-deep">
+        <div class="what"><strong>Deep</strong> <span>formant voice</span><p class="said">“Bem-vindo à forja, viajante! Você viu o dragão?”</p></div>
+        <audio controls preload="none" src="audio/pt-deep.ogg"></audio>
+      </li>
+      <li id="pt-child">
+        <div class="what"><strong>Child</strong> <span>formant voice</span><p class="said">“Olha, mãe! Um dragão de verdade!”</p></div>
+        <audio controls preload="none" src="audio/pt-child.ogg"></audio>
+      </li>
+      <li id="pt-giant">
+        <div class="what"><strong>Giant</strong> <span>formant voice</span><p class="said">“Quem ousa entrar na minha caverna?”</p></div>
+        <audio controls preload="none" src="audio/pt-giant.ogg"></audio>
+      </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Speech in English <span lang="pt-BR">· Fala em inglês</span></h2>
+      <ul>
+      <li id="en-default">
+        <div class="what"><strong>Default</strong> <span>formant voice</span><p class="said">“Welcome to the forge, traveler! Did you see the dragon?”</p></div>
+        <audio controls preload="none" src="audio/en-default.ogg"></audio>
+      </li>
+      <li id="en-emotions">
+        <div class="what"><strong>Happy, then sad</strong> <span>formant voice</span><p class="said">“[happy] Good to see you! [sad] But I must go...”</p></div>
+        <audio controls preload="none" src="audio/en-emotions.ogg"></audio>
+      </li>
+      <li id="en-robot">
+        <div class="what"><strong>Robot</strong> <span>formant voice</span><p class="said">“Intruder detected. Please remain where you are.”</p></div>
+        <audio controls preload="none" src="audio/en-robot.ogg"></audio>
+      </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Barks <span lang="pt-BR">· Interjeições</span></h2>
+      <ul>
+      <li id="bark-laugh">
+        <div class="what"><strong>Laugh</strong> <span>anime style</span></div>
+        <audio controls preload="none" src="audio/bark-laugh.ogg"></audio>
+      </li>
+      <li id="bark-kiai">
+        <div class="what"><strong>Kiai</strong> <span>a strike with a shout</span></div>
+        <audio controls preload="none" src="audio/bark-kiai.ogg"></audio>
+      </li>
+      <li id="bark-hurt">
+        <div class="what"><strong>Pain</strong> <span>a grunt</span></div>
+        <audio controls preload="none" src="audio/bark-hurt.ogg"></audio>
+      </li>
+      <li id="bark-cheer">
+        <div class="what"><strong>Cheer</strong> <span>MMO style</span></div>
+        <audio controls preload="none" src="audio/bark-cheer.ogg"></audio>
+      </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Effects <span lang="pt-BR">· Efeitos</span></h2>
+      <ul>
+      <li id="sword-clash">
+        <div class="what"><strong>Steel sword clash</strong> <span>the sword “excalibur”, take 3</span></div>
+        <audio controls preload="none" src="audio/sword-clash.ogg"></audio>
+      </li>
+      <li id="fire-spell">
+        <div class="what"><strong>Fire spell</strong> <span>cast</span></div>
+        <audio controls preload="none" src="audio/fire-spell.ogg"></audio>
+      </li>
+      <li id="rain-loop">
+        <div class="what"><strong>Rain</strong> <span>16 s seamless loop</span></div>
+        <audio controls preload="none" src="audio/rain-loop.ogg"></audio>
+      </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Creatures <span lang="pt-BR">· Criaturas</span></h2>
+      <ul>
+      <li id="bird-alert">
+        <div class="what"><strong>A bird’s alert call</strong> <span>bird archetype</span></div>
+        <audio controls preload="none" src="audio/bird-alert.ogg"></audio>
+      </li>
+      </ul>
+    </section>
+    <footer>
+      <p>OGG Vorbis, 48 kHz. Download them all from the <a href="https://github.com/augusto-scarvalho/tare.tools.tune/releases/tag/listen-1">listen-1 release</a>.
+        The sounds, like the code, are under the <a href="https://github.com/augusto-scarvalho/tare.tools.tune/blob/main/LICENSE">Apache License 2.0</a>.</p>
+    </footer>
+  </main>
+</body>
+</html>
