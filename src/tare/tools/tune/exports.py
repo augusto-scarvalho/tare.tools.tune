@@ -13,6 +13,17 @@ from .bundles import atomic_json, file_lock
 from .diagnostics import digest, pcm_id
 
 
+def write_ogg(path, audio: np.ndarray, sr: int, block: int = 65_536) -> None:
+    """Ogg Vorbis, written in blocks: libsndfile 1.2.2 kills the process, with no error, when one write holds about
+    20 s of stereo audio."""
+    import soundfile as sf
+    audio = np.asarray(audio, dtype=np.float32)
+    with sf.SoundFile(str(path), "w", sr, 1 if audio.ndim == 1 else audio.shape[1], format="OGG",
+                      subtype="VORBIS") as f:
+        for start in range(0, len(audio), block):
+            f.write(audio[start:start + block])
+
+
 def _validate_export(path, identity):
     manifest = json.loads((path / "manifest.json").read_text())
     if manifest["bank_id"] != identity:
@@ -81,7 +92,7 @@ def export_sprite(sounds, out, *, ogg=False, gap=0.1, keep_tail=False):
             except ImportError:
                 raise ValueError("OGG export needs the export extra: pip install -e '.[export]'") from None
             encoded = np.pad(np.clip(samples, -1, 1), ((0, padding), (0, 0)))
-            sf.write(str(stage / "bank.ogg"), encoded, rate, format="OGG", subtype="VORBIS")
+            write_ogg(stage / "bank.ogg", encoded, rate)
             decoded, actual_rate = sf.read(str(stage / "bank.ogg"), dtype="float32", always_2d=True)
             if actual_rate != rate or decoded.shape != encoded.shape or not np.isfinite(decoded).all():
                 raise ValueError("encoded Vorbis bank failed decoded rate/length/channel verification")

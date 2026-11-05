@@ -363,3 +363,11 @@ def test_raw_pitch_retains_uncertainty_and_absolute_time():
     assert all(frame["hz"] is None for frame in frames if frame["time"] < 0.1)
     pitched = [frame for frame in frames if frame["time"] > 0.25]
     assert all(frame["dominant_partial_hz"] == pytest.approx(440, abs=20) for frame in pitched)
+
+
+def test_long_ogg_is_written_in_blocks(tmp_path):
+    sf = pytest.importorskip("soundfile")
+    from tare.tools.tune.exports import write_ogg
+    noise = 0.3 * np.random.default_rng(0).standard_normal((30 * 48_000, 2))   # one write of this killed Python
+    write_ogg(tmp_path / "long.ogg", noise, 48_000)
+    assert sf.read(str(tmp_path / "long.ogg"))[0].shape == noise.shape

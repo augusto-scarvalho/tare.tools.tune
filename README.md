@@ -30,6 +30,43 @@ synthesized on the spot: no recordings shipped, no AI at runtime, and the same r
 
 > It began as a Pokémon Gen 1 cry synthesizer. That game made 151 cries from 38 templates plus pitch and duration, and the idea became the model for everything here: **species = genes, individual = small variations, take = a new performance**.
 
+## Listen
+
+25 sounds, each one rendered by [`examples/listen.py`](examples/listen.py): run it and you get the same WAVs, sample for sample. **[▶ Listen in your browser](https://augusto-scarvalho.github.io/tare.tools.tune/)**, or download each one below as OGG (from the [listen-1 release](https://github.com/augusto-scarvalho/tare.tools.tune/releases/tag/listen-1)). The sounds, like the code, are under the Apache License 2.0.
+
+- 🎼 **Music:** [victory][victory] (orchestral jingle) · [level up][levelup-16bit] (16-bit) · [town][town-16bit] (16-bit loop) · [tavern][tavern] · [battle][battle-8bit] (8-bit) · [reverie][reverie-16bit] (16-bit color harmony) · [festival][festival] (koto, shakuhachi, taiko) · [shrine][shrine] · [skirmish][skirmish] (tactics)
+- 🗣️ **Portuguese:** [natural male voice][pt-natural-m] · [natural female voice][pt-natural-f] · [deep][pt-deep] · [child][pt-child] · [giant][pt-giant]
+- 🗣️ **English:** [default][en-default] · [happy, then sad][en-emotions] · [robot][en-robot]
+- 😤 **Barks:** [laugh][bark-laugh] · [kiai][bark-kiai] · [pain][bark-hurt] · [cheer][bark-cheer]
+- ⚔️ **Effects:** [steel sword clash][sword-clash] · [fire spell][fire-spell] · [rain loop][rain-loop] (16 s, seamless)
+- 🐦 **Creatures:** [a bird's alert call][bird-alert]
+
+[victory]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/victory.ogg
+[levelup-16bit]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/levelup-16bit.ogg
+[town-16bit]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/town-16bit.ogg
+[tavern]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/tavern.ogg
+[battle-8bit]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/battle-8bit.ogg
+[reverie-16bit]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/reverie-16bit.ogg
+[festival]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/festival.ogg
+[shrine]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/shrine.ogg
+[skirmish]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/skirmish.ogg
+[pt-natural-m]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/pt-natural-m.ogg
+[pt-natural-f]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/pt-natural-f.ogg
+[pt-deep]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/pt-deep.ogg
+[pt-child]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/pt-child.ogg
+[pt-giant]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/pt-giant.ogg
+[en-default]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/en-default.ogg
+[en-emotions]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/en-emotions.ogg
+[en-robot]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/en-robot.ogg
+[bark-laugh]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/bark-laugh.ogg
+[bark-kiai]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/bark-kiai.ogg
+[bark-hurt]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/bark-hurt.ogg
+[bark-cheer]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/bark-cheer.ogg
+[sword-clash]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/sword-clash.ogg
+[fire-spell]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/fire-spell.ogg
+[rain-loop]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/rain-loop.ogg
+[bird-alert]: https://github.com/augusto-scarvalho/tare.tools.tune/releases/download/listen-1/bird-alert.ogg
+
 ## Quick start
 
 ```bash
