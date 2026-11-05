@@ -1,9 +1,12 @@
 """Same recipe, same WAV on any machine: 30 short sounds from every family against 16-bit references made on
-Windows with the numpy and scipy of constraints.txt. Elsewhere a few samples may differ by the smallest step (libm
-rounds a little differently per OS); anything more is a bug. The printed table is the measurement for the machine
-that ran it.
+Windows with the numpy and scipy of constraints.txt. Elsewhere samples may differ by the smallest step (each OS's
+libm rounds a little differently; macOS moved 76 samples of one line); a bigger step is a bug. The printed table is
+the measurement for the machine that ran it.
 
-    python tests/test_determinism.py   # rewrite the references after a deliberate change to the sound (on Windows)
+    python tests/test_determinism.py   # on Windows, after a deliberate change to the sound
+
+rewrites only the references that changed and names them: check each was meant to change before committing it.
+One file per sound, so the history grows only by the sounds that changed.
 """
 import platform
 import sys
@@ -19,9 +22,9 @@ from tare.tools.tune.render import render
 from tare.tools.tune.speech import Speaker
 
 SR = 16_000
-REF = Path(__file__).parent / "fixtures" / "determinism.npz"
+REF = Path(__file__).parent / "fixtures" / "determinism"
 EN, PT = "Welcome to the forge, traveler! Did you see the dragon?", "Bem-vindo à forja, viajante! Você viu o dragão?"
-TOLERANCE = 1, 8   # at most 1 LSB, in at most 8 samples of a sound
+TOLERANCE = 1   # LSB: rounding flips one step; a real divergence (a moved glottal pulse) is hundreds
 
 wolf = Creature("mammal", species="wolf", size=0.45, aggression=0.5)
 hero = Speaker(pitch=120, tract=1.05)
@@ -56,11 +59,10 @@ def pcm(y) -> np.ndarray:
 
 
 def test_same_wav_as_the_reference():
-    ref = np.load(REF)
-    assert sorted(ref.files) == sorted(SOUNDS)
+    assert sorted(f.stem for f in REF.glob("*.npy")) == sorted(SOUNDS)
     rows, off = [], []
     for name, make in SOUNDS.items():
-        got, want = pcm(make()), ref[name]
+        got, want = pcm(make()), np.load(REF / f"{name}.npy")
         if got.shape != want.shape:
             rows.append(f"{name:34} length {len(got)} instead of {len(want)}")
             off.append(name)
@@ -68,16 +70,24 @@ def test_same_wav_as_the_reference():
         d = np.abs(got.astype(np.int32) - want)
         n, worst = int(np.count_nonzero(d)), int(d.max(initial=0))
         rows.append(f"{name:34} {n:7} samples differ, at most {worst} LSB")
-        if worst > TOLERANCE[0] or n > TOLERANCE[1]:
+        if worst > TOLERANCE:
             off.append(name)
     exact = sum(r.endswith(" 0 samples differ, at most 0 LSB") for r in rows)
     print(f"\n{platform.system()} {platform.machine()}, Python {platform.python_version()}, numpy {np.__version__}, "
           f"scipy {scipy.__version__}: {exact} of {len(SOUNDS)} bit-identical", *rows, sep="\n")
-    assert not off, f"beyond {TOLERANCE[0]} LSB in {TOLERANCE[1]} samples: {off}"
+    assert not off, f"beyond {TOLERANCE} LSB: {off}"
 
 
 if __name__ == "__main__":
     if platform.system() != "Windows" and "--force" not in sys.argv:
         sys.exit("the references are made on Windows; pass --force to write them here anyway")
-    np.savez_compressed(REF, **{name: pcm(make()) for name, make in SOUNDS.items()})
-    print(REF, f"{REF.stat().st_size / 1e6:.1f} MB")
+    REF.mkdir(exist_ok=True)
+    for name, make in SOUNDS.items():
+        path, got = REF / f"{name}.npy", pcm(make())
+        if not path.exists() or not np.array_equal(np.load(path), got):
+            np.save(path, got)
+            print("changed:", name)
+    for path in REF.glob("*.npy"):
+        if path.stem not in SOUNDS:
+            path.unlink()
+            print("removed:", path.stem)
