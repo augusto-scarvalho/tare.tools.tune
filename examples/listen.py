@@ -1,5 +1,5 @@
-"""The sounds of the README's Listen section, rendered from code: run it and you get the same WAVs, sample for sample
-(OGG copies with --ogg, which needs the export extra).
+"""The sounds of the README's Listen section, rendered from code: the same WAVs bit for bit on the same system, and
+at most the smallest step apart across systems (OGG copies with --ogg, which needs the export extra).
 
     python examples/listen.py [out_dir] [--ogg]
 

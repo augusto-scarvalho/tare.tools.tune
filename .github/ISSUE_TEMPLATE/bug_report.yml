@@ -1,0 +1,26 @@
+name: Something broke · Algo quebrou
+description: An error, a crash, or a result that is wrong in a way the tests could catch.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command or code, and the error or output. English or Portuguese.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: version
+    attributes:
+      label: Version, OS and Python
+      placeholder: "commit 649295f, Ubuntu 24.04, Python 3.12, numpy 2.5.3, scipy 1.18.1"
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "Attach the `.tune.json` if you can share it. **Never attach a review bundle**: it keeps a copy of any reference recording."

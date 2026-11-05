@@ -32,7 +32,7 @@ synthesized on the spot: no recordings shipped, no AI at runtime, and the same r
 
 ## Listen
 
-25 sounds, each one rendered by [`examples/listen.py`](examples/listen.py): run it and you get the same WAVs, sample for sample. **[▶ Listen in your browser](https://augusto-scarvalho.github.io/tare.tools.tune/)**, or download each one below as OGG (from the [listen-1 release](https://github.com/augusto-scarvalho/tare.tools.tune/releases/tag/listen-1)). The sounds, like the code, are under the Apache License 2.0.
+25 sounds, each one rendered by [`examples/listen.py`](examples/listen.py): run it and you get the same WAVs: bit for bit on the same system, at most the smallest step apart across systems. **[▶ Listen in your browser](https://augusto-scarvalho.github.io/tare.tools.tune/)**, or download each one below as OGG (from the [listen-1 release](https://github.com/augusto-scarvalho/tare.tools.tune/releases/tag/listen-1)). The sounds, like the code, are under the Apache License 2.0.
 
 - 🎼 **Music:** [victory][victory] (orchestral jingle) · [level up][levelup-16bit] (16-bit) · [town][town-16bit] (16-bit loop) · [tavern][tavern] · [battle][battle-8bit] (8-bit) · [reverie][reverie-16bit] (16-bit color harmony) · [festival][festival] (koto, shakuhachi, taiko) · [shrine][shrine] · [skirmish][skirmish] (tactics)
 - 🗣️ **Portuguese:** [natural male voice][pt-natural-m] · [natural female voice][pt-natural-f] · [deep][pt-deep] · [child][pt-child] · [giant][pt-giant]
@@ -135,6 +135,14 @@ Struck bodies ring through modal synthesis, wind and fire are filtered noise, an
 - **Godot:** the `tare_tune` extension turns small specs into sound inside the game. [How →](docs/guide.md#2-runtime-generate-inside-the-game)
 - **With an AI agent:** link the repo as the `tune-game-audio` skill for Claude Code or Codex. [SKILL.md →](SKILL.md)
 
+## Limits
+
+- **It doesn't sing.** The music is instrumental (the choir sings vowels), and the speech is Brazilian Portuguese and English only.
+- **The natural voices are Portuguese.** Two voice banks, a male and a female; English uses formant synthesis, which sounds more synthetic.
+- **Realism varies from sound to sound.** Some effects and creatures still sound synthetic. The checks measure a sound but never judge its timbre: only listening tells.
+- **Same sound, almost everywhere.** With the pinned numpy and scipy, Windows and Linux (x86 and ARM) match bit for bit on CI's 30 test sounds, and macOS is off by the smallest step in one of them. AMD processors are untested.
+- **Godot renders part of the catalogue.** Its C++ core plays effects, creatures, natural speech and ambience loops from small specs; the `chip` archetype, barks and music still ship as WAVs from `bake`.
+
 ## Learn more
 
 | Read | What's inside |
@@ -146,6 +154,7 @@ Struck bodies ring through modal synthesis, wind and fire are filtered noise, an
 | 🏗️ [Architecture](docs/architecture.md) | how each sound is built, portability, and what listening tests found |
 | 🗡️ [RPG sounds](docs/rpg-sounds.md) · [Tactical RPG sounds](docs/tactics-sounds.md) | coverage and status, sound by sound |
 | 🗂️ [Documentation index](docs/README.md) | everything else, in English and Portuguese |
+| 🤝 [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Privacy](PRIVACY.md) | how to help, what changed, and what it runs, fetches and sends (nothing is sent) |
 
 ## Credits and license
 

@@ -32,7 +32,7 @@ sintetizados na hora: nenhuma gravação no pacote, nenhuma IA rodando no jogo, 
 
 ## Ouça
 
-25 sons, cada um gerado por [`examples/listen.py`](examples/listen.py): rode e você recebe os mesmos WAVs, amostra por amostra. **[▶ Ouça no navegador](https://augusto-scarvalho.github.io/tare.tools.tune/)**, ou baixe cada um abaixo em OGG (do [release listen-1](https://github.com/augusto-scarvalho/tare.tools.tune/releases/tag/listen-1)). Os sons, como o código, estão sob a Licença Apache 2.0.
+25 sons, cada um gerado por [`examples/listen.py`](examples/listen.py): rode e você recebe os mesmos WAVs: idênticos bit a bit no mesmo sistema e, entre sistemas, com no máximo o menor degrau de diferença. **[▶ Ouça no navegador](https://augusto-scarvalho.github.io/tare.tools.tune/)**, ou baixe cada um abaixo em OGG (do [release listen-1](https://github.com/augusto-scarvalho/tare.tools.tune/releases/tag/listen-1)). Os sons, como o código, estão sob a Licença Apache 2.0.
 
 - 🎼 **Música:** [vitória][victory] (jingle orquestral) · [subiu de nível][levelup-16bit] (16 bits) · [cidade][town-16bit] (loop de 16 bits) · [taverna][tavern] · [batalha][battle-8bit] (8 bits) · [devaneio][reverie-16bit] (harmonia de cor, 16 bits) · [festival][festival] (koto, shakuhachi, taiko) · [santuário][shrine] · [escaramuça][skirmish] (tactics)
 - 🗣️ **Português:** [voz natural masculina][pt-natural-m] · [voz natural feminina][pt-natural-f] · [grave][pt-deep] · [infantil][pt-child] · [gigante][pt-giant]
@@ -135,6 +135,14 @@ Corpos que vibram (metal, madeira, sinos) soam por síntese modal, vento e fogo 
 - **Godot:** a extensão `tare_tune` transforma specs pequenas em som dentro do jogo. [Como →](docs/pt-BR/guia.md#2-runtime-gerar-dentro-do-jogo)
 - **Com um agente de IA:** ligue o repositório como a skill `tune-game-audio` no Claude Code ou no Codex. [SKILL.md →](SKILL.md)
 
+## Limites
+
+- **Ele não canta.** A música é instrumental (o coro canta vogais), e a fala é só em português brasileiro e inglês.
+- **As vozes naturais são em português.** São dois bancos de voz, um masculino e um feminino; o inglês usa síntese de formantes, que soa mais sintética.
+- **O realismo varia de som para som.** Alguns efeitos e criaturas ainda soam sintéticos. As verificações medem um som, mas nunca julgam o timbre: só ouvindo para saber.
+- **O mesmo som, quase em toda parte.** Com o numpy e o scipy fixados, Windows e Linux (x86 e ARM) batem bit a bit nos 30 sons de teste do CI, e o macOS difere no menor degrau em um deles. Processadores AMD não foram testados.
+- **O Godot renderiza parte do catálogo.** O núcleo C++ toca efeitos, criaturas, fala natural e ambientes em loop a partir de specs pequenas; o arquétipo `chip`, as interjeições e a música ainda vão como WAVs do `bake`.
+
 ## Para saber mais
 
 | Leia | O que tem lá |
@@ -146,6 +154,7 @@ Corpos que vibram (metal, madeira, sinos) soam por síntese modal, vento e fogo 
 | 🏗️ [Arquitetura](docs/pt-BR/arquitetura.md) | como cada som é feito, portabilidade e o que os testes de escuta mostraram |
 | 🗡️ [Sons de RPG](docs/pt-BR/sons-rpg.md) · [Sons de tactics RPG](docs/pt-BR/sons-tactics.md) | cobertura e status, som por som |
 | 🗂️ [Índice da documentação](docs/README.md) | todo o resto, em inglês e português |
+| 🤝 [Como contribuir](CONTRIBUTING.md) · [Mudanças](CHANGELOG.md) · [Privacidade](PRIVACY.md) | como ajudar, o que mudou, e o que ele roda, baixa e envia (nada é enviado); em inglês |
 
 ## Créditos e licença
 

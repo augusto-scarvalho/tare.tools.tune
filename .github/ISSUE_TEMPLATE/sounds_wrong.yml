@@ -1,0 +1,35 @@
+name: It sounds wrong · Soa errado
+description: A sound that does not sound like what it should, a click, a harsh voice, a loop with a seam, a cue that clashes.
+labels: [listening]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Listening notes are the most useful feedback this project gets. English or Portuguese, whichever you prefer.
+        **Never attach a review bundle**: it keeps a copy of any reference recording. Share the recipe instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: Where and what
+      description: Which sound, at what second, and what you hear there.
+      placeholder: "The steel clash rings on for too long after 0.5 s; the ogre's attack sounds like a slime bubbling."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: How it should sound instead, in words, or a game or recording it should resemble.
+  - type: textarea
+    id: recipe
+    attributes:
+      label: The recipe
+      description: The command, the `.tune.json` or the Python call that made it (seed, take and sample rate included).
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and OS
+      placeholder: "commit 649295f, Windows 11, Python 3.12"
