@@ -424,11 +424,11 @@ For complete stereo scenes (effects, creatures, speech, and music over ambience)
 ```json
 "music": {
   "town":    {"cue": "town", "style": "snes", "seed": 2, "layers": true},
-  "fanfare": {"cue": "victory", "seed": 3}
+  "fanfare": {"cue": "victory", "seed": 3, "lufs": -16}
 }
 ```
 
-With layers, `mix.wav` is exactly their sum; as 16-bit files, the layers add up to it within one step per layer.
+With layers, `mix.wav` is exactly their sum; as 16-bit files, the layers add up to it within one step per layer. `"lufs"` brings a cue down to that loudness (BS.1770) and `gain_db` in the manifest says by how much. It only lowers: a cue already peaks near −1 dB, and it never goes past a true peak of −1 dBTP, so a quieter cue stays as it is and the manifest's `lufs` says where it is. The 96 cues (32 × 3 styles) measure −19 to −9 LUFS: −16 reaches 86 of them, −18 reaches 94. Only music takes a target: loudness is measured over 400 ms blocks, so a click or a hit has none (`null`) and keeps its peak.
 
 Notes are `(note, time, duration[, intensity])`. A note can be a name (`"C#5"`), MIDI number, or list (a chord). Intensity changes timbre as well as volume: a loud trumpet opens up the highs, and a soft strike is darker.
 
@@ -457,7 +457,7 @@ tare.tools.tune judge                                                  # what th
 
 ### 1. Offline: generate assets for any engine
 
-A bestiary file becomes WAV packs, plus a `manifest.json` and a JSON spec for each sound:
+A bestiary file becomes WAV packs, plus a `manifest.json` (each sound's duration, peak, loudness in LUFS and true peak) and a JSON spec for each sound:
 
 ```bash
 tare.tools.tune bake examples/bestiary.json -o baked     # 19 creatures × 5 calls × 3 takes

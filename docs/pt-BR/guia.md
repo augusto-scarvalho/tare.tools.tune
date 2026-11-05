@@ -402,11 +402,11 @@ Para cenas inteiras (efeitos, criaturas, uma fala e música sobre um ambiente, e
 ```json
 "music": {
   "cidade":  {"cue": "town", "style": "snes", "seed": 2, "layers": true},
-  "fanfarra": {"cue": "victory", "seed": 3}
+  "fanfarra": {"cue": "victory", "seed": 3, "lufs": -16}
 }
 ```
 
-Com camadas, o `mix.wav` é exatamente a soma delas; em arquivos de 16 bits, as camadas somam a mixagem com diferença de no máximo um degrau por camada.
+Com camadas, o `mix.wav` é exatamente a soma delas; em arquivos de 16 bits, as camadas somam a mixagem com diferença de no máximo um degrau por camada. `"lufs"` abaixa a música até esse volume percebido (BS.1770), e o `gain_db` do manifesto diz quanto. Ele só abaixa: a música já sai com pico perto de −1 dB e nunca passa de um pico real de −1 dBTP, então uma música mais baixa que o alvo fica como está, e o `lufs` do manifesto diz onde ela ficou. As 96 músicas (32 × 3 estilos) medem de −19 a −9 LUFS: −16 alcança 86 delas, −18 alcança 94. Só a música aceita um alvo: o volume é medido em blocos de 400 ms, então um clique ou um golpe fica sem medida (`null`) e mantém o seu pico.
 
 Notas são `(nota, tempo, duração[, intensidade])`. A nota pode ser um nome (`"C#5"`), um número MIDI ou uma lista (um acorde). A intensidade muda o timbre, não só o volume: o trompete forte abre os agudos, e uma batida suave é mais escura.
 
@@ -434,7 +434,7 @@ tare.tools.tune judge                                                      # o q
 
 ### 1. Offline: gerar assets para qualquer engine
 
-Um arquivo de bestiário vira pacotes de WAV, mais um `manifest.json` e o spec JSON de cada som:
+Um arquivo de bestiário vira pacotes de WAV, mais um `manifest.json` (a duração, o pico, o volume em LUFS e o pico real de cada som) e o spec JSON de cada som:
 
 ```bash
 tare.tools.tune bake examples/bestiary.json -o baked     # 19 criaturas x 5 chamados x 3 takes

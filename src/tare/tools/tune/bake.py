@@ -49,6 +49,10 @@ Music goes in an optional ``music`` section (see tare.tools.tune.music; ``style`
 
 A loop is written whole (``mix.wav``, with its loop in a sampler chunk) and, with ``layers``, as stems that
 add up to it (``base``, ``rhythm``, ``lead``): start them together and fade them in and out as play heats up.
+``"lufs": -16`` brings a cue down to that loudness (``gain_db`` says by how much). It only lowers: cues already
+peak near -1 dB and it never passes a true peak of -1 dBTP, so a quieter cue keeps its level.
+
+Every manifest entry carries its loudness (``lufs``, BS.1770, null under 400 ms) and ``true_peak_db``.
 """
 import json
 import os
@@ -63,6 +67,7 @@ from . import __version__, rng
 from .audio_io import trim_tail, write_wav
 from .calls import CALLS
 from .creature import Creature
+from .loudness import measure
 from .music import CUES, STYLES, Cue
 from .render import DEFAULT_SR, render
 from .sfx import RECIPES, Sfx
@@ -130,10 +135,10 @@ def sound_from_entry(name: str, entry: Mapping) -> tuple[Sfx, list[str]]:
 
 
 def music_from_entry(name: str, entry: Mapping) -> dict:
-    if unknown := set(entry) - {"cue", "style", "seed", "layers"}:
+    if unknown := set(entry) - {"cue", "style", "seed", "layers", "lufs"}:
         raise ValueError(f"music {name!r}: unknown field(s) {', '.join(sorted(unknown))}")
     spec = {"cue": entry.get("cue", name), "style": entry.get("style", "orchestral"), "seed": int(entry.get("seed", 0)),
-            "layers": bool(entry.get("layers", False))}
+            "layers": bool(entry.get("layers", False)), "lufs": entry.get("lufs")}
     if spec["cue"] not in CUES or spec["style"] not in STYLES:
         raise ValueError(f"music {name!r}: cue is one of {', '.join(CUES)}; style one of {', '.join(STYLES)}")
     if spec["layers"] and not Cue(spec["cue"], spec["style"], spec["seed"]).loop:
@@ -174,7 +179,7 @@ def _bake_one(job):
     audio = _rendered(voice, sr, keep_tail)
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
     entry = {"file": f"{stem}.wav", "duration": round(len(audio) / sr, 4),
-             "peak": round(float(np.max(np.abs(audio))), 4)}
+             "peak": round(float(np.max(np.abs(audio))), 4), **measure(audio, sr)}
     if specs:
         (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(indent=1), encoding="utf-8")
         entry["spec"] = f"{stem}.json"
@@ -188,7 +193,7 @@ def _bake_sound(job):
     audio = _rendered(voice, sr, keep_tail)
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr, loop=voice.loop > 0)
     entry = {"file": f"{stem}.wav", "duration": round(len(audio) / sr, 4),
-             "peak": round(float(np.max(np.abs(audio))), 4)}
+             "peak": round(float(np.max(np.abs(audio))), 4), **measure(audio, sr)}
     if voice.loop:
         entry["loop"] = True
     if specs:
@@ -203,7 +208,7 @@ def _bake_line(job):
     voice = who.voice(text, lang)
     audio = _rendered(voice, sr, keep_tail)
     write_wav(Path(out_dir) / f"{stem}.wav", audio, sr)
-    entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4)}
+    entry = {"file": f"{stem}.wav", "text": text, "duration": round(len(audio) / sr, 4), **measure(audio, sr)}
     if specs and voice:
         (Path(out_dir) / f"{stem}.json").write_text(voice.to_json(), encoding="utf-8")
         entry["spec"] = f"{stem}.json"
@@ -215,10 +220,16 @@ def _bake_cue(job):
     cue = Cue(spec["cue"], spec["style"], spec["seed"], sr)
     stems = cue.layers() if spec["layers"] else {}
     audio = sum(stems.values()) if stems else cue.render()     # with layers, the mix is exactly their sum
+    gain_db = None
+    if spec.get("lufs") is not None and (now := measure(audio, sr))["lufs"] is not None:
+        gain_db = round(min(spec["lufs"] - now["lufs"], -1.0 - now["true_peak_db"]), 2)   # never past -1 dBTP
+        audio, stems = audio * 10 ** (gain_db / 20), {g: y * 10 ** (gain_db / 20) for g, y in stems.items()}
     loop = cue.length > 0
     entry = {"file": f"{name}/mix.wav", "duration": round(len(audio) / sr, 4),
-             "peak": round(float(np.max(np.abs(audio))), 4), "loop": loop, "bpm": round(cue.score.bpm, 3),
-             "meter": cue.score.meter}
+             "peak": round(float(np.max(np.abs(audio))), 4), **measure(audio, sr), "loop": loop,
+             "bpm": round(cue.score.bpm, 3), "meter": cue.score.meter}
+    if gain_db is not None:
+        entry["gain_db"] = gain_db
     write_wav(Path(out_dir) / entry["file"], audio, sr, loop=loop)
     if loop:
         entry["bars"] = round(cue.length / cue.score.bar(1))

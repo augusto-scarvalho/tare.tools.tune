@@ -52,12 +52,14 @@ def test_bake_writes_packs_and_manifest(tmp_path):
 
 
 def test_bake_writes_music_and_its_layers(tmp_path):
-    music = {"town": {"cue": "tavern", "style": "chip", "seed": 2, "layers": True},
+    music = {"town": {"cue": "tavern", "style": "chip", "seed": 2, "layers": True, "lufs": -18},
              "fanfare": {"cue": "victory", "style": "chip"}}
     manifest = bake({}, tmp_path, sr=SR, workers=1, music=music)
     town, fanfare = manifest["music"]["town"], manifest["music"]["fanfare"]
     assert town["loop"] and town["bars"] > 0 and set(town["layers"]) <= {"base", "rhythm", "lead"}
     assert not fanfare["loop"] and "layers" not in fanfare
+    assert town["lufs"] == pytest.approx(-18, abs=0.02) and town["true_peak_db"] <= -1.0 and town["gain_db"] < 0
+    assert fanfare["lufs"] is not None and "gain_db" not in fanfare
 
     def pcm(name):
         with wave.open(str(tmp_path / name)) as w:
