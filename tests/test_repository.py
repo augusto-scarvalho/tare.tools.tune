@@ -1,4 +1,5 @@
 """The public repository stays clean: links resolve, the two READMEs match, and nothing personal or recorded ships."""
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -50,3 +51,13 @@ def test_no_recordings_in_the_repository():
     # sounds people hear come from releases; the only audio file is a test fixture made by tune itself
     audio = [f for f in TRACKED if f.lower().endswith((".wav", ".ogg", ".mp3", ".flac", ".m4a"))]
     assert all(f.startswith("tests/fixtures/") for f in audio), audio
+
+
+def test_one_version_everywhere():
+    # the Claude Code plugin caches one copy per version: users get changes only when it moves
+    project = re.search(r'^version = "(.+)"', (ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.M)[1]
+    init = (ROOT / "src/tare/tools/tune/__init__.py").read_text(encoding="utf-8")
+    package = re.search(r'__version__ = "(.+)"', init)[1]
+    plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
+    assert project == package == plugin
+    assert f"## {project} (" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

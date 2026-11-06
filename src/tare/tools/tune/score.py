@@ -247,8 +247,9 @@ class Score:
         `overlap` beats, one of them held at least `held` beats: what an ear hears as a rub, found in the score
         without rendering. Percussion is left out. Each: {"bar", "beat", "beats", "notes": [(track, MIDI), ...],
         "kind", "same_track", "interval"}. A "chord" rub starts with both notes, so it is built into the harmony;
-        a "line" rub is a note entering over another (passing, leaning, or a tune that ignores its chord). In the
-        cues, rubs built into held chords are what sounded harsh; lines over clean chords were heard as colour."""
+        a "line" rub is a note entering over another (passing, leaning, or a tune that ignores its chord). In a
+        blind round, an untrained listener rated worst the cues with rubs within one track and best those with
+        lines over chords; the count alone said nothing."""
         notes = [(t.name, e["pitch"], e["offset"] + e["beat"], e["beats"]) for t in self.tracks.values()
                  for e in t.events if e["instrument"] not in UNPITCHED]
         if len(notes) < 2:

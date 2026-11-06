@@ -39,4 +39,10 @@ python tools/build_native.py build                    # optional (C++17 compiler
   downloaded by `tools/build_barks.py --download`, and Generation 1 data is yours to supply.
 - Samples or data under licences that forbid commercial use or changes, or that are unclear.
 
+## Releases
+
+A release raises the version in `pyproject.toml`, `src/tare/tools/tune/__init__.py` and `.claude-plugin/plugin.json`
+together (a test holds them equal), turns the changelog's Unreleased section into that version, and is tagged
+`vX.Y.Z`. Plugin users get a new copy only when the version changes.
+
 By contributing you agree that your contribution is licensed under the [Apache License 2.0](LICENSE).

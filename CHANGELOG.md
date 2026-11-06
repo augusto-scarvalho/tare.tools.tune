@@ -5,6 +5,8 @@ that alters rendered samples says so, since the same recipe is meant to give the
 
 ## Unreleased
 
+## 0.2.0 (2026-11-05)
+
 ### Added
 
 - **Music in `bake`.** A bestiary's `music` section bakes cues to `mix.wav`, with the loop in a sampler chunk and
@@ -15,11 +17,15 @@ that alters rendered samples says so, since the same recipe is meant to give the
   a `"lufs"` target, which only lowers the level and never passes −1 dBTP.
 - **Notes that rub.** `Score.clashes()` finds minor seconds and ninths held together in a score, without rendering,
   and says whether each is built into a chord or is a line over one. A test keeps each of the 96 cues from gaining
-  rubs. The kind matters more than the count: the `boss` cue, heard as harsh, rubs mostly inside held chords.
+  rubs. The count alone says nothing: in a blind round, an untrained listener rated worst the excerpts with rubs
+  within one section, and best those whose rubs were lines over chords.
 - **Listen.** 25 sounds picked by ear are rendered by `examples/listen.py`. They can be played on a
   [GitHub Pages page](https://augusto-scarvalho.github.io/tare.tools.tune/) or downloaded from the `listen-1` release.
 - **CI** on Windows, Linux (x86 and ARM) and macOS (ARM), with Python 3.10. It builds the native core on Linux and
   checks determinism: 30 sounds from every family are compared with 16-bit references made on Windows.
+- **One-step install as an agent plugin.** In Claude Code, `/plugin install tare-tools-tune --marketplace
+  augusto-scarvalho/tare.tools.tune`; for Codex and other agents, `npx skills add augusto-scarvalho/tare.tools.tune`.
+- **`tare.tools.tune doctor`** checks an install: Python, the pinned numpy and scipy, the voice banks, one render.
 - **`constraints.txt`**, which pins the numpy and scipy that every render was verified with.
 
 ### Changed

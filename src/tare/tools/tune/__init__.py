@@ -18,7 +18,7 @@ from .render import DEFAULT_SR, render
 from .sfx import RECIPES, Sfx
 from .spec import ChipProgram, Modal, Noise, Scatter, Syllable, Voice
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "ARCHETYPES", "CALLS", "DEFAULT_SR", "DESCRIPTIONS", "RECIPES", "Call", "ChipProgram", "Creature", "Genome",

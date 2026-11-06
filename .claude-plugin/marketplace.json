@@ -1,0 +1,17 @@
+{
+  "name": "tare-tools-tune",
+  "owner": {
+    "name": "Augusto da Silva Carvalho",
+    "url": "https://github.com/augusto-scarvalho"
+  },
+  "description": "tare.tools.tune: deterministic game audio from code, as an agent skill.",
+  "plugins": [
+    {
+      "name": "tare-tools-tune",
+      "source": "./",
+      "description": "Creature cries, NPC speech (pt-BR and en), barks, sound effects and music, synthesized from code. Ships the tune-game-audio skill.",
+      "category": "creative",
+      "keywords": ["game-audio", "procedural-audio", "sound-design", "music"]
+    }
+  ]
+}

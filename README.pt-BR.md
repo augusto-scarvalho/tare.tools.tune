@@ -133,7 +133,7 @@ Corpos que vibram (metal, madeira, sinos) soam por síntese modal, vento e fogo 
 - **Offline:** o `bake` transforma um bestiário em pacotes de WAV com manifesto, que você importa na Unity, no Godot, na Unreal, no FMOD ou no Wwise. [Como →](docs/pt-BR/guia.md#1-offline-gerar-assets-para-qualquer-engine)
 - **Jogos em Python:** o `VoiceBank` renderiza em threads, guarda em cache e nunca toca o mesmo take duas vezes seguidas. O `AmbiencePlayer` mantém um lugar vivo. [Como →](docs/pt-BR/guia.md#2-runtime-gerar-dentro-do-jogo)
 - **Godot:** a extensão `tare_tune` transforma specs pequenas em som dentro do jogo. [Como →](docs/pt-BR/guia.md#2-runtime-gerar-dentro-do-jogo)
-- **Com um agente de IA:** ligue o repositório como a skill `tune-game-audio` no Claude Code ou no Codex. [SKILL.md →](SKILL.md)
+- **Com um agente de IA:** no Claude Code, `/plugin install tare-tools-tune --marketplace augusto-scarvalho/tare.tools.tune`; no Codex e em outros agentes, `npx skills add augusto-scarvalho/tare.tools.tune`. Depois o agente monta o `.venv` da skill e o `tare.tools.tune doctor` confere. [SKILL.md →](SKILL.md)
 
 ## Limites
 

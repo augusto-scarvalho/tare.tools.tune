@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tare.tools.tune"
-version = "0.1.0"
+version = "0.2.0"
 description = "Procedural game audio: creature voices, human speech (pt-BR, English), sound effects and music, deterministic and portable, with a Game Boy cry engine."
 readme = "README.md"
 license = "Apache-2.0"

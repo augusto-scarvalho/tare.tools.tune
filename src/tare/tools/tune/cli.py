@@ -82,6 +82,47 @@ def cmd_say(a):
     _write(voice, a.output or "fala.wav", a.sr, a.png, a.keep_tail)
 
 
+def cmd_doctor(a):
+    """Is this install ready, and is it the one every render was verified with? Fails only when it cannot render."""
+    import importlib.util
+    import platform
+    import time
+
+    import numpy
+    import scipy
+
+    root = Path(__file__).resolve().parents[4]                  # a clone: constraints.txt sits next to pyproject.toml
+    pins = {}
+    if (root / "constraints.txt").exists():
+        pins = dict(line.split("==") for line in (root / "constraints.txt").read_text().split() if "==" in line)
+
+    def row(good, what, note=""):
+        print(f"{'ok' if good else '!!'}  {what}{f'  ({note})' if note else ''}")
+        return good
+
+    ready = row(sys.version_info >= (3, 10), f"Python {platform.python_version()}",
+                "3.10+; 3.12+ for the pinned numpy and scipy")
+    for name, module in (("numpy", numpy), ("scipy", scipy)):
+        want = pins.get(name)
+        note = ("no constraints.txt here to compare with" if want is None else
+                "the version every render was verified with" if want == module.__version__ else
+                f"renders were verified with {want}: pip install -e . -c constraints.txt")
+        row(want in (None, module.__version__), f"{name} {module.__version__}", note)
+    banks = sorted((Path(__file__).parent / "speech" / "data").glob("bank_*.npz"))
+    ready &= row(bool(banks), f"natural voice banks: {', '.join(b.stem[5:] for b in banks) or 'none'}")
+    ogg = importlib.util.find_spec("soundfile") is not None
+    row(True, f"OGG export: {'yes' if ogg else 'no'}", "" if ogg else "optional: pip install -e '.[export]'")
+    try:
+        t = time.perf_counter()
+        y = Creature("mammal", 7).render("attack", sr=16_000)
+        ready &= row(bool(len(y)) and bool(numpy.isfinite(y).all()),
+                     f"render: a creature call in {time.perf_counter() - t:.2f} s")
+    except Exception as e:  # noqa: BLE001 - reporting it is the whole point
+        ready = row(False, f"render failed: {type(e).__name__}: {e}")
+    if not ready:
+        raise ValueError("this install cannot render: see the !! lines above")
+
+
 def cmd_voices(a):
     from .speech import PRESETS, concat
     print("formant voices:")
@@ -365,6 +406,8 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=cmd_say)
 
     sub.add_parser("voices", help="speech voice presets").set_defaults(fn=cmd_voices)
+    p = sub.add_parser("doctor", help="check this install: Python, the pinned numpy and scipy, voice banks, a render")
+    p.set_defaults(fn=cmd_doctor)
 
     from .sfx import RECIPES
     p = sub.add_parser("sfx", help="render a sound effect: weapons, footsteps, explosions, magic, ambience")

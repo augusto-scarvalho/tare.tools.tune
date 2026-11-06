@@ -88,6 +88,12 @@ def test_voice_bank_rotates_takes():
         assert all(a != b for a, b in zip(picks, picks[1:], strict=False)) and len(set(picks)) == 3
 
 
+def test_doctor(capsys):
+    assert main(["doctor"]) == 0
+    out = capsys.readouterr().out
+    assert "ok  render: a creature call" in out and "natural voice banks: pt_alex, pt_dora" in out
+
+
 def test_cli(tmp_path, capsys):
     wav, spec = tmp_path / "roar.wav", tmp_path / "roar.json"
     assert main(["render", "monster", "--species", "ogre", "--size", "0.9", "--call", "attack",

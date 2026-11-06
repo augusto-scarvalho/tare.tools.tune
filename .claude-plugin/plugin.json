@@ -1,0 +1,14 @@
+{
+  "name": "tare-tools-tune",
+  "displayName": "tare.tools.tune",
+  "version": "0.2.0",
+  "description": "Game audio from code: creature cries, NPC speech in Brazilian Portuguese and English, barks, sound effects and music, synthesized deterministically in Python with no recordings shipped and no AI at runtime. Ships the tune-game-audio skill.",
+  "author": {
+    "name": "Augusto da Silva Carvalho",
+    "url": "https://github.com/augusto-scarvalho"
+  },
+  "homepage": "https://github.com/augusto-scarvalho/tare.tools.tune",
+  "repository": "https://github.com/augusto-scarvalho/tare.tools.tune",
+  "license": "Apache-2.0",
+  "keywords": ["game-audio", "procedural-audio", "sound-design", "speech-synthesis", "music", "godot"]
+}
