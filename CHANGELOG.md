@@ -23,8 +23,10 @@ that alters rendered samples says so, since the same recipe is meant to give the
   [GitHub Pages page](https://augusto-scarvalho.github.io/tare.tools.tune/) or downloaded from the `listen-1` release.
 - **CI** on Windows, Linux (x86 and ARM) and macOS (ARM), with Python 3.10. It builds the native core on Linux and
   checks determinism: 30 sounds from every family are compared with 16-bit references made on Windows.
-- **One-step install as an agent plugin.** In Claude Code, `/plugin install tare-tools-tune --marketplace
+- **Install as an agent plugin.** In Claude Code, `/plugin install tare-tools-tune --marketplace
   augusto-scarvalho/tare.tools.tune`; for Codex and other agents, `npx skills add augusto-scarvalho/tare.tools.tune`.
+  Either copies the files only: on first use the agent makes the skill's Python environment (Python 3.12+, a minute
+  or two and 200 MB), and again after each update, which comes in a new folder.
 - **`tare.tools.tune doctor`** checks an install: Python, the pinned numpy and scipy, the voice banks, one render.
 - **`constraints.txt`**, which pins the numpy and scipy that every render was verified with.
 

@@ -133,7 +133,7 @@ Struck bodies ring through modal synthesis, wind and fire are filtered noise, an
 - **Offline:** `bake` a bestiary into WAV packs with a manifest, then import them into Unity, Godot, Unreal, FMOD or Wwise. [How →](docs/guide.md#1-offline-generate-assets-for-any-engine)
 - **Python games:** `VoiceBank` renders in threads, caches, and never plays the same take twice in a row. `AmbiencePlayer` keeps a place alive. [How →](docs/guide.md#2-runtime-generate-inside-the-game)
 - **Godot:** the `tare_tune` extension turns small specs into sound inside the game. [How →](docs/guide.md#2-runtime-generate-inside-the-game)
-- **With an AI agent:** in Claude Code, `/plugin install tare-tools-tune --marketplace augusto-scarvalho/tare.tools.tune`; for Codex and other agents, `npx skills add augusto-scarvalho/tare.tools.tune`. The agent then builds the skill's `.venv` and `tare.tools.tune doctor` checks it. [SKILL.md →](SKILL.md)
+- **With an AI agent:** in Claude Code, `/plugin install tare-tools-tune --marketplace augusto-scarvalho/tare.tools.tune`; for Codex and other agents, `npx skills add augusto-scarvalho/tare.tools.tune`. The agent then builds the skill's `.venv` (Python 3.12+, a minute or two; again after each update) and `tare.tools.tune doctor` checks it. [SKILL.md →](SKILL.md)
 
 ## Limits
 
