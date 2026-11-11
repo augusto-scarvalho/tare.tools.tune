@@ -117,6 +117,58 @@ HELP = {
             "A bundle keeps the recording's PCM: never share bundles. freeze and export carry only the sound.",
         ],
     },
+    "arrangement": {
+        "usage": "dsl check SOURCE --name NAME --layout --json (nothing is rendered: any size of piece); "
+        "also facts.arrangement in a review; in Python: Score.arrangement()",
+        "meaning": "Lay out an orchestral battle or scene as scores do, and read the layout back as numbers.",
+        "example": '{"music": "march", "seed": 2}',
+        "rules": [
+            "One line per part: notes_per_attack near 1. Harmony comes from stacking parts in their own registers "
+            "(basses, cellos, violas, violins), not from chords inside one track.",
+            "Lines move by step or repeat the note: leaps_share (over a fourth) under 0.2. Arpeggios that leap "
+            "every note read as busy.",
+            "Parts come in a few at a time: parts_by_block rising, parts_growth 2 or more. Start with strings and "
+            "percussion; bring winds and brass later, on long notes or doubling a line.",
+            "Leave a quiet stretch: density_ratio 2 or more between the fullest and the emptiest 4 bars; then "
+            "bars_db should show it too, the opening 2-5 dB under the middle level, not 10.",
+            "Put the fast notes in the percussion (a snare or a low drum, 9-12 a bar) and keep string parts to 3-4 "
+            "eighths a bar; short string notes on spiccato, held ones on strings, violins or cellos.",
+            "Keep the tune off half steps from what is held under it: rubs lists them.",
+            "A battle slower than about 126 bpm read as sluggish to our listener; a percussion colour used once or "
+            "twice in a piece read as a mistake: use it every loud phrase or not at all.",
+            "These rules are what 22 scores share and one listener's picks, not a recipe: finish with a listening "
+            "round (dsl help listener).",
+        ],
+    },
+    "chiptune": {
+        "usage": 'a track or clip "instrument": {"chip_voice": "pulse"|"triangle", "duty": 12.5|25|50|75, '
+        '"fade": true, "slide": SEMITONES, "vibrato": [HZ, SEMITONES]}',
+        "meaning": "Compose 8-bit music: console channels as score tracks, read back as numbers by review.",
+        "example": "dsl review examples/dsl-chiptune.tune.json --name overworld -o output/reviews "
+        "--response compact --json",
+        "rules": [
+            "A console is a band of four tracks: two pulses (the tune; harmony or echo), the triangle (bass) and "
+            "drums on chip_kick, chip_snare, chip_hat. More voices stop sounding 8-bit.",
+            'A chip_voice has one voice. Give it a chord ({"chord": "Am"}, a pitch array, C4+E4+G4 in a pattern) '
+            "and it plays the chip's chord: an arpeggio, 60 notes a second. Notes overlapping in one track are a "
+            "second voice: avoid them.",
+            "duty is colour and weight: 12.5 thin, 25 the bright lead, 50 hollow (75 sounds as 25). fade makes held "
+            "notes and chords pluck and endings die away; slide -2 scoops up into each note; vibrato [6, 0.3] "
+            "suits a held lead.",
+            'One instrument per clip, so a track\'s clips change colour mid-tune (at: "2bar"). The echo: the tune '
+            'again on the other pulse, a clip at "1/2b", duty 12.5, then [{"velocity": 0.4}].',
+            "Write patterns bar by bar with | between bars: a miscounted bar fails naming the bar and its steps. "
+            "- holds, . rests, X and C4! accent; steps counts per beat. A repeated pitch strikes again.",
+            "Read review as ears. facts.bars_db: the mix's level per bar, dBFS; sections want a few dB of contrast, "
+            "and a long tune with every bar alike is flat. tracks[].level_db: each track under the loudest; keep "
+            "the tune on top, and a part 20 dB under it is barely heard. facts.rubs: half steps held together; a "
+            "'chord' rub (both start together) is usually a wrong note, a 'line' rub often passes.",
+            "Change gain (track) or velocity (notes) because of a number, then review again.",
+            'No composing needed? {"music": "battle", "style": "chip", "seed": 2}. In Python: '
+            "Score.track(...).play(tare.tools.tune.instruments.chip_voice(...), notes).",
+            "Numbers never say it sounds good: finish with a listening round (dsl help listener).",
+        ],
+    },
     "builders": {
         "usage": "from tare.tools.tune.dsl import builders as t",
         "meaning": "Trusted Python composition emits ordinary validated DSL JSON; no Python evaluator in project data.",

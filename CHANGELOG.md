@@ -5,6 +5,45 @@ that alters rendered samples says so, since the same recipe is meant to give the
 
 ## Unreleased
 
+### Added
+
+- **8-bit music you compose.** `chip_voice` is one channel of a console, in the DSL
+  (`"instrument": {"chip_voice": "pulse", "duty": 12.5, "fade": true}`) and in Python
+  (`instruments.chip_voice(...)`): a pulse in four duties or the triangle bass, with `fade`, `slide` and `vibrato`.
+  It has one voice, so a chord plays as an arpeggio at 60 notes a second. `examples/dsl-chiptune.tune.json` is a
+  four-channel loop; `dsl help chiptune` holds the craft.
+- **Spiccato.** A string section's short bounced stroke, measured on the VSCO-2 sections (186 notes): half amplitude
+  40-80 ms after the start, a free ring after it, and a stroke about twice as bright as the note it leaves. Our bowed
+  strings start dull and, in the cellos, rise twice as slowly, so short notes did not speak. The instrument keeps
+  half of the recorded bite: in a blind round of four the listener picked that over the measured stroke and
+  over pizzicato.
+- **`march`, a battle arranged like a score.** A 48-bar loop from a seed, written to what 22 scores of game music
+  share: one line per part, lines moving by step, parts entering in stages, the fast notes in the snare, a quiet
+  terrace before the return. By ear, one untrained listener: with the tune held the same, this arrangement was
+  picked over the `battle` cue's way of arranging it; as a seeded cue against `battle` it was picked in one pair
+  of three (the slowest seed read as sluggish, two lone crashes as mistakes: tempo is now 126-142 and every loud
+  phrase has its crash), and its short strings were preferred plucked to the measured spiccato, then the clearer
+  spiccato to plucked. A lead, not a proof.
+- **A score read without ears.** `dsl review` of a score adds `bars_db` (the mix's level bar by bar), each track's
+  `level_db` under the loudest one, `rubs` (what `Score.clashes()` finds) and `arrangement`.
+- **A layout read from the notes.** `Score.arrangement()` gives notes per attack, the share of leaps, how many
+  parts play and how full each 4 bars are, without rendering. `dsl check --layout` returns it with the rubs for
+  a score or cue of any size (a review renders, and refuses a long orchestral score); `dsl help arrangement`
+  says what to look for. `tools/score_study.py` reads MusicXML scores with the same function,
+  `tools/music_study.py` measures recordings, and [the study](docs/orchestral-arrangement.md) says what they
+  found in a soundtrack and 22 scores.
+
+### Changed
+
+- **The snare has its shell back. This alters rendered samples:** every cue and score that plays `snare` sounds
+  different. Against the VSCO-2 hits with the snares on, ours put over half its energy above 1.2 kHz where the
+  recording has a sixth (centroid 2.4 kHz against 0.9); the wires now sit 10 dB lower under the head and its
+  overtones, each band from 150 Hz up within about 2 dB of the recording. Still missing: the thump under 150 Hz.
+  The 30 determinism references do not play a snare and are unchanged. Timpani and bass drum were measured the
+  same way and left alone: their decay and bands already match.
+- A pattern whose bar is miscounted says which bar and how many steps it has.
+- `chip_kick`, `chip_snare` and `chip_hat` export to MIDI as drums.
+
 ## 0.2.0 (2026-11-05)
 
 ### Added

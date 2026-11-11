@@ -206,12 +206,18 @@ class Compiler:
             if op in LAYERS
             else op
             if op in ("speaker", "instrument")
+            else "instrument"
+            if op == "chip_voice"
             else children["body"].kind
             if op in ("use", "edit", "repeat")
             else children["items"][0].kind
             if op == "seq"
             else "sound"
         )
+        if op == "chip_voice":
+            from .instruments import chip
+
+            chip(data, at)
         node = Expr(op, data, children, origin, context, kind)
         self._types(node)
         self.source_map.append(origin)
@@ -289,6 +295,10 @@ class Compiler:
             from .instruments import Template
 
             return Template(node, self)
+        if op == "chip_voice":
+            from .instruments import chip
+
+            return chip(data, at)
         if op in NOTE_OPS - {"overlay"}:
             return note_leaf(data, op, context, node.origin)
         if op == "voice":
@@ -435,7 +445,7 @@ class Compiler:
                     target.play(
                         fn, [[p, float(a), float(h), v] for p, a, h, v in sequence.events], offset=float(offset)
                     )
-                    if isinstance(fn, str):
+                    if not hasattr(fn, "compiler"):  # a template charges each layer as it makes it
                         self.budget.charge("layers", len(target.layers) - before_layers, at)
                     event_origins = [
                         origin

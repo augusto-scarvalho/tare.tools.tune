@@ -195,6 +195,10 @@ def instrument(*layers, midi_program=None):
     return expression("instrument", layers, **({"midi_program": midi_program} if midi_program is not None else {}))
 
 
+def chip_voice(wave="pulse", **fields):
+    return expression("chip_voice", wave, **fields)
+
+
 def primitive(kind, **fields):
     from .registry import LAYERS
 

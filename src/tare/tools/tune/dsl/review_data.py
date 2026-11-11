@@ -3,6 +3,8 @@
 import copy
 import math
 
+import numpy as np
+
 from ..analysis import against
 from ..inspection import inspect_audio
 from .model import DSLError
@@ -55,6 +57,52 @@ def check_spec(value=None):
     return value
 
 
+def _db(x):
+    return round(10 * math.log10(float(np.mean(np.square(x, dtype=np.float64))) + 1e-12))
+
+
+def rub_summary(rubs):
+    """Score.clashes() in a few lines: how many of each kind, and the first three."""
+    return {
+        "chord": sum(r["kind"] == "chord" for r in rubs),
+        "line": sum(r["kind"] == "line" for r in rubs),
+        "first": [
+            {"bar": r["bar"], "kind": r["kind"], "notes": [[name[:40], pitch] for name, pitch in r["notes"]]}
+            for r in rubs[:3]
+        ],
+    }
+
+
+def music(captured, tracks):
+    """A score read without ears: the mix's level bar by bar (dBFS), each track's level under the loudest one,
+    the notes that rub (Score.clashes) and how the parts are laid out (Score.arrangement). Numbers for contrast
+    and balance, never for how it sounds."""
+    from ..score import Score
+
+    nodes = captured.manifest["nodes"]
+    root = next(node for node in nodes if node["id"] == captured.manifest["root"])
+    if root["kind"] != "score":
+        return {}
+    levels = {part["label"]: _db(captured.arrays[part["audio"]]) for part in root["parts"] if part.get("child")}
+    for track in tracks:
+        if track["name"] in levels:
+            track["level_db"] = levels[track["name"]] - max(levels.values())
+    bar = round(root["params"]["meter"] * 60 / root["params"]["bpm"] * captured.sr)
+    score = Score(meter=root["params"]["meter"])
+    for node in nodes:
+        if "track" in node and node["parent"] == root["id"]:
+            score.track(node["track"]["name"]).events = node["track"]["events"]
+    rubs = score.clashes()
+    layout = score.arrangement()
+    layout.update({key: layout[key][:32] for key in ("parts_by_block", "notes_per_bar_by_block")})
+    result = {"arrangement": layout,
+              "bars_db": [_db(captured.audio[i : i + bar])
+                          for i in range(0, len(captured.audio) - bar // 2, bar)][:64]}
+    if rubs:
+        result["rubs"] = rub_summary(rubs)
+    return result
+
+
 def facts(captured, limit=5, reference=True):
     audio = inspect_audio(captured.audio, captured.sr, pitch=False)
     nodes = captured.manifest["nodes"]
@@ -95,7 +143,7 @@ def facts(captured, limit=5, reference=True):
         "processing_truncated": len(nodes) > limit,
         "tracks": tracks[:limit],
         "tracks_truncated": len(tracks) > limit,
-    }
+    } | music(captured, tracks)
     if reference and "reference" in captured.arrays:
         about = captured.manifest["reference"]
         result["reference"] = {

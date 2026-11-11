@@ -12,9 +12,10 @@ PROGRAMS = {"harp": 46, "guitar": 24, "lute": 24, "pizzicato": 45, "marimba": 12
             "glockenspiel": 9, "xylophone": 13, "celesta": 8, "music_box": 10,
             "tubular_bell": 14, "strings": 48, "cellos": 42, "flute": 73,
             "horn": 60, "trumpet": 56, "choir": 52, "bass": 33, "e_piano": 4,
-            "pulse": 80, "square": 80, "thin_pulse": 80, "sine": 79}
+            "pulse": 80, "square": 80, "thin_pulse": 80, "sine": 79, "spiccato": 48}
 DRUMS = {"bass_drum": 36, "snare": 38, "hihat": 42, "open_hat": 46, "crash": 49,
-         "tambourine": 54, "triangle": 81, "hand_drum": 64, "log_drum": 77, "taiko": 41, "gong": 51}
+         "tambourine": 54, "triangle": 81, "hand_drum": 64, "log_drum": 77, "taiko": 41, "gong": 51,
+         "chip_kick": 36, "chip_snare": 38, "chip_hat": 42}
 
 
 def vlq(value):

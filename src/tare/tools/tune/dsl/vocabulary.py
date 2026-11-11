@@ -35,6 +35,10 @@ MEANINGS = {
     "mix": ("Sound", "Place separately processed Sounds through one stereo Score bus."),
     "score": ("Sound", "Musical tracks, separate play-call clips and Sound placements."),
     "instrument": ("Instrument", "Finite primitive templates evaluated once per Note."),
+    "chip_voice": (
+        "Instrument",
+        "One channel of an 8-bit console: a pulse or the triangle bass. A chord plays as a 60 Hz arpeggio.",
+    ),
     "use": ("Same as definition", "Invoke a local definition with lexical typed parameters."),
     "edit": ("Sound", "Refine a copied materialization under an exact expansion guard."),
 }
@@ -71,6 +75,7 @@ EXAMPLES = {
             }
         ]
     },
+    "chip_voice": {"chip_voice": "pulse", "duty": 12.5, "fade": True},
     "use": {"use": "hit", "with": {"power": 0.65}},
     "edit": {"edit": {"sfx": "ui"}, "expect": "FROM_DSL_EXPAND", "set": {"/lowpass": 2400}},
     "syllable": {"syllable": {"start": 0, "dur": 0.1, "pitch": [[0, 440]], "source": "sine"}},
@@ -279,6 +284,14 @@ def operation_fields(op):
             if item.name in result and item.default is not MISSING:
                 default = {} if item.name in ("genes", "knobs") else item.default
                 result[item.name] = result[item.name] | {"default": default}
+    if op == "chip_voice":
+        result.update(
+            chip_voice=field("enum", required=True, choices=["pulse", "triangle"], meaning="triangle: the bass."),
+            duty=field("enum", 25, choices=[12.5, 25, 50, 75], unit="%", meaning="Pulse colour: thin, bright, hollow."),
+            vibrato=field("[number, number]", [0, 0], unit=["Hz", "semitones"]),
+            slide=field("number", 0, min=-24, max=24, unit="semitones", meaning="Scoop in from this far, 60/s."),
+            fade=field("boolean", False, meaning="Step the volume down to silence over each note."),
+        )
     if op in ("edit", "use"):
         result["expect" if op == "edit" else "with"] = field(
             "materialized_id" if op == "edit" else "object", **({"required": True} if op == "edit" else {"default": {}})

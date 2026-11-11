@@ -4,7 +4,25 @@ import copy
 
 from .adapters import make_layer
 from .model import DSLError
-from .validate import known, number
+from .validate import choice, known, number
+
+
+def chip(data, at):
+    """A chip channel as a track instrument: the same arguments as instruments.chip_voice, checked."""
+    from ..instruments import DUTIES, chip_voice
+
+    vibrato = data.get("vibrato", [0, 0])
+    if not isinstance(vibrato, list) or len(vibrato) != 2:
+        raise DSLError("E_TYPE", "vibrato is [Hz, semitones]", at + "/vibrato")
+    if type(data.get("fade", False)) is not bool:
+        raise DSLError("E_TYPE", "fade is true or false", at + "/fade")
+    return chip_voice(
+        choice(data["chip_voice"], ("pulse", "triangle"), at + "/chip_voice"),
+        choice(data.get("duty", 25), DUTIES, at + "/duty"),
+        (number(vibrato[0], at + "/vibrato", 0, 30), number(vibrato[1], at + "/vibrato", 0, 2)),
+        number(data.get("slide", 0), at + "/slide", -24, 24),
+        data.get("fade", False),
+    )
 
 
 class Template:

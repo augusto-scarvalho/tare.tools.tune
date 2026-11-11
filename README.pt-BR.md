@@ -113,7 +113,7 @@ tare.tools.tune bake examples/bestiary.json -o baked
 | 🗣️ **[Fala](docs/pt-BR/guia.md#fala-humana)** | português e inglês | voz de formantes ou banco de voz natural; entonação pela pontuação; emoções; uma voz única por NPC; língua inventada e animalese |
 | 😤 **[Interjeições](docs/pt-BR/guia.md#interjeições-jogos-sem-dublagem-completa)** | 20 tipos, 6 estilos | golpes, dor, risadas, suspiros e sustos na voz do personagem, no estilo de jogos de ação, anime, tactics e MMO |
 | ⚔️ **[Efeitos sonoros](docs/pt-BR/guia.md#efeitos-sonoros)** | 34 tipos | armas, portas, baús, interface, status, magias, invocações, passos, cavalos e ambientes em loop sem emenda; `era="16bit"`, botões de ajuste |
-| 🎼 **[Música](docs/pt-BR/guia.md#música-e-composição)** | 43 instrumentos, 32 músicas | vinhetas e loops nos estilos orquestral, 16 bits e 8 bits; um `Score` para montar cenas inteiras |
+| 🎼 **[Música](docs/pt-BR/guia.md#música-e-composição)** | 44 instrumentos, 33 músicas | vinhetas e loops nos estilos orquestral, 16 bits e 8 bits; um `Score` para montar cenas inteiras |
 | 👾 **[Gritos da 1ª geração](docs/pt-BR/guia.md#reprodução-da-1ª-geração)** | o motor de gritos do Game Boy | o arquétipo `chip`, e a reprodução fiel dos 151 gritos (com os seus próprios dados) |
 
 ## Como funciona

@@ -59,6 +59,7 @@ FIELDS = {
     "rest": set(),
     "score": set(),
     "instrument": {"midi_program"},
+    "chip_voice": {"duty", "vibrato", "slide", "fade"},
     "edit": {"expect", "set", "append", "remove"},
     "use": {"with"},
 } | {name: set() for name in LAYERS}

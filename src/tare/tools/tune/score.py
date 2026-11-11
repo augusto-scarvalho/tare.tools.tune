@@ -81,6 +81,7 @@ class Note:
     f: float              # Hz
     vel: float            # 0..1
     seed: int
+    chord: tuple = ()     # semitones from `f` of every note of the chord, for an instrument that arpeggiates
 
     def rand(self, name: str) -> float:
         return rng.uniform(rng.key(self.seed, name))
@@ -114,19 +115,24 @@ class Track:
     def play(self, instrument: str | Instrument, notes: Iterable, velocity: float = 0.8, transpose: float = 0.0,
              offset: float = 0.0) -> "Track":
         """`notes`: (note, beat, beats[, velocity]) with note a name, a MIDI number or a list of them (a chord);
-        beats count from `offset` beats."""
+        beats count from `offset` beats. An instrument marked `arp` (a chip's one-voice channel) gets each chord
+        whole, in its first note."""
         from .instruments import INSTRUMENTS
         fn = INSTRUMENTS[instrument] if isinstance(instrument, str) else instrument
+        arp = getattr(fn, "arp", False)
         where = origin()
         for i, item in enumerate(notes):
             note, beat, beats, *vel = item
-            for j, n in enumerate(note if isinstance(note, list | tuple) else [note]):
+            pitches = note if isinstance(note, list | tuple) else [note]
+            spread = tuple(midi(p) - midi(pitches[0]) for p in pitches) if arp and len(pitches) > 1 else ()
+            for j, n in enumerate(pitches):
                 k = rng.key(self.score.seed, self.name, len(self.layers), i, j)
                 event_id = f"{self.name}/e{len(self.events)}"
                 first = len(self.layers)
                 effective = vel[0] if vel else velocity
-                self.layers += fn(Note(self.score.beats(offset + beat), self.score.beats(beats),
-                                       hz(midi(n) + transpose), effective, k))
+                if not (spread and j):
+                    self.layers += fn(Note(self.score.beats(offset + beat), self.score.beats(beats),
+                                           hz(midi(n) + transpose), effective, k, spread))
                 module = getattr(instrument, "__module__", "?")
                 qualname = getattr(instrument, "__qualname__", type(instrument).__name__)
                 instrument_name = instrument if isinstance(instrument, str) else f"{module}.{qualname}"
@@ -163,6 +169,46 @@ class Track:
 
 UNPITCHED = {"bass_drum", "snare", "hihat", "open_hat", "crash", "tambourine", "triangle", "hand_drum", "log_drum",
              "taiko", "gong", "shaker", "hyoshigi", "chip_kick", "chip_snare", "chip_hat"}
+
+
+def arrangement(parts: dict, bar_beats: float = 4, block_bars: int = 4) -> dict:
+    """How a piece is laid out, read from its notes: `parts` maps each part to its (beat, pitch) notes, pitch None
+    for unpitched percussion. What 22 orchestral scores of game music shared, and what these numbers look for: one
+    note per attack in a part (lines, not block chords), few leaps over a fourth, parts that come in a few at a
+    time and a busiest stretch several times fuller than the emptiest. Numbers for comparing layouts, never for
+    how a piece sounds. Blocks are `block_bars` bars; a short last block is left out of the two ratios."""
+    pitched = {name: sorted((b, p) for b, p in notes if p is not None) for name, notes in parts.items()}
+    pitched = {name: notes for name, notes in pitched.items() if notes}
+    written = sum(len(notes) for notes in pitched.values())
+    attacks, moves = 0, []
+    for notes in pitched.values():
+        tops: dict[float, float] = {}
+        for b, p in notes:
+            tops[round(b, 3)] = max(p, tops.get(round(b, 3), p))
+        attacks += len(tops)
+        line = [tops[b] for b in sorted(tops)]
+        moves += [abs(b - a) for a, b in zip(line, line[1:], strict=False)]
+    distinct = {(round(b, 3), p) for notes in pitched.values() for b, p in notes}
+    end = max((b for notes in parts.values() for b, _ in notes), default=0.0)
+    size = bar_beats * block_bars
+    blocks = int(end // size) + 1
+    who = [sum(any(i * size <= b < (i + 1) * size for b, _ in notes) for notes in parts.values())
+           for i in range(blocks)]
+    density = [sum(sum(i * size <= b < (i + 1) * size for b, _ in notes) for notes in parts.values()) / block_bars
+               for i in range(blocks)]
+    full = slice(0, blocks - 1) if blocks > 1 and end - (blocks - 1) * size < size / 2 else slice(None)
+    bars = max(int(end // bar_beats) + 1, 1)
+    return {
+        "parts": len(parts), "notes": sum(len(notes) for notes in parts.values()),
+        "notes_per_attack": round(written / max(attacks, 1), 2),
+        "steps_share": round(sum(0 < m <= 2 for m in moves) / max(len(moves), 1), 2),
+        "leaps_share": round(sum(m > 5 for m in moves) / max(len(moves), 1), 2),
+        "doubling": round(written / max(len(distinct), 1), 2),
+        "distinct_notes_per_bar": round(len(distinct) / bars, 1),
+        "parts_by_block": who, "notes_per_bar_by_block": [round(d, 1) for d in density],
+        "parts_growth": round(max(who[full]) / max(min(who[full]), 1), 1),
+        "density_ratio": round(max(density[full]) / max(min(density[full]), 0.25), 1),
+    }
 
 
 @dataclass
@@ -264,6 +310,13 @@ class Score:
                  "kind": "chord" if abs(s[i] - s[j]) < 0.05 else "line", "same_track": name[i] == name[j],
                  "interval": int(round(abs(p[i] - p[j])))}
                 for i, j in zip(*np.nonzero(np.triu(rub, 1)), strict=True)]
+
+    def arrangement(self, block_bars: int = 4) -> dict:
+        """The score's layout by its notes, without rendering (see `arrangement`): notes per attack, leaps, how
+        many tracks play in each `block_bars` bars and how full each is. A chord counts as its notes."""
+        return arrangement({t.name: [(e["offset"] + e["beat"], None if e["instrument"] in UNPITCHED else e["pitch"])
+                                     for e in t.events] for t in self.tracks.values() if t.events},
+                           self.meter, block_bars)
 
     def render_layers(self, groups: dict[str, list[str]], loop: float, gain: float = 1.0) -> dict[str, np.ndarray]:
         """A loop split into stems that add up to ``render(loop, gain)``: each group of tracks goes through the same

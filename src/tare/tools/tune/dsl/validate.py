@@ -68,7 +68,7 @@ def choice(value, options, at=""):
         valid = False
     if not valid:
         options = list(options)
-        close = get_close_matches(str(value), options, n=3)
+        close = get_close_matches(str(value), [str(o) for o in options], n=3)
         # Nothing alike: a short list is cheaper to show than to make the caller look it up.
         hint = "" if close or len(options) > 40 else "; one of: " + ", ".join(map(str, options))
         raise DSLError("E_ENUM", f"unknown value {value!r}{hint}", at, suggestions=close)
@@ -290,7 +290,7 @@ def expression(value, at, limits):
         return
     op = operation(value, at)
     payload = value[op]
-    if op in ("sfx", "creature", "say", "emote", "speaker", "music", "pattern", "chord"):
+    if op in ("sfx", "creature", "say", "emote", "speaker", "music", "pattern", "chord", "chip_voice"):
         slot = isinstance(payload, dict) and set(payload) == {"param"} and isinstance(payload["param"], str)
         if not slot and (not isinstance(payload, str) or not payload):
             raise DSLError("E_TYPE", "operation needs a nonempty string", pointer(at, op))

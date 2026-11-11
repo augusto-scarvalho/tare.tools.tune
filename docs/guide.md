@@ -379,19 +379,22 @@ The path to improvement is the same one used here: compare with real recordings 
 Three pieces, layered together:
 
 - **`Score`** (`tare.tools.tune.score`): a timeline in measures and seconds. Layers notes and finished sounds (effects, creatures, speech), with volume, stereo position, and a shared room echo. Renders in stereo, and `render(loop=...)` returns a seamless loop.
-- **Instruments** (`tare.tools.tune.instruments`): 43 instruments measured from recorded notes, with their measurements in code:
+- **Instruments** (`tare.tools.tune.instruments`): 44 instruments measured from recorded notes, with their measurements in code:
   - plucked strings: harp, guitar, lute, pizzicato;
   - percussion keyboards: glockenspiel, marimba, xylophone, celesta, music box;
   - tubular bells;
   - drums: timpani, hand drums, log drums, bass drum, snare;
   - metal percussion: triangle, cymbal, gong, tambourine, shaker;
   - sustained: violins, cellos, flute, horn, trumpet, choir;
+  - off the string: `spiccato`, a string section's short bounced stroke (it starts brighter than the note it leaves ringing; basses, cellos and violins by register);
   - band: electric bass, electric piano, closed and open hi-hat;
   - Japanese: koto (with *yuri*, string vibrato, and *oshide*, pressing the string up to a note), shakuhachi, taiko, hyoshigi, rin;
-  - chiptune: console pulse waves, bass, and noise.
+  - chiptune: console pulse waves, bass, and noise; and `chip_voice(...)`, one console channel with duty, fade, slide and vibrato, which plays a chord as an arpeggio.
+- **Reading a layout**: `score.arrangement()` says how a score is laid out without rendering it (notes per attack, leaps, how many tracks play and how full each 4 bars are), beside `score.clashes()`. `tools/score_study.py` reads MusicXML scores with the same function and `tools/music_study.py` measures recordings (tempo, loop, level map, balance); [how an orchestral battle is laid out](orchestral-arrangement.md) is what they found.
 - **`Cue`** (`tare.tools.tune.music`): music composed from a seed.
   - Jingles: `victory`, `levelup`, `quest`, `gameover`.
   - Loops: `town`, `explore`, `tavern`, `dungeon`, `battle`.
+  - `march`: a battle laid out as orchestral scores lay one out, from what 22 scores of game music share (read as numbers, never as notes): one line per part, lines that move by step, parts entering a few at a time, the fast notes in the snare, a quiet terrace before the return. 48 bars.
   - Color harmony loops in the style of 16-bit RPG soundtracks (such as Yasunori Mitsuda's): `reverie`, `pastoral`, `timeless`, `grove`, `heroic`, `showdown`. Chords chosen for color rather than function: parallel seventh and ninth chords, shifts by semitone and third, tonic pedals, Dorian, Lydian, and Mixolydian modes, never V → I. The melody rests on ninths and thirteenths and repeats the motif in sequence.
   - Tactical RPG music in the martial, modal style of Hitoshi Sakimoto's scores (measured in FFTA2's 37 tracks): battles `skirmish`, `tense`, `boss`, `final`; `prepare` (formation), `briefing` (map and plan), `worldmap`; scenes `sorrow`, `intrigue`, `triumph`, `comedy`; and the `recruit` jingle (someone joins the party).
   - Japanese music with koto, shakuhachi, taiko, hyoshigi, and rin, benchmarked against the most praised *Utawarerumono* tracks: `shrine` (a sanctuary, almost no pulse), `village` (a village at dusk), `festival` (a matsuri), `kagura` (a battle danced like kagura), `elegy` (a lament). In, yo, and ryukyu scales, phrases with breathing space (*ma*), koto doubling the shakuhachi melody (heterophony), orchestra underneath in fifths and fourths.
@@ -415,6 +418,15 @@ scene.track("harp", pan=-0.3, send=0.3).play("harp", [("A3", 0, 1), ("C4", 1, 1)
 scene.track("strings", send=0.4).play("strings", [(chord("Am", 3), 0, 4), (chord("F", 3), 4, 4)])
 scene.add(Sfx("blade", "steel").render("clash"), at=scene.beats(4), pan=0.5, send=0.2)
 write_wav("scene.wav", scene.render(), 48000)
+
+from tare.tools.tune.instruments import chip_voice    # 8-bit: two pulses, the triangle, noise drums
+
+tune = Score(bpm=140, hall=0)
+tune.track("pulse1", send=0).play(chip_voice(duty=25, vibrato=(6, 0.25)), [("D5", 0, 1), ("A5", 1, 2), ("G5", 3, 1)])
+tune.track("pulse2", gain=0.6, send=0).play(chip_voice(duty=12.5, fade=True), [(chord("Dm", 4), 0, 2)])  # arpeggio
+tune.track("triangle", gain=0.6, send=0).play(chip_voice("triangle"), [("D3", 0, 2), ("A2", 2, 2)])
+tune.track("noise", gain=0.8, send=0).play("chip_hat", [("C4", b / 2, 0.5) for b in range(8)])
+write_wav("tune_8bit.wav", tune.render(loop=tune.bar(1)), 48000)
 ```
 
 For complete stereo scenes (effects, creatures, speech, and music over ambience), see [`examples/scenes.py`](../examples/scenes.py): a dungeon fight, treasure in a cave, and a magic duel.

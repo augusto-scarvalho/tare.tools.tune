@@ -81,7 +81,7 @@ Work in the user's project (renders under `output/`), never in this skill's dire
 
 What you read early is paid again every later turn: ask for one name, never a whole file.
 `TUNE dsl catalog --domain D --name N --fields F --json` is the vocabulary (pages: `--limit`, `--cursor`);
-`TUNE dsl help TOPIC --json` the loop's rules (review, describe, edit, checks, builders, listener).
+`TUNE dsl help TOPIC --json` the loop's rules (no TOPIC: the list).
 Never open `docs/dsl-reference.json` (65k tokens) or `docs/architecture.md` (33k).
 
 | Making | Read (tokens) |
@@ -92,6 +92,7 @@ Never open `docs/dsl-reference.json` (65k tokens) or `docs/architecture.md` (33k
 | a bark, grunt, laugh, gasp | `--domain op --name emote --fields fields`: every emote and style (300) |
 | a jingle or loop from a seed | `--domain music --fields name --limit 100` (240); `--domain op --name music --fields fields` (190) |
 | a composed phrase | `examples/dsl-music.tune.json`; `--domain transform --fields name,meaning --limit 100` (170); `--domain instrument --fields name --limit 100` (300) |
+| 8-bit or orchestral music | `TUNE dsl help chiptune --json` (or `arrangement`) |
 | raw synthesis layers | `examples/dsl-primitives.tune.json`; `--domain layer --name modal --fields fields` (500) |
 | a family with variants | `TUNE dsl help builders --json`; `TUNE dsl variants --help` |
 
@@ -131,8 +132,7 @@ Never open `docs/dsl-reference.json` (65k tokens) or `docs/architecture.md` (33k
 
 ## Examples
 
-- `examples/dsl-bank.tune.json` (a `power` param, two `use`s), `examples/dsl-review.checks.json`,
-  `examples/dsl_builder.py` (a bank written from Python).
+- `examples/dsl-bank.tune.json`, `examples/dsl-review.checks.json`, `examples/dsl_builder.py` (a bank from Python).
 
 ## Habits that give better audio
 
