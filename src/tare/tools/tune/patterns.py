@@ -14,8 +14,10 @@ def parse_pattern(text: str, *, steps_per_beat=4, meter=4):
         if step > 8192:
             raise ValueError("pattern exceeds 8192 steps")
         if token == "|":
-            if step % (steps_per_beat * meter):
-                raise ValueError("pattern bar does not match Score.meter")
+            bar = steps_per_beat * meter
+            if step % bar:   # say where: a miscounted bar is the one mistake a step string invites
+                raise ValueError(f"pattern bar {step // bar + 1} has {step % bar} steps, not {bar} ({meter} beats x "
+                                 f"{steps_per_beat} steps): pattern bar does not match Score.meter")
             continue
         if token == "-":
             if not notes or not math.isclose(notes[-1][1] + notes[-1][2], step / steps_per_beat, abs_tol=1e-9):

@@ -43,7 +43,7 @@ O spec é o ponto de entrega entre as duas. Pode ser salvo junto de um asset, ma
 | `sfx/` | efeitos sonoros: `Sfx`, materiais e `Fx` (`__init__.py`), `physical.py` (armas, passos, explosões), `arms.py`, `magic.py`, `status.py`, `ui.py`, `home.py` (o dia a dia), `mounts.py` (cavalaria, asas, marcha, teleporte), `ambience.py` e `places.py` (os lugares) |
 | `layers.py` | DSP dos efeitos: corpos modais, faixas de ruído com filtro móvel, nuvens de eventos |
 | `score.py` | composição: `Score` (faixas, sons posicionados, pan, sala estéreo compartilhada, loops), nomes de notas, acordes e escalas |
-| `instruments.py` | 43 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
+| `instruments.py` | 44 instrumentos medidos em notas gravadas (cada um: `Note` → camadas do spec) |
 | `music.py` | músicas por semente: `Cue` (jingles e loops, orquestra ou chip) |
 | `music_tactics.py` | os cues de tactics: batalhas, preparação, mapa, cenas, recrutamento |
 | `music_japan.py` | os cues do Japão: santuário, vila, festival, kagura, lamento |

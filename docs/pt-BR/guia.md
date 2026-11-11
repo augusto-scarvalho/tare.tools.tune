@@ -358,19 +358,22 @@ O caminho para melhorar é o mesmo usado aqui: comparar com gravações reais e 
 
 Três peças, uma sobre a outra:
 - **`Score`** (`tare.tools.tune.score`): uma linha do tempo em compassos e segundos. Põe notas e sons prontos (efeitos, criaturas, falas) em camadas, com volume, posição no estéreo e um eco (sala) compartilhado. Renderiza em estéreo, e `render(loop=...)` devolve um loop sem emenda.
-- **Instrumentos** (`tare.tools.tune.instruments`): 43 instrumentos medidos em notas gravadas, com os números de cada um no código:
+- **Instrumentos** (`tare.tools.tune.instruments`): 44 instrumentos medidos em notas gravadas, com os números de cada um no código:
   - cordas pinçadas: harpa, violão, alaúde, pizzicato;
   - teclados de percussão: glockenspiel, marimba, xilofone, celesta, caixinha de música;
   - sinos tubulares;
   - tambores: tímpanos, tambores de mão e de tronco, bumbo, caixa;
   - metais de percussão: triângulo, prato, gongo, pandeiro, chocalho;
   - sustentados: violinos, violoncelos, flauta, trompa, trompete, coro;
+  - fora da corda: `spiccato`, o golpe curto e saltado de um naipe de cordas (começa mais brilhante que a nota que deixa soando; contrabaixos, violoncelos e violinos conforme o registro);
   - banda: baixo elétrico, piano elétrico, chimbal fechado e aberto;
   - do Japão: koto (com o *yuri*, a corda tremendo, e o *oshide*, a corda empurrada até a nota), shakuhachi, taiko, hyoshigi, rin;
-  - chiptune: pulsos, baixo e ruídos de console.
+  - chiptune: pulsos, baixo e ruídos de console; e `chip_voice(...)`, um canal de console com duty, fade, slide e vibrato, que toca um acorde como arpejo.
+- **Ler um arranjo**: `score.arrangement()` diz como uma partitura está disposta sem renderizá-la (notas por ataque, saltos, quantas tracks tocam e quão cheios estão cada 4 compassos), ao lado de `score.clashes()`. `tools/score_study.py` lê partituras MusicXML com a mesma função e `tools/music_study.py` mede gravações (andamento, loop, mapa de nível, equilíbrio); [como uma batalha orquestral é montada](arranjo-orquestral.md) é o que eles encontraram.
 - **`Cue`** (`tare.tools.tune.music`): músicas compostas a partir de uma semente.
   - Jingles: `victory`, `levelup`, `quest`, `gameover`.
   - Loops: `town`, `explore`, `tavern`, `dungeon`, `battle`.
+  - `march`: uma batalha montada como as partituras de orquestra montam, a partir do que 22 partituras de música de jogo têm em comum (lidas como números, nunca como notas): uma linha por parte, linhas por grau conjunto, partes entrando aos poucos, as notas rápidas na caixa, um terraço calmo antes da volta. 48 compassos.
   - Loops de "harmonia de cor", no jeito das trilhas de RPG de 16 bits (como as de Yasunori Mitsuda): `reverie`, `pastoral`, `timeless`, `grove`, `heroic`, `showdown`. Acordes escolhidos pela cor, não pela função: 7ª e 9ª deslizando em paralelo, trocas por meio tom e por terças, a tônica como pedal, modos dórico, lídio e mixolídio, nunca V → I. A melodia apoia nas 9ª e 13ª e repete o motivo em sequência.
   - Para tactics, no jeito marcial e modal das trilhas de Hitoshi Sakimoto (medido nas 37 músicas do FFTA2): batalhas `skirmish`, `tense`, `boss`, `final`; `prepare` (a formação), `briefing` (o mapa e o plano), `worldmap`; cenas `sorrow`, `intrigue`, `triumph`, `comedy`; e o jingle `recruit` (alguém entra no grupo).
   - Do Japão, com o koto, o shakuhachi, o taiko, o hyoshigi e o rin, na régua das faixas mais elogiadas de *Utawarerumono*: `shrine` (um santuário, quase sem pulso), `village` (uma vila ao entardecer), `festival` (um matsuri), `kagura` (uma batalha dançada como um kagura), `elegy` (um lamento). Escalas in, yo e ryukyu, frases com respiro (*ma*), o koto tocando a melodia do shakuhachi junto (heterofonia), a orquestra por baixo em quintas e quartas.
@@ -393,6 +396,15 @@ cena.track("harpa", pan=-0.3, send=0.3).play("harp", [("A3", 0, 1), ("C4", 1, 1)
 cena.track("cordas", send=0.4).play("strings", [(chord("Am", 3), 0, 4), (chord("F", 3), 4, 4)])
 cena.add(Sfx("blade", "steel").render("clash"), at=cena.beats(4), pan=0.5, send=0.2)
 write_wav("cena.wav", cena.render(), 48000)
+
+from tare.tools.tune.instruments import chip_voice    # 8 bits: dois pulsos, o triângulo, ruído
+
+tune = Score(bpm=140, hall=0)
+tune.track("pulse1", send=0).play(chip_voice(duty=25, vibrato=(6, 0.25)), [("D5", 0, 1), ("A5", 1, 2), ("G5", 3, 1)])
+tune.track("pulse2", gain=0.6, send=0).play(chip_voice(duty=12.5, fade=True), [(chord("Dm", 4), 0, 2)])  # arpejo
+tune.track("triangle", gain=0.6, send=0).play(chip_voice("triangle"), [("D3", 0, 2), ("A2", 2, 2)])
+tune.track("noise", gain=0.8, send=0).play("chip_hat", [("C4", b / 2, 0.5) for b in range(8)])
+write_wav("tune_8bit.wav", tune.render(loop=tune.bar(1)), 48000)
 ```
 
 Para cenas inteiras (efeitos, criaturas, uma fala e música sobre um ambiente, em estéreo), veja [`examples/scenes.py`](../../examples/scenes.py): uma luta na masmorra, um tesouro numa caverna e um duelo de magia.

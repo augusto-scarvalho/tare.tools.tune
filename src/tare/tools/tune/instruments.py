@@ -11,6 +11,7 @@ instrument as ratios to the note, their levels and decay times, and how both cha
     Japan         koto, shakuhachi, taiko, hyoshigi, rin (the VCSL đàn tranh and percussion, koto and shakuhachi
                   recordings from Wikimedia Commons)
 """
+import math
 from dataclasses import replace
 
 import numpy as np
@@ -206,12 +207,15 @@ def bass_drum(n: Note) -> list:
 
 
 def snare(n: Note) -> list:
-    """The head's note (~220 Hz) and the wires rattling: broadband to 8 kHz, -20 dB after 70 ms."""
-    head = _ring(n, [(1, 0, 0.25), (1.6, -8, 0.2), (2.3, -12, 0.15)], 4000, 0.0, 0.0, cap=0.6)
-    wires = [Noise(round(n.start, 4), 0.2, [(0, 2500), (1, 2200)], "band", 0.3, amp=[(0, 1), (0.2, 0.15), (1, 0)],
-                   attack=0.001, release=0.03, gain=round(0.6 + 0.6 * n.vel, 4)),
+    """The head's note (~220 Hz) with the shell's overtones just under it, and the wires rattling to 8 kHz. Measured
+    on the VSCO-2 hits with the snares on: -20 dB after 60 ms, -40 dB after 0.26 s, and only a sixth of the energy
+    above 1.2 kHz (the wires are a rattle on the drum, not the drum)."""
+    head = _ring(n, [(1, 0, 0.25), (1.6, 0, 0.2), (2.3, -3, 0.15)], 4000, 0.0, 0.0, cap=0.6)
+    wires = [Noise(round(n.start, 4), 0.28, [(0, 2000), (1, 1800)], "band", 0.3,
+                   amp=[(0, 1), (0.2, 0.2), (1, 0)], attack=0.001, release=0.03,
+                   gain=round(0.085 * (1 + n.vel), 4)),
              Noise(round(n.start, 4), 0.15, [(0, 700), (1, 600)], "band", 0.6, amp=[(0, 1), (0.2, 0.15), (1, 0)],
-                   attack=0.001, release=0.03, gain=round(0.6 * n.vel + 0.2, 4))]
+                   attack=0.001, release=0.03, gain=round(0.4 * (0.6 * n.vel + 0.2), 4))]
     return [head, *wires]
 
 
@@ -339,6 +343,30 @@ def cellos(n: Note) -> list:
 def strings(n: Note) -> list:
     """The string section by register: cellos below G3, violins above."""
     return cellos(n) if n.f < 196 else violins(n)
+
+
+def spiccato(n: Note) -> list:
+    """Strings played off the string, the bow bouncing: a section's short note whatever length is written. Measured
+    on the VSCO-2 sections' spiccato: half amplitude 40-80 ms after the start, the loudest point at 95-155 ms, then a
+    free ring (-20 dB 170-320 ms later; to -40 dB the violins take 0.35 s, the cellos 0.7, the basses 0.9), and a
+    stroke that starts brighter than the note it leaves ringing. The recorded stroke starts twice as bright; ours
+    keeps half of that bite, 0.22 s of bow and two players 3 cents apart, because in a blind round the listener
+    picked this over the measured one: the pitch reads sooner. Basses below G2, cellos to G3, violins above."""
+    # attack, ring, body resonances scaled, brightness, the bite's resonances scaled
+    if n.f < 98:
+        attack, ring, scale, b, edge, forms = 0.07, 1.0, 0.7, 0.2, 1.0, CELLOS[1]
+    elif n.f < 196:
+        attack, ring, scale, b, edge, forms = 0.055, 0.75, 1.0, 0.5, 2.6, CELLOS[1]
+    else:
+        attack, ring, scale, b, edge, forms = 0.065, 0.4, 1.0, 0.6, 2.2, VIOLINS[1]
+    body = [(f * scale, bw, g) for f, bw, g in forms]
+    bite = Syllable(round(n.start, 4), 0.05, [(0, n.f), (1, n.f)], "glottal", brightness=1.0, breath=0.1,
+                    formants=[(f * scale * edge, bw * 2, g) for f, bw, g in forms], attack=0.008, release=0.02,
+                    amp=[(0, 1), (0.5, 0.5), (1, 0)], gain=round(0.25 * n.vel, 4))
+    return [bite] + _sustain(replace(n, dur=0.22), body, b, (5.0, 2.0), attack=attack, release=ring, breath=0.03,
+                             voices=2, spread=3.0, jitter=0.01,
+                             amp=[(0, 1), (0.35, 0.6), (0.6, 0.15), (1, 0)] if n.f < 196
+                             else [(0, 1), (0.4, 0.7), (1, 0)])
 
 
 def flute(n: Note) -> list:
@@ -530,6 +558,51 @@ def chip_hat(n: Note) -> list:
                   release=0.005, gain=round(0.7 * n.vel, 4))]
 
 
+FRAME = 1 / 60                                    # a console sets pitch and volume once per video frame
+DUTIES = (12.5, 25, 50, 75)
+
+
+def _steps(values: list) -> list:
+    """A curve that holds each value for an equal share of the note and jumps to the next."""
+    n, out = len(values), [(0.0, values[0])]
+    for i in range(1, n):
+        if values[i] != values[i - 1]:
+            out += [(round(i / n, 5), values[i - 1]), (round(i / n, 5), values[i])]
+    return out + [(1.0, values[-1])]
+
+
+def chip_voice(wave: str = "pulse", duty: float = 25, vibrato: tuple = (0.0, 0.0), slide: float = 0.0,
+               fade: bool = False):
+    """One channel of an 8-bit console. `wave`: "pulse" (`duty` 12.5, 25, 50 or 75 % is its colour: thin, bright,
+    hollow) or "triangle" (the bass channel). The channel has one voice, so it plays a chord the chip's way: as an
+    arpeggio, the chord's notes cycled 60 times a second. `slide`: semitones; the note scoops in from that far off,
+    a semitone per frame. `fade`: the volume steps down to silence over the note, in the chip's 16 levels (off,
+    the note holds its level). `vibrato`: (Hz, semitones). Velocity is rounded to the 16 levels."""
+    if wave not in ("pulse", "triangle") or duty not in DUTIES:
+        raise ValueError(f"chip_voice: wave is 'pulse' or 'triangle' and duty one of {DUTIES}, "
+                         f"not {wave!r}, {duty!r}")
+
+    def play(n: Note) -> list:
+        dur = max(n.dur - FRAME, n.dur / 2)        # one silent frame, so a repeated note is heard twice
+        frames = min(max(int(dur / FRAME), 1), 1800)
+        if n.chord:
+            bend = [n.chord[i % len(n.chord)] for i in range(max(frames, len(n.chord)))]
+        else:
+            bend = [slide - math.copysign(min(i, abs(slide)), slide) for i in range(frames)]
+        amp = [(15 - i * 16 // frames) / 15 for i in range(frames)] if fade and frames > 1 else [1.0]
+        # ponytail: the triangle is a square through a low-pass at 1.5 f0 (odd harmonics, a little buzzier than a
+        # pure triangle, like the chip's 16 steps); a stepped source in render.py and the native port if it matters
+        return [Syllable(round(n.start, 4), round(dur, 4), _steps([round(n.f * 2 ** (b / 12), 3) for b in bend]),
+                         "pulse", pulse_width=0.5 if wave == "triangle" else duty / 100,
+                         brightness=0.0 if wave == "triangle" else 1.0, vibrato=tuple(vibrato), attack=0.002,
+                         release=0.01, amp=_steps(amp), gain=max(round(n.vel * 15), 1) / 15)]
+    play.arp = True                                # Track.play hands it a whole chord in one Note
+    play.midi_program = 38 if wave == "triangle" else 80
+    play.__qualname__ = f"chip_voice({wave},{duty:g},{vibrato[0]:g}/{vibrato[1]:g},{slide:g},{int(fade)})"
+    play.__doc__ = f"A chip's {wave} channel: chords become arpeggios."
+    return play
+
+
 INSTRUMENTS = {
     "glockenspiel": glockenspiel, "marimba": marimba, "xylophone": xylophone, "celesta": celesta,
     "music_box": music_box, "tubular_bell": tubular_bell, "harp": harp, "pizzicato": pizzicato, "guitar": guitar,
@@ -537,7 +610,8 @@ INSTRUMENTS = {
     "snare": snare, "triangle": triangle,
     "gong": gong, "crash": crash, "tambourine": tambourine, "shaker": shaker, "hihat": hihat, "open_hat": open_hat,
     "bass": bass, "e_piano": e_piano,
-    "violins": violins, "cellos": cellos, "strings": strings, "flute": flute, "horn": horn, "trumpet": trumpet,
+    "violins": violins, "cellos": cellos, "strings": strings, "spiccato": spiccato, "flute": flute, "horn": horn,
+    "trumpet": trumpet,
     "choir": choir, "koto": koto, "shakuhachi": shakuhachi, "taiko": taiko, "hyoshigi": hyoshigi, "rin": rin,
     "square": _pulse(0.5), "pulse": _pulse(0.25), "thin_pulse": _pulse(0.125), "chip_bass": chip_bass,
     "chip_kick": chip_kick, "chip_snare": chip_snare, "chip_hat": chip_hat,

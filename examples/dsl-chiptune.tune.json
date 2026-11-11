@@ -1,0 +1,36 @@
+{
+  "format": "tare.tools.tune.dsl",
+  "version": 1,
+  "context": {"sample_rate": 48000, "bpm": 140, "meter": 4},
+  "defs": {
+    "lead": {"body": {"chip_voice": "pulse", "duty": 25, "vibrato": [6, 0.25]}},
+    "echo": {"body": {"chip_voice": "pulse", "duty": 12.5}},
+    "chords": {"body": {"chip_voice": "pulse", "duty": 12.5, "fade": true}},
+    "tune": {"body": {"pattern": "D5 . D5 A5 - G5 F5 E5 | E5 - E5 C#5 - A4 E5 - | D5 . D5 A5 - Bb5 A5 G5 | E5 F5 G5 E5 D5 - - .", "steps": 2}}
+  },
+  "sounds": {
+    "overworld": {
+      "score": {
+        "hall": 0, "loop": "4bar",
+        "tracks": [
+          {"name": "pulse1", "instrument": {"use": "lead"}, "pan": -0.15, "send": 0,
+           "notes": {"use": "tune"}},
+          {"name": "pulse2", "gain": 0.7, "pan": 0.15, "send": 0,
+           "clips": [
+             {"id": "chords", "instrument": {"use": "chords"},
+              "notes": {"seq": [{"chord": "Dm", "dur": "2b", "span": "4b"}, {"chord": "A", "octave": 3, "dur": "2b", "span": "4b"},
+                                {"chord": "Bb", "octave": 3, "dur": "2b", "span": "4b"}]}},
+             {"id": "answer", "instrument": {"use": "echo"}, "at": "3bar",
+              "notes": {"pattern": ". E5 F5 G5 E5 D5 - -", "steps": 2, "then": [{"velocity": 0.5}]}}
+           ]},
+          {"name": "triangle", "instrument": {"chip_voice": "triangle"}, "gain": 0.6, "send": 0,
+           "notes": {"pattern": "D3 - D3 - D3 - A2 - | A2 - A2 - A2 - E3 - | Bb2 - Bb2 - Bb2 - F3 - | A2 - A2 - A2 A2 A2 .", "steps": 2}},
+          {"name": "kick", "instrument": "chip_kick", "gain": 0.6, "send": 0,
+           "notes": {"repeat": 4, "of": {"pattern": "x . . . x . . .", "steps": 2}}},
+          {"name": "noise", "instrument": "chip_hat", "gain": 0.9, "send": 0,
+           "notes": {"repeat": 4, "of": {"pattern": ". x X x . x X x", "steps": 2}}}
+        ]
+      }
+    }
+  }
+}

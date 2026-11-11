@@ -113,7 +113,7 @@ tare.tools.tune bake examples/bestiary.json -o baked
 | 🗣️ **[Speech](docs/guide.md#human-speech)** | Portuguese and English | a formant voice or a natural voice bank; intonation from punctuation; emotions; a unique voice per NPC; gibberish and animalese |
 | 😤 **[Barks](docs/guide.md#vocalizations-games-without-full-voice-acting)** | 20 vocalizations, 6 styles | attacks, pain, laughs, sighs and gasps in the character's voice, styled after action, anime, tactics and MMO games |
 | ⚔️ **[Sound effects](docs/guide.md#sound-effects)** | 34 kinds | weapons, doors, chests, UI, status effects, spells, summons, footsteps, horses and seamless ambience loops; `era="16bit"`, knobs |
-| 🎼 **[Music](docs/guide.md#music-and-composition)** | 43 instruments, 32 cues | jingles and loops in orchestral, 16-bit and 8-bit styles; a `Score` to lay out whole scenes |
+| 🎼 **[Music](docs/guide.md#music-and-composition)** | 44 instruments, 33 cues | jingles and loops in orchestral, 16-bit and 8-bit styles; a `Score` to lay out whole scenes |
 | 👾 **[Gen 1 cries](docs/guide.md#generation-1-reproduction)** | a Game Boy cry engine | the `chip` archetype, plus a faithful reproduction of all 151 cries (bring your own data) |
 
 ## How it works

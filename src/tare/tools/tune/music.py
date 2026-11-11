@@ -65,7 +65,9 @@ EXTRA = {   # roles the colour cues add (orchestral and chip get sensible stand-
                    "guitar": ("guitar", 0.45, -0.3, 0.25, {}), "block": ("log_drum", 0.4, 0.3, 0.15, {}),
                    "koto": ("koto", 0.7, -0.2, 0.3, {}), "shakuhachi": ("shakuhachi", 0.6, 0.2, 0.35, {}),
                    "taiko": ("taiko", 1.0, 0.0, 0.25, {}), "hyoshigi": ("hyoshigi", 0.45, 0.3, 0.25, {}),
-                   "rin": ("rin", 0.45, 0.15, 0.45, {})},
+                   "rin": ("rin", 0.45, 0.15, 0.45, {}),
+                   "spiccato": ("spiccato", 0.9, 0.1, 0.3, {}), "spiccato_2": ("spiccato", 0.85, -0.15, 0.3, {}),
+                   "spiccato_low": ("spiccato", 0.9, 0.25, 0.3, {})},
     "chip": {"keys": ("square", 0.25, -0.2, 0.1, {"crush": 0.25}), "mallet": ("thin_pulse", 0.3, 0.2, 0.1,
                                                                              {"crush": 0.25}),
              "music_box": ("thin_pulse", 0.25, 0.3, 0.1, {"crush": 0.25}), "hat": ("chip_hat", 0.15, 0.2, 0.0, {}),
@@ -74,7 +76,10 @@ EXTRA = {   # roles the colour cues add (orchestral and chip get sensible stand-
              "koto": ("thin_pulse", 0.3, -0.2, 0.1, {"crush": 0.25}), "shakuhachi": ("square", 0.35, 0.2, 0.1,
                                                                                     {"crush": 0.25}),
              "taiko": ("chip_kick", 0.5, 0.0, 0.0, {}), "hyoshigi": ("chip_hat", 0.2, 0.3, 0.0, {}),
-             "rin": ("thin_pulse", 0.25, 0.2, 0.1, {"crush": 0.25})},
+             "rin": ("thin_pulse", 0.25, 0.2, 0.1, {"crush": 0.25}),
+             "spiccato": ("thin_pulse", 0.25, 0.1, 0.1, {"crush": 0.25}),
+             "spiccato_2": ("thin_pulse", 0.25, -0.15, 0.1, {"crush": 0.25}),
+             "spiccato_low": ("square", 0.3, 0.25, 0.1, {"crush": 0.25})},
 }
 ORCHESTRAL.update(EXTRA["orchestral"])
 CHIP.update(EXTRA["chip"])
@@ -435,6 +440,101 @@ def battle(c: Cue):
     _loop(c, len(prog))
 
 
+# Two string parts sharing a bar of eighths between them, and the snare's bar of sixteenths: (beats played)
+MARCH_CELLS = [((0, 1, 1.5, 3), (0.5, 2, 2.5, 3.5)), ((0, 1.5, 2, 3), (0.5, 1, 2.5, 3.5)),
+               ((0, 0.5, 2, 3), (1, 1.5, 2.5, 3.5))]
+MARCH_SNARE = [(0, .5, .75, 1, 1.5, 1.75, 2, 2.5, 2.75, 3, 3.5, 3.75),
+               (0, .75, 1, 1.5, 1.75, 2, 2.75, 3, 3.25, 3.5, 3.75),
+               (0, .5, 1, 1.25, 1.5, 2, 2.5, 3, 3.25, 3.5, 3.75)]
+MARCH_LEVELS = (0.85, 0.85, 0.85, 0.85, 0.9, 0.9, 0.7, 0.75, 0.92, 0.92, 0.95, 0.95)    # one terrace per 4 bars
+
+
+def _clear(key: Key, ch: int, tune: list, low: int, high: int, prev: int | None) -> int:
+    """A chord tone in [low, high] for a held part: never a half step from the tune in this bar, near the last."""
+    chord = {key.note(t, ch) % 12 for t in key.chord(ch)}
+    tones = [n for n in range(low, high + 1) if n % 12 in chord]
+    safe = [n for n in tones if not any((n - m) % 12 in (1, 11) for m in tune)] or tones
+    return min(safe, key=lambda n: abs(n - (prev if prev is not None else (low + high) // 2)))
+
+
+def _settle(key: Key, ch: int, n: int, held: list) -> int:
+    """`n`, or the chord tone nearest to it when `n` would sit a half step from a note held under it."""
+    if not any((n - h) % 12 in (1, 11) for h in held):
+        return n
+    chord = {key.note(t, ch) % 12 for t in key.chord(ch)}
+    return min((m for m in range(n - 4, n + 5) if m % 12 in chord and not any((m - h) % 12 in (1, 11) for h in held)),
+               key=lambda m: (abs(m - n), m), default=n)
+
+
+def march(c: Cue):
+    """A battle laid out the way orchestral scores lay one out (what 22 scores of game music share, read as
+    numbers): every part plays one line, the lines move by step, the parts come in a few at a time, the fast notes
+    are the snare's, and a quiet terrace sets up the return. 48 bars: strings and drums alone, then the tune, the
+    horn, the trumpet; eight bars of low strings and a horn; then everyone, a flute over the tune."""
+    r = c.r
+    c.new_score(bpm=126 + 16 * r.u())      # at 120 a listener heard it stand still
+    key = c.key("minor")
+    a = r.pick(MINOR_PROGRESSIONS)
+    b = r.pick([p for p in MINOR_PROGRESSIONS if p != a])
+    a2, b2, quiet = a[:3] + [4], b[:2] + [4, 4], [3, 3, 0, 0, 5, 5, 4, 4]
+    tunes = {0: melody(r, key, a + a2, CALM, start=4), 1: melody(r, key, b + b2, CALM, low=4, high=13, start=7),
+             2: melody(r, key, quiet, CALM[:3], low=0, high=7, start=2)}
+    phrase = {2: (0, 0), 3: (0, 4), 4: (1, 0), 5: (1, 4), 6: (2, 0), 7: (2, 4), 8: (0, 0), 9: (0, 4), 10: (1, 0),
+              11: (1, 4)}                                    # block -> which tune, from which of its bars
+    cells, snare = r.pick(MARCH_CELLS), r.pick(MARCH_SNARE)
+    prev = horn = brass = None
+    for block, chords in enumerate([a, a2, a, a2, b, b2, quiet[:4], quiet[4:], a, a2, b, b2]):
+        relief, full, v = block in (6, 7), block >= 8, MARCH_LEVELS[block]
+        for k, ch in enumerate(chords):
+            at = 16 * block + 4 * k
+            prev = voicing(key, ch, prev, 52, 67)
+            root = 31 + (key.note(ch, ch) - 31) % 12
+            tune = []
+            if block in phrase:
+                which, first = phrase[block]
+                under = [root, prev[1]] if relief else [root]           # what is held below the tune in this bar
+                tune = [(_settle(key, ch, n, under), at + beat - 4 * (first + k), held)
+                        for n, beat, held in tunes[which] if 4 * (first + k) <= beat < 4 * (first + k + 1)]
+            if relief:                                       # low strings, a held middle, the horn's slow line
+                c.part("low_strings", [(root, at, 3.8)], v)
+                c.part("pad", [(prev[1], at, 1.5), (prev[1], at + 2, 1.5)], v - 0.2)
+                c.part("horns", [(n, beat, held * 0.95) for n, beat, held in tune], v + 0.15)
+                if block == 7:
+                    c.part("spiccato_low", [(prev[j % 2] - 12, at + beat, 0.4) for j, beat in
+                                            enumerate((0, 1.5, 2, 3.5))], v)
+                    if k == 3:                               # the roll that brings the band back
+                        c.part("snare", [(60, at + j / 4, 0.2, 0.2 + 0.045 * j) for j in range(16)])
+                        c.part("kick", [(36, at + 3.5, 0.5, 0.8)])
+                continue
+            c.part("low_strings", [(root, at + j, 0.85) for j in range(4)], v)
+            c.part("spiccato", [(prev[1], at + beat, 0.4) for beat in cells[0]], v)
+            if block >= 1:
+                c.part("spiccato_2", [(prev[2], at + beat, 0.4) for beat in cells[1]], v)
+            if block < 2:                                    # the cellos hold the floor until the tune comes
+                c.part("spiccato_low", [(prev[0] - 12, at + j, 0.4) for j in range(4)], v)
+            else:
+                beats = (0, 0.5, 1.5, 2, 2.5, 3.5) if block >= 4 else (0, 1.5, 2, 3.5)
+                c.part("spiccato_low", [(prev[j % 2] - 12, at + beat, 0.4) for j, beat in enumerate(beats)], v)
+            if k in (0, 2) or block < 4:                     # every bar while the band is still small
+                c.part("timpani", [(41 + (key.note(ch, ch) - 41) % 12, at, 1, v)])
+            c.part("strings", [(n, beat, held * 0.92) for n, beat, held in tune], min(v + 0.05, 1))
+            if full:
+                c.part("lead", [(n, beat, held * 0.9) for n, beat, held in tune], v - 0.1, octave=1)
+            heard = [n for n, _, _ in tune]
+            if block >= 3:
+                horn = _clear(key, ch, heard, 55, 67, horn)
+                c.part("horns", [(horn, at, 3.7)], v - 0.05)
+            if block >= 4:
+                brass = _clear(key, ch, heard, 67, 79, brass)
+                c.part("brass", [(brass, at, 3.6, 0.5 + 0.13 * k)])       # a swell across the phrase
+            hits = sorted({*snare, 3.25}) if k == 3 else snare
+            c.part("snare", [(60, at + beat, 0.2, v if beat == int(beat) else v / 2) for beat in hits])
+            c.part("kick", [(36, at + beat, 0.5, v) for beat in ((0, 2, 3.5) if block >= 4 else (0, 2))])
+        if block >= 4 and not relief:                     # every loud phrase: two in 48 bars sounded like mistakes
+            c.part("crash", [(60, 16 * block, 2, 0.8 if block in (4, 8) else 0.55)])
+    _loop(c, 48)
+
+
 def _accompany(c: Cue, key: Key, prog: list, arp=False, pad=False, shaker=False):
     prev = None
     for bar, ch in enumerate(prog):
@@ -744,7 +844,7 @@ COLOR_CUES = ("reverie", "pastoral", "timeless", "grove", "heroic", "showdown")
 
 CUES: dict[str, Callable[[Cue], None]] = {
     "victory": victory, "levelup": levelup, "quest": quest, "gameover": gameover,
-    "town": town, "explore": explore, "tavern": tavern, "dungeon": dungeon, "battle": battle,
+    "town": town, "explore": explore, "tavern": tavern, "dungeon": dungeon, "battle": battle, "march": march,
     "reverie": reverie, "pastoral": pastoral, "timeless": timeless, "grove": grove, "heroic": heroic,
     "showdown": showdown,
 }

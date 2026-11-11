@@ -148,6 +148,9 @@ def review_summary(result):
         compact["facts"][key] = [level[key] for level in facts["levels"]]
     if facts.get("tracks_truncated"):
         compact["facts"]["tracks_truncated"] = True
+    for key in ("bars_db", "rubs", "arrangement"):
+        if key in facts:
+            compact["facts"][key] = facts[key]
     if "reference" in facts:
         compact["ref"] = reference_pairs(facts["reference"])
     if "changes" not in result:

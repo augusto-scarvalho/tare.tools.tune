@@ -37,6 +37,8 @@ def register(sub):
             p.add_argument("--asset-root", action="append", default=[])
         if name == "check":
             p.add_argument("--expand", action="store_true")
+            p.add_argument("--layout", action="store_true", help="a score's or cue's arrangement and rubs, read "
+                           "from its notes: nothing is rendered, so a piece too large to review can be read")
         if name == "query":
             p.add_argument("--target")
             p.add_argument("--pointer")
@@ -107,6 +109,21 @@ def run(args):
 
         raw = sys.stdin.buffer.read(1024 * 1024 + 1) if args.patch == "-" else Path(args.patch).read_bytes()
         result = patch_file(args.source, parse(raw), dry_run=args.dry_run, asset_roots=args.asset_root)
+    elif command == "check" and args.layout:
+        from .model import Budgets
+        from .review_data import rub_summary
+
+        # Nothing is rendered here, so the limits that bound a render's memory and time do not apply.
+        roomy = Budgets(layers=65536, notes=8192, capture_bytes=2**44, work_bytes=2**44, weighted_work=10**15)
+        compiled = compile_document(load(args.source, asset_roots=args.asset_root, limits=roomy), name=args.name)
+        if compiled.plan.kind not in ("score", "cue"):
+            raise DSLError("E_CAPABILITY", "layout reads a score or a music cue", "/sounds/" + compiled.name)
+        score = compiled.plan.source.score if compiled.plan.kind == "cue" else compiled.plan.source
+        layout, rubs = score.arrangement(), score.clashes()
+        layout.update({key: layout[key][:64] for key in ("parts_by_block", "notes_per_bar_by_block")})
+        result = {"schema": "tune.query/1", "sound": compiled.name, "mode": "notes only; no synthesis",
+                  "bpm": score.bpm, "meter": score.meter, "arrangement": layout,
+                  "rubs": rub_summary(rubs) if rubs else {"chord": 0, "line": 0, "first": []}}
     else:
         document = load(args.source, asset_roots=args.asset_root)
         if command == "query":

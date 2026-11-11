@@ -9,6 +9,7 @@ English (en-US) is the primary documentation language and the reference for this
 | Architecture, rendering, portability, and calibration | [Architecture](architecture.md) | [Arquitetura](pt-BR/arquitetura.md) |
 | Essential action and adventure RPG sounds | [RPG sounds](rpg-sounds.md) | [Sons essenciais de RPG](pt-BR/sons-rpg.md) |
 | Tactical RPG sound coverage and priorities | [Tactical RPG sounds](tactics-sounds.md) | [Sons de tactics RPG](pt-BR/sons-tactics.md) |
+| How an orchestral battle is laid out: a study of recordings and scores, and what a listener picked | [Orchestral arrangement](orchestral-arrangement.md) | [Arranjo orquestral](pt-BR/arranjo-orquestral.md) |
 | Capture, inspection, live authoring, MIDI, sprites, and optional DSP | [Authoring](authoring.md) | [Autoria](pt-BR/autoria.md) |
 | Semantic DSL, reusable definitions, Notes, guarded edits, and compact queries (experimental) | [DSL](dsl.md) | [DSL: guia auxiliar](pt-BR/dsl.md) |
 | Agent skill: workflow, lookups, template and habits for AI agents | [SKILL.md](../SKILL.md) | — (English only) |
